@@ -1,5 +1,13 @@
 <?php
-
+/*
+ * Plugin Name: VIP Auth Monitoring Plugin
+ * Description: Monitors authentication events.
+ * Version: 1.0.0
+ * Author: Automattic
+ * License: MIT
+ * Text Domain: vip-security-boost
+ * Domain Path: /lang
+ */
 namespace Automattic\VIP\Security\AuthMonitoring;
 
 use Automattic\VIP\Security\Utils\Logger;
@@ -54,3 +62,5 @@ final class Plugin {
 		] );
 	}
 }
+
+Plugin::get_instance();

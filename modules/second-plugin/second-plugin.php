@@ -1,4 +1,13 @@
 <?php
+/*
+ * Plugin Name: VIP Second Plugin
+ * Description: Test.
+ * Version: 1.0.0
+ * Author: Automattic
+ * License: MIT
+ * Text Domain: vip-security-boost
+ * Domain Path: /lang
+ */
 
 namespace Automattic\VIP\Security\SecondPlugin;
 
@@ -25,6 +34,7 @@ final class Plugin {
 	public function init(): void {
 		// Initialize the integration
 		add_action( 'wp_login', [ $this, 'on_wp_login' ], 10, 2 );
+		add_action( 'admin_notices', [ $this, 'admin_notice' ] );
 	}
 	// @codeCoverageIgnoreEnd
 
@@ -42,4 +52,11 @@ final class Plugin {
 			'site_id'  => get_current_blog_id(),
 		] );
 	}
+
+	public function admin_notice(): void {
+		error_log( 'Second plugin test' );
+		echo '<div class="notice notice-success is-dismissible"><p>Second plugin test</p></div>';
+	}
 }
+
+Plugin::get_instance();
