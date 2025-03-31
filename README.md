@@ -2,6 +2,10 @@
 
 Welcome to WordPress VIP! This repository is a starting point for building your WordPress VIP application, including all the base directories.
 
+## For Automatticians!
+
+:wave: Just a quick reminder that this is a public repo. Please don't include any internal links or sensitive data (like PII, private code, customer names, site URLs, etc. Any fixes related to security should be discussed with Platform before opening a PR. If you're not sure if something is safe to share, please just ask!
+
 ## Guidebooks
 
 We recommend starting with one of the following WordPress VIP guidebooks:
@@ -12,18 +16,16 @@ We recommend starting with one of the following WordPress VIP guidebooks:
 
 ## Directories
 
-All the following directories are required and must not be removed:
+- `modules/`: Contains modular components of the security boost integration.
+- `utils/`: Contains utility functions and helper classes.
+- `vip-config/`: For [custom configurations](https://docs.wpvip.com/technical-references/vip-codebase/vip-config-directory/) and additional [`sunrise.php` changes](https://docs.wpvip.com/technical-references/multisites/sunrise-php/). This folder's `vip-config.php` can be used to supply things usually found in `wp-config.php`.
 
-- `client-mu-plugins/`: For [always active global plugins](https://docs.wpvip.com/technical-references/vip-codebase/client-mu-plugins-directory/) (similar to `mu-plugins`).
-- `docs/`: Not mounted to production, so [useful for storing documentation](https://docs.wpvip.com/technical-references/vip-codebase/docs-directory/) about an applications features and requirements.
-- `images/`: Store [your site's favicons](https://docs.wpvip.com/technical-references/vip-codebase/images-directory/) here. All other public-facing images should be uploaded or [imported](https://docs.wpvip.com/how-tos/launch-a-site-with-vip/launch-with-vip-migrate-content/) to the WordPress dashboard or stored as part of your `/theme/` assets.
-- `languages/`: For [`.po` and `.mo` translation files](https://docs.wpvip.com/how-tos/upload-languages-to-the-language-directory/), which specify the translated strings for the site.
-- `plugins/`: Your site's [regular plugins](https://docs.wpvip.com/technical-references/vip-codebase/plugins-directory/).
-- `private/`: Provides access to [files that are not directly web accessible](https://docs.wpvip.com/technical-references/vip-codebase/private-directory/), but can be accessed by your theme or plugin code.
-- `themes/`: [Themes available to your sites](https://docs.wpvip.com/technical-references/vip-codebase/themes-on-vip-go/). We recommend keeping the default theme available for [testing purposes](https://docs.wpvip.com/how-tos/prepare-for-site-launch/testing-your-site/).
-- `vip-config/`: For [custom configurations](https://docs.wpvip.com/technical-references/vip-codebase/vip-config-directory/) and additional [`sunrise.php` changes](https://docs.wpvip.com/technical-references/multisites/sunrise-php/). This folder's `vip-config.php` can be used to supply things usually found in `wp-config.php`..
+Key files in the root directory:
+- `vip-security-boost.php`: Main plugin file
+- `class-integration.php`: Core integration class
+- `class-loader.php`: Loads enabled modules for the integration
 
-These directories will also be available on production web servers. Any additional directories created in your GitHub repository that are not included in the above list will not be mounted onto your site, and so will not be web-accessible.
+These directories and files are essential for the security boost integration to function properly. Any additional directories created in your GitHub repository that are not included in the above list will not be mounted onto your site, and so will not be web-accessible.
 
 For more information on how our codebase is structured, see https://docs.wpvip.com/technical-references/vip-codebase/.
 

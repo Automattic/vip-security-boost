@@ -22,12 +22,12 @@ class Inactive_Users {
 	private $application_password_authentication_error;
 	
 	public static function init() {
-		if ( ! defined( 'SECURITY_BUNDLE_CONFIGS' ) ) {
-			error_log( 'SECURITY_BUNDLE_CONFIGS not defined' );
+		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
+			error_log( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
 			return;
 		}
 	
-		$configs               = constant( 'SECURITY_BUNDLE_CONFIGS' );
+		$configs               = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
 		$inactive_user_configs = $configs['inactive_users'] ?? [];
 
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
