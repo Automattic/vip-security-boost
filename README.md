@@ -2,6 +2,10 @@
 
 Welcome to WordPress VIP! This repository is a starting point for building your WordPress VIP application, including all the base directories.
 
+## For Automatticians!
+
+:wave: Just a quick reminder that this is a public repo. Please don't include any internal links or sensitive data (like PII, private code, customer names, site URLs, etc. Any fixes related to security should be discussed with Platform before opening a PR. If you're not sure if something is safe to share, please just ask!
+
 ## Guidebooks
 
 We recommend starting with one of the following WordPress VIP guidebooks:
