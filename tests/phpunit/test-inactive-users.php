@@ -15,8 +15,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
             'user_registered' => date('Y-m-d H:i:s', strtotime('-100 days')),
         ]);
         
-        if (!defined('SECURITY_BUNDLE_CONFIGS')) {
-            define('SECURITY_BUNDLE_CONFIGS', [
+        if (!defined('VIP_SECURITY_BOOST_CONFIGS')) {
+            define('VIP_SECURITY_BOOST_CONFIGS', [
                 'inactive_users' => [
                     'mode' => 'BLOCK',
                     'considered_inactive_after_days' => 90,
