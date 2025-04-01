@@ -30,8 +30,8 @@
 		}
 	},
 	"scripts": {
-		"lint": "phpcs --standard=.phpcs.xml.dist",
-		"phpcs": "phpcs",
+		"lint": "./vendor/bin/phpcs --standard=.phpcs.xml.dist",
+		"format": "./vendor/bin/phpcbf --standard=.phpcs.xml.dist",
 		"psalm": "psalm",
 		"test": "./bin/test.sh --php 8.2 --wp 6.5"
 	}

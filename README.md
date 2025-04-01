@@ -31,29 +31,67 @@ For more information on how our codebase is structured, see https://docs.wpvip.c
 
 The `docs/` directory is a special directory that contains your documentation for your application. It is not mounted onto your site, but is available for you to use. See [docs/index.php](docs/index.php) for more information.
 
-## PHPCS for checking coding standards
+## Testing
 
-This repo contains a starting point for installing and using a _local_ version of [PHP_CodeSniffer](https://docs.wpvip.com/how-tos/php_codesniffer/) (PHPCS). To get started, you'll need to have [Composer](https://getcomposer.org/) installed, then open a command line at this directory, and run:
+### Unit Tests
 
-```sh
-composer install
+We utilize [PHPUnit 9](https://phpunit.de/index.html) for unit tests. For an example of a test suite please refer to the [/tests/phpunit](tests/phpunit/) folder.
+
+To run the unit tests, execute the following command from the project root:
+
+```bash
+composer test
 ```
 
-This will install PHPCS and register the below standards:
+This script uses Docker to run the tests in an isolated environment.
 
-- [VIP Coding Standards](https://github.com/Automattic/VIP-Coding-Standards)
-- [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards)
-- [PHPCompatibilityWP Standard](https://github.com/PHPCompatibility/PHPCompatibilityWP)
+#### Testing Modules
 
-The [`.phpcs.xml.dist`](https://docs.wpvip.com/technical-references/vip-codebase/phpcs-xml-dist/) file contains a _suggested_ configuration, but you are free to amend this. You can also [extend](https://docs.wpvip.com/technical-references/vip-codebase/phpcs-xml-dist/#h-extending-the-root-phpcs-xml-dist-file-for-custom-themes-and-plugins) it for more granularity of configuration for theme and custom plugins.
+When testing classes defined within the `modules/` directory, ensure they are correctly autoloaded for the test environment. Add the necessary file paths to the `autoload-dev` section in `composer.json`:
 
-To run PHPCS, navigate to the directory where the relevant `.phpcs.xml.dist` lives, and type:
-
-```sh
-vendor/bin/phpcs
+```json
+	"autoload-dev": {
+		"files": [
+			"modules/inactive-users/inactive-users.php"
+		]
+	},
 ```
 
-See the [PHPCS documentation](https://github.com/squizlabs/PHP_CodeSniffer/wiki/Usage) (or run `phpcs -h`) for the available command line arguments.
+After modifying `composer.json`, regenerate the autoload files:
+
+```bash
+composer dump-autoload
+```
+
+**Note:** If a module class file includes a global initialization call (e.g., `My_Class::init();` at the end of the file), it might run before the test's `setUp` method configures necessary constants or settings. If you encounter test failures related to incorrect configuration, you may need to explicitly re-run the class's initialization method at the beginning of the affected test method(s).
+
+### End-to-end tests
+
+For end-to-end tests we use [Playwright](https://playwright.dev/). Examples can be found in [/tests/e2e](/tests/e2e).
+
+## Static analysis
+
+[Psalm](https://psalm.dev/) is a free & open-source static analysis tool that helps you identify problems in your code.
+
+Please note, for Psalm to work properly you will need to annotate your PHP code. For examples please refer to [/plugins/auth-monitoring](/plugins/auth-monitoring).
+
+## Linting and coding standards.
+
+Linting and coding standards are powered by [PHP_CodeSniffer](https://github.com/squizlabs/PHP_CodeSniffer) (commonly known as PHPCS) along with WordPress VIP and WordPress core rulesets.
+
+For more information please refer to the [linting documentation](/docs/linting.md).
+
+To check the codebase for coding standards violations, run:
+
+```bash
+composer lint
+```
+
+To automatically fix many of the reported violations, run:
+
+```bash
+composer format
+```
 
 ## Support
 
