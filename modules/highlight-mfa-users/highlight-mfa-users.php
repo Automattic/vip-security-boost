@@ -1,7 +1,7 @@
 <?php
 namespace Automattic\VIP\Security\MFAUsers;
 
-class MFA_Users {
+class Highlight_MFA_Users {
 	private static $mode;
 	const MFA_SKIP_USER_IDS_OPTION_KEY = 'vip_security_mfa_skip_user_ids';
 	public static function init() {
@@ -71,4 +71,4 @@ class MFA_Users {
 		}
 	}
 }
-MFA_Users::init();
+Highlight_MFA_Users::init();
