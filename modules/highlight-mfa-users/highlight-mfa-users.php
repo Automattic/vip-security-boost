@@ -15,59 +15,116 @@ class Highlight_MFA_Users {
 		self::$mode          = $highlight_mfa_users['mode'] ?? 'REPORT';
 
 		if ( in_array( self::$mode, array( 'REPORT', 'HIGHLIGHT' ) ) ) {
-			add_filter( 'wpmu_users_columns', [ __CLASS__, 'add_mfa_status_column_head' ] );
-			add_filter( 'manage_users_columns', [ __CLASS__, 'add_mfa_status_column_head' ] );
-			add_filter( 'manage_users_custom_column', [ __CLASS__, 'add_mfa_status_column_content' ], 10, 3 );
+			add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
+			add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
 		}
 	}
-	
-	public static function add_mfa_status_column_head( $columns ) {
-		$columns['mfa_status'] = __( 'MFA Status', 'wpvip' );
-		return $columns;
-	}
 
-	public static function add_mfa_status_column_content( $output, $column_name, $user_id ) {
-		if ( 'mfa_status' !== $column_name ) {
-			return $output;
+	/**
+	 * Display an admin notice on the Users page showing the count of users with MFA disabled.
+	 */
+	public static function display_mfa_disabled_notice() {
+		// Check if the Two Factor plugin is active
+		// TODO: if Two_Factor_Core is disabled, do we display all admin users?
+		if ( ! class_exists( 'Two_Factor_Core' ) ) {
+			return; // Exit if Two Factor plugin isn't active
 		}
 
-		// Check if user should be skipped via filter
-		/**
-		 * Filters whether to skip the MFA status check for a specific user via code.
-		 * Returning true will prevent the "Enabled" or "Disabled" status from being displayed for this user.
-		 * @param bool $skip    Whether to skip the check. Default false.
-		 * @param int  $user_id The ID of the user being checked.
-		 */
-		$skip_via_filter = apply_filters( 'vip_security_mfa_skip_user_check', false, $user_id );
-
-		if ( $skip_via_filter ) {
-			return $output;
+		// Only show on the main users list table
+		$screen = get_current_screen();
+		if ( ! $screen || 'users' !== $screen->id ) {
+			return;
 		}
 
-		// Check if user should be skipped via option
+
 		$skipped_user_ids = get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
 		if ( ! is_array( $skipped_user_ids ) ) {
 			$skipped_user_ids = [];
 		}
 
-		if ( in_array( $user_id, $skipped_user_ids, true ) ) {
-			return $output;
+		// Query for administrator user IDs, excluding skipped ones
+		$args = [
+			'role'    => 'administrator', // Only administrators
+			'fields'  => 'ID',
+			'exclude' => $skipped_user_ids,
+			'number'  => -1, // Get all relevant users
+		];
+		$user_query = new \WP_User_Query( $args );
+		$user_ids   = $user_query->get_results();
+
+		$mfa_disabled_count = 0;
+		foreach ( $user_ids as $user_id ) {
+			// Use the reliable check from the Two Factor plugin
+			if ( ! \Two_Factor_Core::is_user_using_two_factor( $user_id ) ) {
+				$mfa_disabled_count++;
+			}
 		}
 
-		// Proceed with MFA check if not skipped
-		$mfa_enabled = false;
-
-		if ( class_exists( 'Two_Factor_Core' ) && \Two_Factor_Core::is_user_using_two_factor( $user_id ) ) {
-			$mfa_enabled = true;
-		} else {
-			// $mfa_enabled = get_user_meta( $user_id, 'my_custom_mfa_status_meta_key', true );
+		if ( $mfa_disabled_count > 0 ) {
+			$filter_url = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
+			printf(
+				'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
+				sprintf(
+					_n(
+						'There is %d administrator with MFA disabled.',
+						'There are %d administrators with MFA disabled.',
+						$mfa_disabled_count,
+						'wpvip'
+					),
+					number_format_i18n( $mfa_disabled_count )
+				),
+				esc_url( $filter_url ),
+				esc_html__( 'Filter list to show these users.', 'wpvip' )
+			);
 		}
+	}
 
+	/**
+		* Modify the user query on the Users page to filter by MFA status if requested.
+		* @param \WP_User_Query $query The WP_User_Query instance (passed by reference).
+		*/
+	public static function filter_users_by_mfa_status( $query ) {
+		global $pagenow;
+		if ( is_admin() && 'users.php' === $pagenow && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
+			
+			// Ensure we don't break other meta queries
+			$meta_query = $query->get( 'meta_query' );
+			if ( ! is_array( $meta_query ) ) {
+				$meta_query = [];
+			}
 
-		if ( $mfa_enabled ) {
-			return __( 'Enabled', 'wpvip' );
-		} else {
-			return sprintf( '<strong style="color: red;">%s</strong>', __( 'Disabled', 'wpvip' ) );
+			$meta_query[] = [
+				'relation' => 'OR',
+				[
+					'key'     => '_two_factor_enabled_providers',
+					'compare' => 'NOT EXISTS',
+				],
+				[
+					'key'     => '_two_factor_enabled_providers',
+					'value'   => 'a:0:{}',
+					'compare' => '=',
+				],
+				[
+					'key'     => '_two_factor_enabled_providers',
+					'value'   => '',
+					'compare' => '=',
+				],
+			];
+			$query->set( 'role__in', ['administrator'] );
+			$query->set( 'meta_query', $meta_query );
+
+			// Exclude skipped users
+			$skipped_user_ids = get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
+			if ( ! is_array( $skipped_user_ids ) ) {
+				$skipped_user_ids = [];
+			}
+			if ( ! empty( $skipped_user_ids ) ) {
+				$exclude_ids = $query->get( 'exclude' );
+				if ( ! is_array( $exclude_ids ) ) {
+					$exclude_ids = [];
+				}
+				$query->set( 'exclude', array_unique( array_merge( $exclude_ids, $skipped_user_ids ) ) );
+			}
 		}
 	}
 }
