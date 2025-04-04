@@ -10,6 +10,12 @@ class Loader {
         $configs = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
         $enabled_modules = $configs['enabled_modules'] ?? [];
 
+        // If enabled_modules is a string, convert it to an array
+        // I noticed the integrations-config can output a string so we need to handle that
+        if ( is_string( $enabled_modules ) ) {
+            $enabled_modules = explode( ',', $enabled_modules );
+        }
+
         foreach ( $enabled_modules as $module ) {
             $load_path = __DIR__ . '/modules/' . $module . '/' . $module . '.php';
 
