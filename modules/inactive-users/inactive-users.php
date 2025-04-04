@@ -194,7 +194,7 @@ class Inactive_Users {
 		}
 
 		if ( ! self::is_block_action_enabled() || ! self::is_considered_inactive( $user_id ) ) {
-			return sprintf( '<span>%s %s</span>', esc_html( $date ), self::is_block_action_enabled() ? 'BLOCK' : 'REPORT' );
+			return sprintf( '<span>%s</span>', esc_html( $date ) );
 		}
 
 		$unblock_link = '';
