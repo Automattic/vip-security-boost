@@ -2,32 +2,21 @@
 namespace Automattic\VIP\Security\MFAUsers;
 
 class Highlight_MFA_Users {
-	private static $mode;
 	const MFA_SKIP_USER_IDS_OPTION_KEY = 'vip_security_mfa_skip_user_ids';
+
 	public static function init() {
-		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			error_log( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
-			return;
-		}
-
-		$configs             = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
-		$highlight_mfa_users = $configs['highlight_mfa_users'] ?? [];
-		self::$mode          = $highlight_mfa_users['mode'] ?? 'REPORT';
-
-		if ( in_array( self::$mode, array( 'REPORT', 'HIGHLIGHT' ) ) ) {
-			add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
-			add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
-		}
+		// Feature is always active unless specific users are skipped via option.
+		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
+		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
 	}
 
 	/**
 	 * Display an admin notice on the Users page showing the count of users with MFA disabled.
 	 */
 	public static function display_mfa_disabled_notice() {
-		// Check if the Two Factor plugin is active
 		// TODO: if Two_Factor_Core is disabled, do we display all admin users?
 		if ( ! class_exists( 'Two_Factor_Core' ) ) {
-			return; // Exit if Two Factor plugin isn't active
+			return;
 		}
 
 		// Only show on the main users list table
@@ -44,9 +33,9 @@ class Highlight_MFA_Users {
 
 		// Query for administrator user IDs, excluding skipped ones
 		$args = [
-			'role'    => 'administrator', // Only administrators
+			'role'    => 'administrator',
 			'fields'  => 'ID',
-			'exclude' => $skipped_user_ids,
+			'exclude' => array_merge( $skipped_user_ids, [1] ), // Exclude skipped users AND user ID 1
 			'number'  => -1, // Get all relevant users
 		];
 		$user_query = new \WP_User_Query( $args );
