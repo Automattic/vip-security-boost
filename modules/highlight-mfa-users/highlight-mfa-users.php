@@ -14,7 +14,6 @@ class Highlight_MFA_Users {
 		* Display an admin notice on the Users page showing the count of users with MFA disabled.
 		*/
 	public static function display_mfa_disabled_notice() {
-		// TODO: if Two_Factor_Core is disabled, do we display all admin users?
 		if ( ! class_exists( 'Two_Factor_Core' ) ) {
 			return;
 		}
