@@ -194,8 +194,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
             '<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
             sprintf(
                 _n(
-                    'There is %d administrator with MFA disabled.',
-                    'There are %d administrators with MFA disabled.',
+                    'There is %d user with MFA disabled.',
+                    'There are %d users with MFA disabled.',
                     $expected_count,
                     'wpvip'
                 ),
@@ -213,6 +213,40 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
         $output = ob_get_clean();
 
         $this->assertEquals($expected_output, $output);
+       }
+      
+       /**
+        * Test that the admin notice is displayed correctly with the count when the list IS filtered.
+        */
+       public function test_display_mfa_disabled_notice_shows_correct_message_when_filtered() {
+        $this->set_admin_screen_users();
+        $_GET['filter_mfa_disabled'] = '1'; // Activate the filter
+      
+        // We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id)
+        $expected_count = 1;
+        $show_all_url = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
+        $expected_output = sprintf(
+        	'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Notice class is notice-info when filtered
+        	sprintf(
+        		_n(
+        			'Showing %d user without MFA enabled.',
+        			'Showing %d users without MFA enabled.',
+        			$expected_count,
+        			'wpvip'
+        		),
+        		number_format_i18n( $expected_count )
+        	),
+        	esc_url( $show_all_url ),
+        	esc_html__( 'Show all users.', 'wpvip' )
+        );
+      
+        ob_start();
+        Highlight_MFA_Users::display_mfa_disabled_notice();
+        $output = ob_get_clean();
+      
+        $this->assertEquals($expected_output, $output);
+      
+        unset($_GET['filter_mfa_disabled']); // Clean up
     }
 
      /**

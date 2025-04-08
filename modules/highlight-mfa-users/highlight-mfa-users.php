@@ -11,8 +11,8 @@ class Highlight_MFA_Users {
 	}
 
 	/**
-	 * Display an admin notice on the Users page showing the count of users with MFA disabled.
-	 */
+		* Display an admin notice on the Users page showing the count of users with MFA disabled.
+		*/
 	public static function display_mfa_disabled_notice() {
 		// TODO: if Two_Factor_Core is disabled, do we display all admin users?
 		if ( ! class_exists( 'Two_Factor_Core' ) ) {
@@ -20,13 +20,12 @@ class Highlight_MFA_Users {
 		}
 
 		// Only show on the main users list table
-		$screen = \get_current_screen();
+		$screen = get_current_screen();
 		if ( ! $screen || 'users' !== $screen->id ) {
 			return;
 		}
 
-
-		$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
+		$skipped_user_ids = get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
 		if ( ! is_array( $skipped_user_ids ) ) {
 			$skipped_user_ids = [];
 		}
@@ -43,7 +42,6 @@ class Highlight_MFA_Users {
 
 		$mfa_disabled_count = 0;
 		foreach ( $user_ids as $user_id ) {
-			// Use the reliable check from the Two Factor plugin
 			if ( ! \Two_Factor_Core::is_user_using_two_factor( $user_id ) ) {
 				$mfa_disabled_count++;
 			}
@@ -55,29 +53,37 @@ class Highlight_MFA_Users {
 
 			if ( $is_filtered ) {
 				// Display notice for when the list IS filtered
-				$show_all_url = \remove_query_arg( 'filter_mfa_disabled', \admin_url( 'users.php' ) );
+				$show_all_url = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 				printf(
-					'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Using notice-info for filtered view
-					\esc_html__( 'Showing administrators without MFA enabled.', 'wpvip' ),
-					\esc_url( $show_all_url ),
-					\esc_html__( 'Show all users.', 'wpvip' )
-				);
-			} else {
-				// Display the original notice when the list is NOT filtered
-				$filter_url = \add_query_arg( 'filter_mfa_disabled', '1', \admin_url( 'users.php' ) );
-				printf(
-					'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
+					'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
 					sprintf(
-						\_n(
-							'There is %d administrator with MFA disabled.',
-							'There are %d administrators with MFA disabled.',
+						_n(
+							'Showing %d user without MFA enabled.',
+							'Showing %d users without MFA enabled.',
 							$mfa_disabled_count,
 							'wpvip'
 						),
-						\number_format_i18n( $mfa_disabled_count )
+						number_format_i18n( $mfa_disabled_count )
 					),
-					\esc_url( $filter_url ),
-					\esc_html__( 'Filter list to show these users.', 'wpvip' )
+					esc_url( $show_all_url ),
+					esc_html__( 'Show all users.', 'wpvip' )
+				);
+			} else {
+				// Display the original notice when the list is NOT filtered
+				$filter_url = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
+				printf(
+					'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
+					sprintf(
+						_n(
+							'There is %d user with MFA disabled.',
+							'There are %d users with MFA disabled.',
+							$mfa_disabled_count,
+							'wpvip'
+						),
+						number_format_i18n( $mfa_disabled_count )
+					),
+					esc_url( $filter_url ),
+					esc_html__( 'Filter list to show these users.', 'wpvip' )
 				);
 			}
 		}
@@ -89,7 +95,7 @@ class Highlight_MFA_Users {
 		*/
 	public static function filter_users_by_mfa_status( $query ) {
 		global $pagenow;
-		if ( \is_admin() && 'users.php' === $pagenow && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
+		if ( is_admin() && 'users.php' === $pagenow && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
 			
 			// Ensure we don't break other meta queries
 			$meta_query = $query->get( 'meta_query' );
