@@ -26,11 +26,6 @@
             </errorLevel>
         </PossiblyUnusedParam>
     </issueHandlers>
-    <stubs>
-        <file name="vendor/php-stubs/wordpress-stubs/wordpress-stubs.php"/>
-        <file name="vendor/wildwolf/wordpress-test-library-stubs/wordpress-test-library-stubs.php"/>
-        <file name="wordpress.stubs"/>
-    </stubs>
     <plugins>
         <pluginClass class="Psalm\PhpUnitPlugin\Plugin"/>
     </plugins>
