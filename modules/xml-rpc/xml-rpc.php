@@ -2,7 +2,7 @@
 namespace Automattic\VIP\Security\XmlRpc;
 
 class Xml_Rpc {
-	private static $disabled;
+	private static $mode = 'DISABLE';
 
 	public static function init() {
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
@@ -13,10 +13,19 @@ class Xml_Rpc {
 		$configs        = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
 		$module_configs = $configs[ 'module_configs' ] ?? [];
 		$xmlrpc_configs = $module_configs['xml-rpc'] ?? [];
-		self::$disabled = $xmlrpc_configs['disabled'] ?? false;
+		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'DISABLE' );
 
-		if ( self::$disabled ) {
-			self::disable_xml_rpc();
+		switch ( self::$mode ) {
+			case 'RESTRICT':
+				// Restrict XML-RPC to only allow Application Passwords.
+				self::restrict_xmlrpc();
+				break;
+
+			case 'DISABLE':
+			default:
+				// Completely disable XML-RPC.
+				self::disable_xml_rpc();
+				break;
 		}
 	}
 
@@ -46,6 +55,29 @@ class Xml_Rpc {
 			header('HTTP/1.1 403 Forbidden');
 			exit('Access to XML-RPC is disabled on this site.');
 		});
+	}
+
+	/**
+	 * Restrict XML-RPC
+	 */
+	public static function restrict_xmlrpc() {
+		// Only act during XML-RPC requests.
+		if ( self::is_xmlrpc_request() ) {
+			// Remove the filters responsible for username/password and email/password authentication.
+			// Priority 20 must match the priority used when they were added.
+			// See https://github.com/WordPress/WordPress/blob/master/wp-includes/default-filters.php#L500-L503
+			remove_filter( 'authenticate', 'wp_authenticate_username_password', 20 );
+			remove_filter( 'authenticate', 'wp_authenticate_email_password', 20 );
+		}
+	}
+
+	/**
+	 * Check if the current request is an XML-RPC request.
+	 *
+	 * @return bool True if the request is an XML-RPC request, false otherwise.
+	 */
+	private static function is_xmlrpc_request() {
+		return defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST;
 	}
 }
 
