@@ -34,8 +34,10 @@ if ( $is_local_env ) {
 		define( 'VIP_GO_APP_ID', 101 );
 	}
 
-	define( 'VIP_CONFIG_API_URL', vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) ) );
+	$vip_config_api_url = vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) );
+	define( 'VIP_CONFIG_API_URL', ! empty( $vip_config_api_url ) ? $vip_config_api_url : 'http://vip_go_api_app:2999/v1/vip-integrations/frontend' );
 
+    error_log( 'VIP_CONFIG_API_URL: ' . VIP_CONFIG_API_URL );
     /**
      * Register and activate the integration.
      */
@@ -53,3 +55,4 @@ if ( $is_local_env ) {
 
 // Load the modules
 require_once __DIR__ . '/class-loader.php';
+
