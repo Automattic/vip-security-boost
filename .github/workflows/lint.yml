@@ -33,4 +33,4 @@ jobs:
         run: echo "::add-matcher::$(pwd)/.github/checkstyle-problem-matcher.json"
 
       - name: Run style check
-        run: composer phpcs -- --report=checkstyle
+        run: composer lint
