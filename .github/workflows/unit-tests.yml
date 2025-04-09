@@ -21,11 +21,6 @@ jobs:
           php_version: "8.2"
           dev: "no"
 
-      - name: Install two-factor-provider-webauth Composer Dependencies
-        uses: ramsey/composer-install@a2636af0004d1c0499ffca16ac0b4cc94df70565 # 3.1.0
-        with:
-          working-directory: plugins/two-factor-provider-webauthn
-
       - name: "Run tests"
         run: |
           composer test
