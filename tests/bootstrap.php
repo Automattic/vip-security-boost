@@ -68,18 +68,17 @@ function _disable_core_legacy_widget_registration() {
 }
 
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
-tests_add_filter( 'muplugins_loaded', 'wpcom_enable_two_factor_plugin' );
 tests_add_filter( 'muplugins_loaded', '_remove_init_hook_for_cache_manager' );
 tests_add_filter( 'muplugins_loaded', '_disable_core_legacy_widget_registration' );
 
 // Disable calls to wordpress.org to get translations
-tests_add_filter( 'translations_api', function ( $res ) {
+function _vip_tests_disable_translations_api( $res ) {
 	if ( false === $res ) {
 		$res = [ 'translations' => [] ];
 	}
-
 	return $res;
-} );
+}
+tests_add_filter( 'translations_api', '_vip_tests_disable_translations_api' );
 
 
 require $_tests_dir . '/includes/bootstrap.php';
