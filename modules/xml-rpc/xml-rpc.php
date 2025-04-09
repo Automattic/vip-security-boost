@@ -16,15 +16,15 @@ class Xml_Rpc {
 		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'DISABLE' );
 
 		switch ( self::$mode ) {
-			case 'RESTRICT':
-				// Restrict XML-RPC to only allow Application Passwords.
-				self::restrict_xmlrpc();
-				break;
-
 			case 'DISABLE':
-			default:
 				// Completely disable XML-RPC.
 				self::disable_xml_rpc();
+				break;
+
+			case 'RESTRICT':
+			default:
+				// Restrict XML-RPC to only allow Application Passwords.
+				self::restrict_xmlrpc();
 				break;
 		}
 	}
