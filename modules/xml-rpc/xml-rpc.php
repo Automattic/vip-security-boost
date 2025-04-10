@@ -6,7 +6,8 @@ class Xml_Rpc {
 
 	public static function init() {
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			error_log( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
+			trigger_error( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
 			return;
 		}
 
@@ -17,7 +18,6 @@ class Xml_Rpc {
 
 		if ( vip_is_jetpack_request() ) {
 			// Jetpack is allowed to use XML-RPC.
-			error_log( 'Allowing Jetpack to use XML-RPC' );
 			return;
 		}
 
@@ -60,6 +60,7 @@ class Xml_Rpc {
 		add_filter('wp_xmlrpc_server_class', function( $class ) {
 			header('HTTP/1.1 403 Forbidden');
 			exit('Access to XML-RPC is disabled on this site.');
+			return $class;
 		});
 	}
 
