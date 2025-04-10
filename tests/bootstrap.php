@@ -43,7 +43,9 @@ function _manually_load_plugin() {
 
 	require_once __DIR__ . '/../mu-plugins/wp-cli.php';
 
-	require_once __DIR__ . '/../mu-plugins/client-mu-plugins.php';
+	require_once __DIR__ . '/../mu-plugins/z-client-mu-plugins.php';
+
+	require_once __DIR__ . '/../client-mu-plugins/plugin-loader.php';
 
 }
 
