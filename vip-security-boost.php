@@ -19,7 +19,8 @@ require_once __DIR__ . '/class-integration.php';
 use Automattic\VIP\Integrations\IntegrationsSingleton;
 use Automattic\VIP\Security\Integration;
 
-use function Automattic\VIP\Security\Utils\load_integration_configs;
+use function Automattic\VIP\Security\Utils\load_integration_configs_from_headers;
+use function Automattic\VIP\Security\Utils\load_integration_configs_from_url;
 
 /**
  * Local environment specific configurations.
@@ -34,8 +35,6 @@ if ( $is_local_env ) {
 		define( 'VIP_GO_APP_ID', 101 );
 	}
     
-    define( 'VIP_CONFIG_API_URL', vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) ) );
-	
     /**
      * Register and activate the integration.
      */
@@ -44,8 +43,14 @@ if ( $is_local_env ) {
     IntegrationsSingleton::instance()->register( $integration );
     IntegrationsSingleton::instance()->activate_platform_integrations();
 
-    // Load the integration configurations from the CONFIG API
-    load_integration_configs();
+    // Check headers for integration test configs
+    if ( isset( $_SERVER['HTTP_X_INTEGRATION_TEST'] ) ) {
+        // Load the integration configurations from the headers
+        load_integration_configs_from_headers();
+    } else {
+        // Load the integration configurations from the CONFIG API
+        load_integration_configs_from_url();
+    }
 
     // Load the integration
     $integration->load();
