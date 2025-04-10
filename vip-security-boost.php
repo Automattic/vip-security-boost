@@ -33,9 +33,9 @@ if ( $is_local_env ) {
 	if ( ! defined( 'VIP_GO_APP_ID' ) || ! constant( 'VIP_GO_APP_ID' ) ) {
 		define( 'VIP_GO_APP_ID', 101 );
 	}
-
-	define( 'VIP_CONFIG_API_URL', vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) ) );
-
+    
+    define( 'VIP_CONFIG_API_URL', vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) ) );
+	
     /**
      * Register and activate the integration.
      */
@@ -53,3 +53,4 @@ if ( $is_local_env ) {
 
 // Load the modules
 require_once __DIR__ . '/class-loader.php';
+

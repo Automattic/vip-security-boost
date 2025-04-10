@@ -33,7 +33,8 @@ class Highlight_MFA_Users {
 		$args = [
 			'role'    => 'administrator',
 			'fields'  => 'ID',
-			'exclude' => array_merge( $skipped_user_ids, [1] ), // Exclude skipped users AND user ID 1
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
+			'exclude' => array_merge( $skipped_user_ids, [1] ),
 			'number'  => -1, // Get all relevant users
 		];
 		$user_query = new \WP_User_Query( $args );
@@ -48,6 +49,7 @@ class Highlight_MFA_Users {
 
 		if ( $mfa_disabled_count > 0 ) {
 			// Check if the filter is currently active
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
 			$is_filtered = isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'];
 
 			if ( $is_filtered ) {
@@ -55,7 +57,7 @@ class Highlight_MFA_Users {
 				$show_all_url = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 				printf(
 					'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
-					sprintf(
+					esc_html( sprintf(
 						_n(
 							'Showing %d user without MFA enabled.',
 							'Showing %d users without MFA enabled.',
@@ -63,7 +65,7 @@ class Highlight_MFA_Users {
 							'wpvip'
 						),
 						number_format_i18n( $mfa_disabled_count )
-					),
+					) ),
 					esc_url( $show_all_url ),
 					esc_html__( 'Show all users.', 'wpvip' )
 				);
@@ -72,7 +74,7 @@ class Highlight_MFA_Users {
 				$filter_url = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 				printf(
 					'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
-					sprintf(
+					esc_html( sprintf(
 						_n(
 							'There is %d user with MFA disabled.',
 							'There are %d users with MFA disabled.',
@@ -80,7 +82,7 @@ class Highlight_MFA_Users {
 							'wpvip'
 						),
 						number_format_i18n( $mfa_disabled_count )
-					),
+					) ),
 					esc_url( $filter_url ),
 					esc_html__( 'Filter list to show these users.', 'wpvip' )
 				);
@@ -94,8 +96,8 @@ class Highlight_MFA_Users {
 		*/
 	public static function filter_users_by_mfa_status( $query ) {
 		global $pagenow;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
 		if ( is_admin() && 'users.php' === $pagenow && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
-			
 			// Ensure we don't break other meta queries
 			$meta_query = $query->get( 'meta_query' );
 			if ( ! is_array( $meta_query ) ) {
