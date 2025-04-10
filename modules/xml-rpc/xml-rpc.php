@@ -15,6 +15,12 @@ class Xml_Rpc {
 		$xmlrpc_configs = $module_configs['xml-rpc'] ?? [];
 		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'DISABLE' );
 
+		if ( vip_is_jetpack_request() ) {
+			// Jetpack is allowed to use XML-RPC.
+			error_log( 'Allowing Jetpack to use XML-RPC' );
+			return;
+		}
+
 		switch ( self::$mode ) {
 			case 'DISABLE':
 				// Completely disable XML-RPC.
