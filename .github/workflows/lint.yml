@@ -1,13 +1,8 @@
 name: Code Standards Compliance Checks
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+  pull_request:
 
 permissions:
   contents: read
@@ -38,4 +33,4 @@ jobs:
         run: echo "::add-matcher::$(pwd)/.github/checkstyle-problem-matcher.json"
 
       - name: Run style check
-        run: composer phpcs -- --report=checkstyle
+        run: composer lint
