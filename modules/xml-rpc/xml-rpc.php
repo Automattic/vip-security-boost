@@ -4,11 +4,11 @@ namespace Automattic\VIP\Security\XmlRpc;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Xml_Rpc {
-	private static $mode = 'DISABLE';
+	private static $mode = 'RESTRICT';
 
 	public static function init() {
 		$xmlrpc_configs = get_module_configs( 'xml-rpc' );
-		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'DISABLE' );
+		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'RESTRICT' );
 
 		if ( vip_is_jetpack_request() ) {
 			// Jetpack is allowed to use XML-RPC.
