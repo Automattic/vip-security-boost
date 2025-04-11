@@ -1,19 +1,13 @@
 <?php
 namespace Automattic\VIP\Security\XmlRpc;
 
+use function Automattic\VIP\Security\Utils\get_module_configs;
+
 class Xml_Rpc {
 	private static $mode = 'DISABLE';
 
 	public static function init() {
-		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-			trigger_error( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
-			return;
-		}
-
-		$configs        = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
-		$module_configs = $configs[ 'module_configs' ] ?? [];
-		$xmlrpc_configs = $module_configs['xml-rpc'] ?? [];
+		$xmlrpc_configs = get_module_configs( 'xml-rpc' );
 		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'DISABLE' );
 
 		if ( vip_is_jetpack_request() ) {
