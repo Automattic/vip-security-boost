@@ -13,7 +13,6 @@ class Forced_MFA_Users {
 
 	public static function init() {
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			error_log( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
 			return;
 		}
 	
@@ -22,13 +21,12 @@ class Forced_MFA_Users {
 		$forced_mfa_configs    = $module_configs[ 'forced-mfa-users' ] ?? [];
 
 		self::$capability = $forced_mfa_configs['capability'] ?? [];
-    error_log( 'self::$capability: ' . print_r( self::$capability, true ) );
-    add_action( 'set_current_user', [ __CLASS__, 'filter_user_capabilities' ] );
+        add_action( 'set_current_user', [ __CLASS__, 'filter_user_capabilities' ] );
 	}
 
-  /**
-		* Require 2FA based on capabilities set in config
-		*/
+    /**
+    * Require 2FA based on capabilities set in config
+    */
     public static function filter_user_capabilities() {
         $required_capability_or_caps = self::$capability;
 
@@ -50,7 +48,6 @@ class Forced_MFA_Users {
         }
 
         if ( $user_has_required_capability ) {
-            error_log( 'Adding filter for forced MFA' );
             add_filter( 'wpcom_vip_is_two_factor_forced', function() {
                 return true;
             }, PHP_INT_MAX );
