@@ -58,6 +58,7 @@ class Highlight_MFA_Users {
 				printf(
 					'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
 					esc_html( sprintf(
+						/* Translators: %d is the number of users without MFA enabled being shown in the filtered list. */
 						_n(
 							'Showing %d user without MFA enabled.',
 							'Showing %d users without MFA enabled.',
@@ -75,6 +76,7 @@ class Highlight_MFA_Users {
 				printf(
 					'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
 					esc_html( sprintf(
+						/* Translators: %d is the number of users without MFA enabled. */
 						_n(
 							'There is %d user with MFA disabled.',
 							'There are %d users with MFA disabled.',

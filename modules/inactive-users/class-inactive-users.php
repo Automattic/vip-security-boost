@@ -1,8 +1,8 @@
 <?php
 namespace Automattic\VIP\Security\InactiveUsers;
 
-use function Automattic\VIP\Security\Utils\get_module_configs;
 use Automattic\VIP\Utils\Context;
+use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Inactive_Users {
 	private static $mode;
@@ -170,9 +170,9 @@ class Inactive_Users {
 		return $vars;
 	}
 
-	public static function add_last_seen_column_date( $default, $column_name, $user_id ) {
+	public static function add_last_seen_column_date( $default_value, $column_name, $user_id ) {
 		if ( 'last_seen' !== $column_name ) {
-			return $default;
+			return $default_value;
 		}
 
 		$last_seen_timestamp = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
@@ -362,7 +362,7 @@ class Inactive_Users {
 	}
 
 	private static function is_block_action_enabled() {
-		return self::$mode === 'BLOCK';
+		return 'BLOCK' === self::$mode;
 	}
 
 	private static function should_check_user_last_seen( $user_id ) {
