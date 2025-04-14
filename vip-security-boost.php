@@ -14,6 +14,7 @@
  * @package vip-security-boost
  */
 
+require_once __DIR__ . '/utils/configs.php';
 require_once __DIR__ . '/class-integration.php';
 
 use Automattic\VIP\Integrations\IntegrationsSingleton;
