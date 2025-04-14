@@ -40,7 +40,7 @@ class Xml_Rpc {
 		remove_action( 'wp_head', 'rsd_link' );
 
 		// Remove the X-Pingback HTTP header.
-		add_filter( 'wp_headers', function( $headers ) {
+		add_filter( 'wp_headers', function ( $headers ) {
 			if ( isset( $headers['X-Pingback'] ) ) {
 				unset( $headers['X-Pingback'] );
 			}
@@ -51,9 +51,9 @@ class Xml_Rpc {
 		add_filter( 'xmlrpc_methods', '__return_empty_array', PHP_INT_MAX );
 
 		// Disable XML-RPC completely by returning a 403 Forbidden header.
-		add_filter('wp_xmlrpc_server_class', function( $class ) {
-			header('HTTP/1.1 403 Forbidden');
-			exit('Access to XML-RPC is disabled on this site.');
+		add_filter('wp_xmlrpc_server_class', function ( $class ) {
+			header( 'HTTP/1.1 403 Forbidden' );
+			exit( 'Access to XML-RPC is disabled on this site.' );
 			return $class;
 		});
 	}
