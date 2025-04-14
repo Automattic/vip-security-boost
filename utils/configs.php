@@ -21,29 +21,27 @@ function get_module_configs( $module_name ) {
     $configs = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
 
     if ( ! is_array( $configs ) || ! isset( $configs[ 'module_configs' ] ) ) {
-        trigger_error( 'Invalid structure in VIP_SECURITY_BOOST_CONFIGS: \'module_configs\' key not found or constant is not an array.', E_USER_WARNING );
         return [];
     }
+
     $module_configs = $configs[ 'module_configs' ];
+    $current_module_config = [];
 
-    if ( ! is_array( $module_configs ) || ! isset( $module_configs[ $module_name ] ) ) {
-        trigger_error( 'Module configuration not found for module: ' . $module_name, E_USER_NOTICE );
-        return [];
-    }
+    if ( is_array( $module_configs ) && isset( $module_configs[ $module_name ] ) ) {
+        $current_module_config = $module_configs[ $module_name ];
 
-    $current_module_config = $module_configs[ $module_name ];
+        if ( is_string( $current_module_config ) ) {
+            $decoded_config = json_decode( $current_module_config, true );
 
-    if ( is_string( $current_module_config ) ) {
-        $decoded_config = json_decode( $current_module_config, true );
-
-        if ( is_null( $decoded_config ) && json_last_error() !== JSON_ERROR_NONE ) {
-            trigger_error(
-                'Failed to decode JSON configuration for module: ' . $module_name . '. Error (' . json_last_error() . '): ' . json_last_error_msg(),
-                E_USER_WARNING
-            );
-            return [];
+            if ( is_null( $decoded_config ) && json_last_error() !== JSON_ERROR_NONE ) {
+                trigger_error(
+                    'Failed to decode JSON configuration for module: ' . $module_name . '. Error (' . json_last_error() . '): ' . json_last_error_msg(),
+                    E_USER_WARNING
+                );
+                return [];
+            }
+            $current_module_config = $decoded_config;
         }
-        $current_module_config = $decoded_config;
     }
 
     if ( ! is_array( $current_module_config ) ) {
