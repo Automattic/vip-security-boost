@@ -415,6 +415,7 @@ class Inactive_Users {
 			return true;
 		}
 
+		// TODO: Add a list of capabilities to check.
 		foreach ( $elevated_capabilities as $elevated_capability ) {
 			// phpcs:ignore WordPress.WP.Capabilities.Undetermined -- $elevated_capability is defined earlier and contains a valid capability
 			if ( user_can( $user->ID, $elevated_capability ) ) {
