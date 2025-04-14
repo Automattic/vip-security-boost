@@ -25,9 +25,9 @@ class Inactive_Users {
 	public static function init() {
 		$inactive_user_configs = get_module_configs( 'inactive-users' );
 
-		self::$mode                           = $inactive_user_configs[ 'mode' ] ?? 'REPORT';
-		self::$considered_inactive_after_days = $inactive_user_configs[ 'considered_inactive_after_days' ] ?? 90;
-		self::$release_date = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
+		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
+		self::$considered_inactive_after_days = $inactive_user_configs['considered_inactive_after_days'] ?? 90;
+		self::$release_date                   = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 
 		// Use a global cache group since users are shared among network sites.
 		wp_cache_add_global_groups( array( self::LAST_SEEN_CACHE_GROUP ) );
@@ -139,32 +139,32 @@ class Inactive_Users {
 	}
 
 	public static function add_last_seen_column_head( $columns ) {
-		$columns[ 'last_seen' ] = __( 'Last seen', 'wpvip' );
+		$columns['last_seen'] = __( 'Last seen', 'wpvip' );
 		return $columns;
 	}
 
 	public static function add_last_seen_sortable_column( $columns ) {
-		$columns[ 'last_seen' ] = 'last_seen';
+		$columns['last_seen'] = 'last_seen';
 
 		return $columns;
 	}
 
 	public static function last_seen_order_by_query_args( $vars ) {
-		if ( isset( $vars[ 'orderby' ] ) && 'last_seen' === $vars[ 'orderby' ] ) {
-			$vars[ 'meta_key' ] = self::LAST_SEEN_META_KEY;
-			$vars[ 'orderby' ]  = 'meta_value_num';
+		if ( isset( $vars['orderby'] ) && 'last_seen' === $vars['orderby'] ) {
+			$vars['meta_key'] = self::LAST_SEEN_META_KEY;
+			$vars['orderby']  = 'meta_value_num';
 		}
 
 		return $vars;
 	}
 
 	public static function last_seen_blocked_users_filter_query_args( $vars ) {
-		if ( isset( $_GET[ 'last_seen_filter' ] ) && 'blocked' === $_GET[ 'last_seen_filter' ] && isset( $_GET[ 'last_seen_filter_nonce' ] ) && wp_verify_nonce( sanitize_text_field( $_GET[ 'last_seen_filter_nonce' ] ), 'last_seen_filter' ) ) {
-			$vars[ 'meta_key' ] = self::LAST_SEEN_META_KEY;
+		if ( isset( $_GET['last_seen_filter'] ) && 'blocked' === $_GET['last_seen_filter'] && isset( $_GET['last_seen_filter_nonce'] ) && wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' ) ) {
+			$vars['meta_key'] = self::LAST_SEEN_META_KEY;
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-			$vars[ 'meta_value' ]   = self::get_inactivity_timestamp();
-			$vars[ 'meta_type' ]    = 'NUMERIC';
-			$vars[ 'meta_compare' ] = '<';
+			$vars['meta_value']   = self::get_inactivity_timestamp();
+			$vars['meta_type']    = 'NUMERIC';
+			$vars['meta_compare'] = '<';
 		}
 
 		return $vars;
@@ -221,7 +221,7 @@ class Inactive_Users {
 			),
 		);
 
-		$views[ 'blocked_users' ] = __( 'Blocked Users', 'wpvip' );
+		$views['blocked_users'] = __( 'Blocked Users', 'wpvip' );
 
 		if ( ! $users_query->get_results() ) {
 			return $views;
@@ -233,11 +233,11 @@ class Inactive_Users {
 		) );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$class = isset( $_GET[ 'last_seen_filter' ] ) ? 'current' : '';
+		$class = isset( $_GET['last_seen_filter'] ) ? 'current' : '';
 
-		$view = '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $views[ 'blocked_users' ] ) . '</a>';
+		$view = '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $views['blocked_users'] ) . '</a>';
 
-		$views[ 'blocked_users' ] = $view;
+		$views['blocked_users'] = $view;
 
 		return $views;
 	}
@@ -245,7 +245,7 @@ class Inactive_Users {
 	public static function last_seen_unblock_action() {
 		$admin_notices_hook_name = is_network_admin() ? 'network_admin_notices' : 'admin_notices';
 
-		if ( isset( $_GET[ 'reset_last_seen_success' ] ) && '1' === $_GET[ 'reset_last_seen_success' ] ) {
+		if ( isset( $_GET['reset_last_seen_success'] ) && '1' === $_GET['reset_last_seen_success'] ) {
 			add_action( $admin_notices_hook_name, function () {
 				$class = 'notice notice-success is-dismissible';
 				$error = __( 'User unblocked.', 'wpvip' );
@@ -254,14 +254,14 @@ class Inactive_Users {
 			} );
 		}
 
-		if ( ! isset( $_GET[ 'user_id' ], $_GET[ 'action' ] ) || 'reset_last_seen' !== $_GET[ 'action' ] ) {
+		if ( ! isset( $_GET['user_id'], $_GET['action'] ) || 'reset_last_seen' !== $_GET['action'] ) {
 			return;
 		}
 
-		$user_id = absint( $_GET[ 'user_id' ] );
+		$user_id = absint( $_GET['user_id'] );
 
 		$error = null;
-		if ( ! isset( $_GET[ 'reset_last_seen_nonce' ] ) || ! wp_verify_nonce( sanitize_text_field( $_GET[ 'reset_last_seen_nonce' ] ), 'reset_last_seen_action' ) ) {
+		if ( ! isset( $_GET['reset_last_seen_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( $_GET['reset_last_seen_nonce'] ), 'reset_last_seen_action' ) ) {
 			$error = __( 'Unable to verify your request', 'wpvip' );
 		}
 
