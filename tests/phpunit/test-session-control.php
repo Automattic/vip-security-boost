@@ -2,13 +2,13 @@
 
 use Automattic\VIP\Security\SessionControl\Session_Control;
 
+use PHPUnit\Framework\Error\Warning;
 
 class SessionControlTest extends WP_UnitTestCase {
 	private $user_id;
 
 	public function setUp(): void {
 		parent::setUp();
-
 		// Create a test user
 		$this->user_id = self::factory()->user->create([
 			'role' => 'editor',
@@ -85,13 +85,9 @@ class SessionControlTest extends WP_UnitTestCase {
 		// Test with "remember me" - should be modified to our custom value
 		$result = Session_Control::set_auth_cookie_expiration( $default_remember_expiration, $this->user_id, true );
 
-		// The result should be approximately the current time plus the number of days in seconds
-		// We'll allow a small margin of error (5 seconds) for test execution time
-		$expected_min = time() + ( $test_days * DAY_IN_SECONDS ) - 5;
-		$expected_max = time() + ( $test_days * DAY_IN_SECONDS ) + 5;
+		$expected = $test_days * DAY_IN_SECONDS;
 
-		$this->assertGreaterThanOrEqual( $expected_min, $result, 'Custom expiration should be applied when "remember me" is checked' );
-		$this->assertLessThanOrEqual( $expected_max, $result, 'Custom expiration should be applied when "remember me" is checked' );
+		$this->assertEquals( $expected, $result, 'Custom expiration should be applied when "remember me" is checked' );
 	}
 
 
@@ -152,10 +148,9 @@ class SessionControlTest extends WP_UnitTestCase {
 
 	/**
 	 * Helper method to validate that invalid expiration days are handled correctly
-	 * @runInSeparateProcess
-	 * @preserveGlobalState disabled
 	 */
 	private function validate_invalid_expiration_days() {
+		$this->expectException( Warning::class );
 		// Initialize the module
 		Session_Control::init();
 
