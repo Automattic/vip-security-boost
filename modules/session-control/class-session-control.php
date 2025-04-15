@@ -2,6 +2,7 @@
 
 namespace Automattic\VIP\Security\SessionControl;
 
+use function Automattic\VIP\Security\Utils\get_module_configs;
 /**
  * Session Control module for VIP Security Boost
  *
@@ -29,9 +30,7 @@ class Session_Control {
 			return;
 		}
 
-		$configs               = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
-		$module_configs        = $configs['module_configs'] ?? array();
-		$session_configs       = $module_configs['session-control'] ?? array();
+		$session_configs       = get_module_configs( 'session-control' );
 		$expiration_days_value = $session_configs['expiration_days'] ?? self::DEFAULT_VALUE;
 
 		// Only apply if a valid expiration time is set
@@ -39,15 +38,15 @@ class Session_Control {
 			// Validate the expiration days value (must be between 1 and 13)
 			// check if it's valid int
 			if ( ! is_numeric( $expiration_days_value ) ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-				trigger_error( 'Invalid session expiration days. Must be an integer. Reverting to default.' );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Invalid session expiration days. Must be an integer. Reverting to default.' );
 				return;
 			}
 			$expiration_days = intval( $expiration_days_value );
 
 			if ( $expiration_days < 1 || $expiration_days > 13 ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-				trigger_error( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.' );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.' );
 				return;
 			}
 			self::$expiration_days = $expiration_days;
