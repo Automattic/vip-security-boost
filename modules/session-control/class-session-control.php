@@ -52,7 +52,7 @@ class Session_Control {
 			}
 			self::$expiration_days = $expiration_days;
 			// Add filters to modify session expiration time
-			add_filter( 'auth_cookie_expiration', array( __CLASS__, 'set_auth_cookie_expiration' ), 99, 3 );
+			add_filter( 'auth_cookie_expiration', array( __CLASS__, 'set_auth_cookie_expiration' ), PHP_INT_MAX, 3 );
 		}
 	}
 
