@@ -38,20 +38,20 @@ class Session_Control {
 			// Validate the expiration days value (must be between 1 and 13)
 			// check if it's valid int
 			if ( ! is_numeric( $expiration_days_value ) ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( 'Invalid session expiration days. Must be an integer. Reverting to default.' );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
+				trigger_error( 'Invalid session expiration days. Must be an integer. Reverting to default.', E_USER_WARNING );
 				return;
 			}
 			$expiration_days = intval( $expiration_days_value );
 
 			if ( $expiration_days < 1 || $expiration_days > 13 ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.' );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
+				trigger_error( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.', E_USER_WARNING );
 				return;
 			}
 			self::$expiration_days = $expiration_days;
 			// Add filters to modify session expiration time
-			add_filter( 'auth_cookie_expiration', array( __CLASS__, 'set_auth_cookie_expiration' ), PHP_INT_MAX, 3 );
+			add_filter( 'auth_cookie_expiration', array( __CLASS__, 'set_auth_cookie_expiration' ), 99, 3 );
 		}
 	}
 
@@ -69,9 +69,8 @@ class Session_Control {
 		if ( $remember && self::DEFAULT_VALUE !== self::$expiration_days ) {
 			// Convert days to seconds
 			$days_in_seconds = self::$expiration_days * DAY_IN_SECONDS;
-
 			// Set the expiration time based on our configuration
-			return time() + $days_in_seconds;
+			return $days_in_seconds;
 		}
 
 		// Return the default expiration if "Remember Me" is not checked
