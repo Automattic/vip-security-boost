@@ -10,6 +10,7 @@ if ( ! $_tests_dir ) {
 	$_tests_dir = '/tmp/wordpress-tests-lib';
 }
 
+// phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 require_once $_tests_dir . '/includes/functions.php';
 
 require_once __DIR__ . '/../mu-plugins/000-pre-vip-config/requires.php';
@@ -81,4 +82,5 @@ function _vip_tests_disable_translations_api( $res ) {
 tests_add_filter( 'translations_api', '_vip_tests_disable_translations_api' );
 
 
+// phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 require $_tests_dir . '/includes/bootstrap.php';
