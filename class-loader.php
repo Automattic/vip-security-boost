@@ -20,9 +20,11 @@ class Loader {
 			$load_path = __DIR__ . '/modules/' . $module . '/' . $module . '.php';
 
 			if ( file_exists( $load_path ) ) {
+				// phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 				require_once $load_path;
 			} else {
-				trigger_error( 'Module not found: ' . $module, E_USER_WARNING );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
+				trigger_error( 'Module not found: ' . esc_html( $module ), E_USER_WARNING );
 			}
 		}
 	}
