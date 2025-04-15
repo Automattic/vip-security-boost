@@ -1,6 +1,7 @@
 <?php
 namespace Automattic\VIP\Security\InactiveUsers;
 
+use function Automattic\VIP\Security\Utils\get_module_configs;
 use Automattic\VIP\Utils\Context;
 
 class Inactive_Users {
@@ -22,13 +23,7 @@ class Inactive_Users {
 	private $application_password_authentication_error;
 	
 	public static function init() {
-		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			return;
-		}
-	
-		$configs               = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
-		$module_configs        = $configs[ 'module_configs' ] ?? [];
-		$inactive_user_configs = $module_configs[ 'inactive-users' ] ?? [];
+		$inactive_user_configs = get_module_configs( 'inactive-users' );
 
 		self::$mode                           = $inactive_user_configs[ 'mode' ] ?? 'REPORT';
 		self::$considered_inactive_after_days = $inactive_user_configs[ 'considered_inactive_after_days' ] ?? 90;
