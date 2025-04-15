@@ -16,7 +16,7 @@
 	},
 	"autoload-dev": {
 		"classmap": [
-			"modules/"
+			"./modules/"
 		]
 	},
 	"config": {

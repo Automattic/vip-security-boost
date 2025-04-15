@@ -1,20 +1,14 @@
 <?php
 namespace Automattic\VIP\Security\XmlRpc;
 
+use function Automattic\VIP\Security\Utils\get_module_configs;
+
 class Xml_Rpc {
-	private static $mode = 'DISABLE';
+	private static $mode = 'RESTRICT';
 
 	public static function init() {
-		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-			trigger_error( 'VIP_SECURITY_BOOST_CONFIGS not defined' );
-			return;
-		}
-
-		$configs        = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
-		$module_configs = $configs[ 'module_configs' ] ?? [];
-		$xmlrpc_configs = $module_configs['xml-rpc'] ?? [];
-		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'DISABLE' );
+		$xmlrpc_configs = get_module_configs( 'xml-rpc' );
+		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'RESTRICT' );
 
 		if ( vip_is_jetpack_request() ) {
 			// Jetpack is allowed to use XML-RPC.
@@ -42,11 +36,11 @@ class Xml_Rpc {
 		// Disable XML-RPC methods that require authentication.
 		add_filter( 'xmlrpc_enabled', '__return_false', PHP_INT_MAX );
 
-		// Remove the “Really Simple Discovery” link from the header.
+		// Remove the "Really Simple Discovery" link from the header.
 		remove_action( 'wp_head', 'rsd_link' );
 
 		// Remove the X-Pingback HTTP header.
-		add_filter( 'wp_headers', function( $headers ) {
+		add_filter( 'wp_headers', function ( $headers ) {
 			if ( isset( $headers['X-Pingback'] ) ) {
 				unset( $headers['X-Pingback'] );
 			}
@@ -56,11 +50,11 @@ class Xml_Rpc {
 		// Return an empty array for all XML-RPC methods.
 		add_filter( 'xmlrpc_methods', '__return_empty_array', PHP_INT_MAX );
 
-		// Disable XML-RPC completely by returning a 403 Forbidden header.
-		add_filter('wp_xmlrpc_server_class', function( $class ) {
-			header('HTTP/1.1 403 Forbidden');
-			exit('Access to XML-RPC is disabled on this site.');
-			return $class;
+		// TODO: Figure how to disable XML-RPC without returning a value.
+		add_filter('wp_xmlrpc_server_class', function ( $server_class ) {
+			exit( 'Access to XML-RPC is disabled on this site.' );
+			// phpcs:ignore Squiz.PHP.NonExecutableCode.Unreachable
+			return $server_class;
 		});
 	}
 
