@@ -6,22 +6,10 @@ use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
 
 class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function tearDown(): void {
-		// No need to handle the constant definition due to @runInSeparateProcess
-
 		// Remove actions/filters added by the class
 		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] );
-		// Ensure the filter removal uses the correct callback reference if it wasn't __return_true
-		// It seems the original code adds an anonymous function, which is harder to remove directly.
-		// Let's re-check the original code... Yes, it adds an anonymous function.
-		// Removing filters added with closures isn't straightforward without more complex hook inspection/management.
-		// For isolated testing via filter_user_capabilities directly, it might be okay,
-		// but if testing the hook triggering, this could be an issue.
-		// Let's assume direct calls to filter_user_capabilities are sufficient for now.
-		// remove_filter( 'wpcom_vip_is_two_factor_forced', '__return_true', PHP_INT_MAX ); // This won't remove the closure
-
 
 		// Reset the static capability property using reflection
-		// Check if class exists before using Reflection, useful for the 'config_not_defined' test path
 		if ( class_exists( Forced_MFA_Users::class ) ) {
 			try {
 				$reflection = new ReflectionClass( Forced_MFA_Users::class );
@@ -30,9 +18,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 					$capability_prop->setAccessible( true );
 					$capability_prop->setValue( null, null ); // Reset to initial state
 				}
-			} catch ( ReflectionException $e ) {
-				// Handle case where class might exist but reflection fails (unlikely here)
-			}
+			} catch ( ReflectionException $e ) { }
 		}
 
 		// Reset current user
@@ -40,16 +26,12 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		parent::tearDown();
 	}
 
-	// Removed define_test_configs helper
-
 	/**
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
 	public function test_init_adds_action_when_config_defined() {
 		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] ) );
-
-		// Define config directly for this process
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
@@ -77,8 +59,6 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * Assumes the calling test method has already set up the constant and called init().
 	 */
 	private function setup_user_and_filter( $user_role_or_caps ) {
-		// Constant and init() should be handled by the calling test method
-
 		$user_id = self::factory()->user->create( [ 'role' => is_string( $user_role_or_caps) ? $user_role_or_caps : 'subscriber' ] );
 		if ( is_array( $user_role_or_caps ) ) {
 			$user = get_user_by( 'id', $user_id );
@@ -104,7 +84,6 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @preserveGlobalState disabled
 	 */
 	public function test_filter_user_capabilities_no_capability_set() {
-		// Define config directly for this process
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'capability' => [] ], // Empty capability config
