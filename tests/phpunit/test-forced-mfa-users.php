@@ -1,7 +1,5 @@
 <?php
 
-require_once dirname( __DIR__ ) . '/modules/forced-mfa-users/class-forced-mfa-users.php';
-
 use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
 
 class Test_Forced_MFA_Users extends WP_UnitTestCase {
