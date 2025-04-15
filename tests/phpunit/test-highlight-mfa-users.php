@@ -13,6 +13,7 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 use Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users;
 use WP_User_Query;
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {
 	private $admin_user_mfa_enabled_id;
 	private $admin_user_mfa_disabled_id;
@@ -26,6 +27,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		Two_Factor_Core::$mock_enabled_user_ids = [];
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Storing original state for test manipulation.
 		$this->original_get            = $_GET;
 		$this->original_current_screen = $GLOBALS['current_screen'] ?? null;
 
@@ -111,7 +113,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertIsArray( $meta_query );
 		$mfa_meta_clause_found = false;
 		foreach ( $meta_query as $clause ) {
-			if ( isset( $clause['relation'] ) && $clause['relation'] === 'OR' && count( $clause ) === 4 ) { // 3 conditions + relation key
+			if ( isset( $clause['relation'] ) && 'OR' === $clause['relation'] && count( $clause ) === 4 ) { // 3 conditions + relation key
 				$mfa_meta_clause_found = true;
 				break;
 			}
@@ -193,6 +195,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
 			sprintf(
+				// translators: %d: Number of users.
 				_n(
 					'There is %d user with MFA disabled.',
 					'There are %d users with MFA disabled.',
@@ -228,6 +231,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$expected_output = sprintf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Notice class is notice-info when filtered
 			sprintf(
+				// translators: %d: Number of users.
 				_n(
 					'Showing %d user without MFA enabled.',
 					'Showing %d users without MFA enabled.',
