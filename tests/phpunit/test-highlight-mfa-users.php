@@ -49,6 +49,10 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 			'role' => 'editor',
 		]);
 
+		$this->subscriber_user_id = $this->factory()->user->create([
+			'role' => 'subscriber',
+		]);
+
 		// Set skipped users option
 		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
 
@@ -105,9 +109,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$query = new \WP_User_Query();
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
-		$meta_query    = $query->get( 'meta_query' );
-		$role_query    = $query->get( 'role__in' );
-		$exclude_query = $query->get( 'exclude' );
+		$meta_query       = $query->get( 'meta_query' );
+		$capability_query = $query->get( 'capability' );
+		$exclude_query    = $query->get( 'exclude' );
 
 		
 		$this->assertIsArray( $meta_query );
@@ -121,7 +125,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( $mfa_meta_clause_found, 'MFA status meta query clause not found.' );
 
 
-		$this->assertEquals( [ 'administrator' ], $role_query );
+		$this->assertEquals( 'edit_posts', $capability_query );
 
 		$this->assertIsArray( $exclude_query );
 		$this->assertContains( $this->admin_user_mfa_skipped_id, $exclude_query );
@@ -136,16 +140,16 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		unset( $_GET['filter_mfa_disabled'] );
 
-		$query                  = new \WP_User_Query();
-		$original_meta_query    = $query->get( 'meta_query' );
-		$original_role_query    = $query->get( 'role__in' );
-		$original_exclude_query = $query->get( 'exclude' );
+		$query                     = new \WP_User_Query();
+		$original_meta_query       = $query->get( 'meta_query' );
+		$original_capability_query = $query->get( 'capability' );
+		$original_exclude_query    = $query->get( 'exclude' );
 
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
 		// Assert that the query parameters were not modified
 		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
-		$this->assertEquals( $original_role_query, $query->get( 'role__in' ) );
+		$this->assertEquals( $original_capability_query, $query->get( 'capability' ) );
 		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
 	}
 
@@ -167,16 +171,16 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		}
 		$_GET['filter_mfa_disabled'] = '1'; // Set the param
 
-		$query                  = new \WP_User_Query();
-		$original_meta_query    = $query->get( 'meta_query' );
-		$original_role_query    = $query->get( 'role__in' );
-		$original_exclude_query = $query->get( 'exclude' );
+		$query                     = new \WP_User_Query();
+		$original_meta_query       = $query->get( 'meta_query' );
+		$original_capability_query = $query->get( 'capability' );
+		$original_exclude_query    = $query->get( 'exclude' );
 
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
 		// Assert that the query parameters were not modified
 		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
-		$this->assertEquals( $original_role_query, $query->get( 'role__in' ) );
+		$this->assertEquals( $original_capability_query, $query->get( 'capability' ) );
 		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
 
 		unset( $_GET['filter_mfa_disabled'] );
@@ -187,10 +191,11 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_display_mfa_disabled_notice_shows_when_needed() {
 		$this->set_admin_screen_users();
-		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id)
+		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
 		// The skipped admin ($this->admin_user_mfa_skipped_id) should be ignored by the notice logic.
+		// The subscriber ($this->subscriber_user_id) should not be included in the notice.
 		// The notice logic uses Two_Factor_Core::is_user_using_two_factor which we've mocked.
-		$expected_count  = 1; // Only admin_user_mfa_disabled_id should be counted
+		$expected_count  = 2; // Only admin_user_mfa_disabled_id should be counted
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
@@ -225,8 +230,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 	  
-		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id)
-		$expected_count  = 1;
+		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
+		$expected_count  = 2;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Notice class is notice-info when filtered
@@ -279,11 +284,11 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	/**
 	 * Test that the admin notice is not displayed if all admins have MFA enabled or are skipped.
 	 */
-	public function test_display_mfa_disabled_notice_hides_when_no_disabled_admins() {
+	public function test_display_mfa_disabled_notice_hides_when_no_disabled_users() {
 		$this->set_admin_screen_users();
 		// Temporarily tell the mock that the MFA-disabled user is enabled for this test
 		Two_Factor_Core::$mock_enabled_user_ids[] = $this->admin_user_mfa_disabled_id;
-		
+		Two_Factor_Core::$mock_enabled_user_ids[] = $this->editor_user_id;
 
 		// Expect no output
 		ob_start();
