@@ -18,7 +18,10 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 					$capability_prop->setAccessible( true );
 					$capability_prop->setValue( null, null ); // Reset to initial state
 				}
-			} catch ( ReflectionException $e ) { }
+				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			} catch ( ReflectionException $e ) {
+				
+			}
 		}
 
 		// Reset current user
@@ -59,12 +62,12 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * Assumes the calling test method has already set up the constant and called init().
 	 */
 	private function setup_user_and_filter( $user_role_or_caps ) {
-		$user_id = self::factory()->user->create( [ 'role' => is_string( $user_role_or_caps) ? $user_role_or_caps : 'subscriber' ] );
+		$user_id = self::factory()->user->create( [ 'role' => is_string( $user_role_or_caps ) ? $user_role_or_caps : 'subscriber' ] );
 		if ( is_array( $user_role_or_caps ) ) {
 			$user = get_user_by( 'id', $user_id );
 			if ( $user ) { // Check if user creation was successful
-				foreach( $user_role_or_caps as $cap ) {
-					if ( is_string($cap) && !empty($cap) ) { // Add check for valid caps
+				foreach ( $user_role_or_caps as $cap ) {
+					if ( is_string( $cap ) && ! empty( $cap ) ) { // Add check for valid caps
 						$user->add_cap( $cap );
 					}
 				}
