@@ -17,7 +17,7 @@ class Loader {
 		}
 
 		foreach ( $enabled_modules as $module ) {
-			$load_path = __DIR__ . '/modules/' . $module . '/' . $module . '.php';
+			$load_path = __DIR__ . '/modules/' . $module . '/class-' . $module . '.php';
 
 			if ( file_exists( $load_path ) ) {
 				// phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
