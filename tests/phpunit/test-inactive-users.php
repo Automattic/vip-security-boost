@@ -12,7 +12,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Create a test user with elevated capabilities and an old registration date
 		$this->user_id = $this->factory->user->create([
 			'role'            => 'editor',
-			'user_registered' => date( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
 		
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
@@ -125,7 +125,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Create a new user with a recent registration date
 		$new_user_id = $this->factory->user->create([
 			'role'            => 'editor',
-			'user_registered' => date( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
 		]);
 		
 		$this->assertFalse( Inactive_Users::is_considered_inactive( $new_user_id ) );
