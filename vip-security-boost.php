@@ -1,5 +1,4 @@
-<?php declare(strict_types = 1);
-
+<?php 
 /**
  * Plugin Name: WordPress VIP Security Boost
  * Plugin URI: https://github.com/Automattic/vip-security-boost-integration
@@ -13,6 +12,8 @@
  *
  * @package vip-security-boost
  */
+
+declare(strict_types = 1);
 
 require_once __DIR__ . '/utils/configs.php';
 require_once __DIR__ . '/class-integration.php';
