@@ -18,7 +18,6 @@ function load_integration_configs_from_url() {
 	$response  = vip_safe_wp_remote_get( $endpoint, $api_error, 5, 5, 5, array() );
 
 	if ( is_wp_error( $response ) ) {
-		error_log( 'Error: ' . $response->get_error_message() );
 		return;
 	}
 
@@ -26,8 +25,7 @@ function load_integration_configs_from_url() {
 	$body_raw    = wp_remote_retrieve_body( $response );
 	$body        = json_decode( $body_raw, true );
 
-	if ( $status_code !== 200 || ! is_array( $body ) || ! isset( $body['data'] ) ) {
-		error_log( 'Error: ' . $body_raw );
+	if ( 200 !== $status_code || ! is_array( $body ) || ! isset( $body['data'] ) ) {
 		return;
 	}
 
@@ -37,6 +35,16 @@ function load_integration_configs_from_url() {
 }
 
 function load_integration_configs_from_headers() {
-	$configs = json_decode( base64_decode( $_SERVER['HTTP_X_INTEGRATION_TEST_CONFIGS'] ), true );
-	define( 'VIP_SECURITY_BOOST_CONFIGS', $configs );
+	// Check if the header exists before using it.
+	if ( ! isset( $_SERVER['HTTP_X_INTEGRATION_TEST_CONFIGS'] ) ) {
+		return;
+	}
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	$configs_raw = $_SERVER['HTTP_X_INTEGRATION_TEST_CONFIGS'];
+	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+	$configs = json_decode( base64_decode( $configs_raw ), true );
+
+	if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', $configs );
+	}
 }
