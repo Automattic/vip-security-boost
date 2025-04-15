@@ -14,6 +14,7 @@ namespace Automattic\VIP\Security\Utils;
  */
 function get_module_configs( $module_name ) {
 	if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 		trigger_error( 'VIP_SECURITY_BOOST_CONFIGS is not defined.', E_USER_WARNING );
 		return [];
 	}
@@ -34,8 +35,9 @@ function get_module_configs( $module_name ) {
 			$decoded_config = json_decode( $current_module_config, true );
 
 			if ( is_null( $decoded_config ) && json_last_error() !== JSON_ERROR_NONE ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error(
-					'Failed to decode JSON configuration for module: ' . $module_name . '. Error (' . json_last_error() . '): ' . json_last_error_msg(),
+					'Failed to decode JSON configuration for module: ' . esc_html( $module_name ) . '. Error (' . esc_html( (string) json_last_error() ) . '): ' . esc_html( json_last_error_msg() ),
 					E_USER_WARNING
 				);
 				return [];
@@ -45,8 +47,9 @@ function get_module_configs( $module_name ) {
 	}
 
 	if ( ! is_array( $current_module_config ) ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 		trigger_error(
-			'Module configuration for ' . $module_name . ' resolved to a non-array type after processing. Returning empty array.',
+			'Module configuration for ' . esc_html( $module_name ) . ' resolved to a non-array type after processing. Returning empty array.',
 			E_USER_NOTICE
 		);
 		return [];
