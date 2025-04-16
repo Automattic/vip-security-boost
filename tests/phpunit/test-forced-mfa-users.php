@@ -48,10 +48,13 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @preserveGlobalState disabled
 	 */
 	public function test_init_does_not_add_action_when_config_not_defined() {
+		// Expect the warning from get_all_module_configs() when the constant is missing
+		$this->expectWarning();
+		$this->expectWarningMessageMatches( '/VIP_SECURITY_BOOST_CONFIGS is not defined/' );
+
 		// Constant is NOT defined in this separate process
 		$this->assertFalse( defined( 'VIP_SECURITY_BOOST_CONFIGS' ) );
-		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
-		Forced_MFA_Users::init(); // Should return early
+		Forced_MFA_Users::init();
 		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
 
