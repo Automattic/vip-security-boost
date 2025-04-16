@@ -1,5 +1,6 @@
 <?php
 namespace Automattic\VIP\Security\MFAUsers;
+
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Forced_MFA_Users {
