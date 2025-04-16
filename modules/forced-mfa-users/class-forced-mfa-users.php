@@ -21,35 +21,40 @@ class Forced_MFA_Users {
 		$forced_mfa_configs = $module_configs['forced-mfa-users'] ?? [];
 
 		self::$capability = $forced_mfa_configs['capability'] ?? [];
-		add_action( 'set_current_user', [ __CLASS__, 'filter_user_capabilities' ] );
+		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
 	}
 
 	/**
 	* Require 2FA based on capabilities set in config
 	*/
-	public static function filter_user_capabilities() {
+	public static function maybe_enforce_two_factor() {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
 		$required_capability_or_caps = self::$capability;
 
 		if ( empty( $required_capability_or_caps ) ) {
 			return;
 		}
 
-		$user_has_required_capability = false;
+		if ( is_string( $required_capability_or_caps ) ) {
+			$required_capability_or_caps = [ $required_capability_or_caps ];
+		}
+
+		$user_has_two_factor_enforced = false;
 
 		if ( is_array( $required_capability_or_caps ) ) {
 			foreach ( $required_capability_or_caps as $cap ) {
 				// phpcs:ignore WordPress.WP.Capabilities.Undetermined
 				if ( is_string( $cap ) && ! empty( $cap ) && current_user_can( $cap ) ) {
-					$user_has_required_capability = true;
+					$user_has_two_factor_enforced = true;
 					break;
 				}
 			}
-		} elseif ( is_string( $required_capability_or_caps ) ) {
-			// phpcs:ignore WordPress.WP.Capabilities.Undetermined
-			$user_has_required_capability = current_user_can( $required_capability_or_caps );
 		}
 
-		if ( $user_has_required_capability ) {
+		if ( $user_has_two_factor_enforced ) {
 			add_filter( 'wpcom_vip_is_two_factor_forced', function () {
 				return true;
 			}, PHP_INT_MAX );

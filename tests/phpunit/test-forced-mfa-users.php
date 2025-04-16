@@ -32,7 +32,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @preserveGlobalState disabled
 	 */
 	public function test_init_adds_action_when_config_defined() {
-		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] ) );
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
@@ -40,7 +40,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		] );
 
 		Forced_MFA_Users::init();
-		$this->assertNotFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] ) );
+		$this->assertNotFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
 
 	/**
@@ -50,9 +50,9 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function test_init_does_not_add_action_when_config_not_defined() {
 		// Constant is NOT defined in this separate process
 		$this->assertFalse( defined( 'VIP_SECURITY_BOOST_CONFIGS' ) );
-		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] ) );
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 		Forced_MFA_Users::init(); // Should return early
-		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] ) );
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
 
 	/**
@@ -76,7 +76,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		wp_set_current_user( $user_id );
 
 		// Manually trigger the action hook's callback for testing isolation
-		Forced_MFA_Users::filter_user_capabilities();
+		Forced_MFA_Users::maybe_enforce_two_factor();
 	}
 
 
@@ -84,7 +84,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_no_capability_set() {
+	public function test_maybe_enforce_two_factor_no_capability_set() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'capability' => [] ], // Empty capability config
@@ -100,7 +100,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_single_cap_user_has_cap() {
+	public function test_maybe_enforce_two_factor_single_cap_user_has_cap() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
@@ -116,7 +116,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_single_cap_user_lacks_cap() {
+	public function test_maybe_enforce_two_factor_single_cap_user_lacks_cap() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
@@ -132,7 +132,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_array_cap_user_has_one_cap() {
+	public function test_maybe_enforce_two_factor_array_cap_user_has_one_cap() {
 		$caps = [ 'edit_posts', 'manage_options' ];
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
@@ -149,7 +149,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_array_cap_user_lacks_all_caps() {
+	public function test_maybe_enforce_two_factor_array_cap_user_lacks_all_caps() {
 		$caps = [ 'manage_options', 'promote_users' ];
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
@@ -166,7 +166,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_empty_cap_array() {
+	public function test_maybe_enforce_two_factor_empty_cap_array() {
 		$caps = [];
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
@@ -183,7 +183,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_invalid_cap_types_in_array_user_has_valid_cap() {
+	public function test_maybe_enforce_two_factor_invalid_cap_types_in_array_user_has_valid_cap() {
 		$caps = [ 'edit_posts', null, '', 5 ]; // Mix of valid and invalid
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
@@ -200,7 +200,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_filter_user_capabilities_invalid_cap_types_in_array_only_invalid() {
+	public function test_maybe_enforce_two_factor_invalid_cap_types_in_array_only_invalid() {
 		$caps = [ null, '', 5 ]; // Only invalid types
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
