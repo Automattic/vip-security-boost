@@ -9,7 +9,7 @@ use function Automattic\VIP\Security\Utils\get_module_configs;
  * This module allows controlling the WordPress session time length.
  * Options:
  * - "default": WordPress default behavior (module not active)
- * - 1-13: Number of days the session should last
+ * - 1-13: Number of days the session should last. WordPress default is 14 days, so we're allowing users to choose a number below it.
  */
 class Session_Control {
 
