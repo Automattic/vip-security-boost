@@ -29,9 +29,9 @@ class Highlight_MFA_Users {
 			$skipped_user_ids = [];
 		}
 
-		// Query for administrator user IDs, excluding skipped ones
+		// Query for edit_posts user IDs, excluding skipped ones
 		$args       = [
-			'role'    => 'administrator',
+			'role'    => 'edit_posts',
 			'fields'  => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
 			'exclude' => array_merge( $skipped_user_ids, [ 1 ] ),
@@ -123,7 +123,7 @@ class Highlight_MFA_Users {
 					'compare' => '=',
 				],
 			];
-			$query->set( 'role__in', [ 'administrator' ] );
+			$query->set( 'role__in', [ 'edit_posts' ] );
 			$query->set( 'meta_query', $meta_query );
 
 			// Exclude skipped users AND always exclude User ID 1
