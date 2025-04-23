@@ -29,7 +29,7 @@ class Inactive_Users {
 		self::$release_date                   = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
 		self::$considered_inactive_after_days = $inactive_user_configs['considered_inactive_after_days'] ?? 90;
-		self::$elevated_capabilities          = $inactive_user_configs['elevated_capabilities'] ?? [
+		self::$elevated_capabilities          = $inactive_user_configs['capability'] ?? [
 			'edit_posts',
 			'delete_posts',
 			'publish_posts',
