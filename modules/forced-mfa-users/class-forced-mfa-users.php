@@ -33,20 +33,20 @@ class Forced_MFA_Users {
 			return;
 		}
 
-		$required_capability_or_caps = self::$capabilities;
+		$required_capabilities = self::$capabilities;
 
-		if ( empty( $required_capability_or_caps ) ) {
+		if ( empty( $required_capabilities ) ) {
 			return;
 		}
 
-		if ( is_string( $required_capability_or_caps ) ) {
-			$required_capability_or_caps = [ $required_capability_or_caps ];
+		if ( is_string( $required_capabilities ) ) {
+			$required_capabilities = [ $required_capabilities ];
 		}
 
 		$user_has_two_factor_enforced = false;
 
-		if ( is_array( $required_capability_or_caps ) ) {
-			foreach ( $required_capability_or_caps as $cap ) {
+		if ( is_array( $required_capabilities ) ) {
+			foreach ( $required_capabilities as $cap ) {
 				// phpcs:ignore WordPress.WP.Capabilities.Undetermined
 				if ( is_string( $cap ) && ! empty( $cap ) && current_user_can( $cap ) ) {
 					$user_has_two_factor_enforced = true;
