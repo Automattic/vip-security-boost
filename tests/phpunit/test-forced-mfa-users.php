@@ -11,10 +11,10 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		if ( class_exists( Forced_MFA_Users::class ) ) {
 			try {
 				$reflection = new ReflectionClass( Forced_MFA_Users::class );
-				if ( $reflection->hasProperty( 'capability' ) ) {
-					$capability_prop = $reflection->getProperty( 'capability' );
-					$capability_prop->setAccessible( true );
-					$capability_prop->setValue( null, null ); // Reset to initial state
+				if ( $reflection->hasProperty( 'capabilities' ) ) {
+					$capabilities_prop = $reflection->getProperty( 'capabilities' );
+					$capabilities_prop->setAccessible( true );
+					$capabilities_prop->setValue( null, null ); // Reset to initial state
 				}
 				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
 			} catch ( ReflectionException $e ) {
@@ -35,7 +35,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
+				'forced-mfa-users' => [ 'capabilities' => 'manage_options' ],
 			],
 		] );
 
@@ -90,7 +90,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function test_maybe_enforce_two_factor_no_capability_set() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => [] ], // Empty capability config
+				'forced-mfa-users' => [ 'capabilities' => [] ],
 			],
 		] );
 		Forced_MFA_Users::init(); // Run init to set the static property
@@ -106,7 +106,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function test_maybe_enforce_two_factor_single_cap_user_has_cap() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
+				'forced-mfa-users' => [ 'capabilities' => 'manage_options' ],
 			],
 		] );
 		Forced_MFA_Users::init();
@@ -122,7 +122,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function test_maybe_enforce_two_factor_single_cap_user_lacks_cap() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => 'manage_options' ],
+				'forced-mfa-users' => [ 'capabilities' => 'manage_options' ],
 			],
 		] );
 		Forced_MFA_Users::init();
@@ -139,7 +139,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$caps = [ 'edit_posts', 'manage_options' ];
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => $caps ],
+				'forced-mfa-users' => [ 'capabilities' => $caps ],
 			],
 		] );
 		Forced_MFA_Users::init();
@@ -156,7 +156,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$caps = [ 'manage_options', 'promote_users' ];
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => $caps ],
+				'forced-mfa-users' => [ 'capabilities' => $caps ],
 			],
 		] );
 		Forced_MFA_Users::init();
@@ -173,7 +173,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$caps = [];
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => $caps ],
+				'forced-mfa-users' => [ 'capabilities' => $caps ],
 			],
 		] );
 		Forced_MFA_Users::init();
@@ -190,7 +190,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$caps = [ 'edit_posts', null, '', 5 ]; // Mix of valid and invalid
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => $caps ],
+				'forced-mfa-users' => [ 'capabilities' => $caps ],
 			],
 		] );
 		Forced_MFA_Users::init();
@@ -207,7 +207,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$caps = [ null, '', 5 ]; // Only invalid types
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 'capability' => $caps ],
+				'forced-mfa-users' => [ 'capabilities' => $caps ],
 			],
 		] );
 		Forced_MFA_Users::init();
