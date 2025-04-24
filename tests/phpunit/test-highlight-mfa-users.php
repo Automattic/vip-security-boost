@@ -109,9 +109,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$query = new \WP_User_Query();
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
-		$meta_query       = $query->get( 'meta_query' );
-		$capability_query = $query->get( 'capability' );
-		$exclude_query    = $query->get( 'exclude' );
+		$meta_query          = $query->get( 'meta_query' );
+		$capability_in_query = $query->get( 'capability__in' );
+		$exclude_query       = $query->get( 'exclude' );
 
 		
 		$this->assertIsArray( $meta_query );
@@ -125,7 +125,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( $mfa_meta_clause_found, 'MFA status meta query clause not found.' );
 
 
-		$this->assertEquals( 'edit_posts', $capability_query );
+		$this->assertEquals( [ 'edit_posts' ], $capability_in_query );
 
 		$this->assertIsArray( $exclude_query );
 		$this->assertContains( $this->admin_user_mfa_skipped_id, $exclude_query );
@@ -140,16 +140,16 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		unset( $_GET['filter_mfa_disabled'] );
 
-		$query                     = new \WP_User_Query();
-		$original_meta_query       = $query->get( 'meta_query' );
-		$original_capability_query = $query->get( 'capability' );
-		$original_exclude_query    = $query->get( 'exclude' );
+		$query                        = new \WP_User_Query();
+		$original_meta_query          = $query->get( 'meta_query' );
+		$original_capability_in_query = $query->get( 'capability__in' );
+		$original_exclude_query       = $query->get( 'exclude' );
 
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
 		// Assert that the query parameters were not modified
 		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
-		$this->assertEquals( $original_capability_query, $query->get( 'capability' ) );
+		$this->assertEquals( $original_capability_in_query, $query->get( 'capability__in' ) );
 		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
 	}
 
@@ -171,16 +171,16 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		}
 		$_GET['filter_mfa_disabled'] = '1'; // Set the param
 
-		$query                     = new \WP_User_Query();
-		$original_meta_query       = $query->get( 'meta_query' );
-		$original_capability_query = $query->get( 'capability' );
-		$original_exclude_query    = $query->get( 'exclude' );
+		$query                        = new \WP_User_Query();
+		$original_meta_query          = $query->get( 'meta_query' );
+		$original_capability_in_query = $query->get( 'capability__in' );
+		$original_exclude_query       = $query->get( 'exclude' );
 
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
 		// Assert that the query parameters were not modified
 		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
-		$this->assertEquals( $original_capability_query, $query->get( 'capability' ) );
+		$this->assertEquals( $original_capability_in_query, $query->get( 'capability__in' ) );
 		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
 
 		unset( $_GET['filter_mfa_disabled'] );
