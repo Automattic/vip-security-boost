@@ -7,16 +7,16 @@ class Forced_MFA_Users {
 	const MFA_SKIP_USER_IDS_OPTION_KEY = 'vip_security_mfa_skip_user_ids';
 
 	/**
-	 * The capability required to force MFA.
+	 * The capability or capabilities required to force MFA.
 	 *
 	 * @var string|array The capability slug or an array of slugs.
 	 */
-	private static $capability;
+	private static $capabilities;
 
 	public static function init() {
 		$forced_mfa_configs = get_module_configs( 'forced-mfa-users' );
 
-		self::$capability = $forced_mfa_configs['capability'] ?? [];
+		self::$capabilities = $forced_mfa_configs['capabilities'] ?? [];
 		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
 	}
 
@@ -28,7 +28,12 @@ class Forced_MFA_Users {
 			return;
 		}
 
-		$required_capability_or_caps = self::$capability;
+		// Exclude User ID 1
+		if ( 1 === get_current_user_id() ) {
+			return;
+		}
+
+		$required_capability_or_caps = self::$capabilities;
 
 		if ( empty( $required_capability_or_caps ) ) {
 			return;
