@@ -21,7 +21,7 @@ class Inactive_Users {
 	 *
 	 * @var \WP_Error|null
 	 */
-	private $application_password_authentication_error;
+	private static $application_password_authentication_error;
 	
 	public static function init() {
 		$inactive_user_configs = get_module_configs( 'inactive-users' );
