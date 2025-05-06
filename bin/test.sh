@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# be sure we're testing against the latest code.
+composer dump-autoload
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --wp)
@@ -89,11 +92,11 @@ if [ ! -d "mu-plugins" ]; then
 	# Extract the downloaded zip file
 	echo "Extracting repository"
 	unzip -o -q mu-plugins.zip
-	
+
 	mv "vip-go-mu-plugins-built-master" "mu-plugins"
 
 	# Cleanup: Remove the temporary zip file
-	rm mu-plugins.zip	
+	rm mu-plugins.zip
 fi
 
 UUID=$(date +%s000)

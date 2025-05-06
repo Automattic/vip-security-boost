@@ -45,3 +45,7 @@ phpcs.xml
 
 # Composer (repo root only)
 /vendor/
+
+# Editor/IDE related
+.vscode/*
+!.vscode/launch.json
