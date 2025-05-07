@@ -18,7 +18,6 @@
 	<file>./utils/</file>
 	<file>./tests/</file>
 	<file>./class-loader.php</file>
-	<file>./class-integration.php</file>
 	<file>./vip-security-boost.php</file>
 	<!-- Ignoring Files and Folders:
 		https://github.com/squizlabs/PHP_CodeSniffer/wiki/Advanced-Usage#ignoring-files-and-folders -->
