@@ -22,7 +22,6 @@ We recommend starting with one of the following WordPress VIP guidebooks:
 
 Key files in the root directory:
 - `vip-security-boost.php`: Main plugin file
-- `class-integration.php`: Core integration class
 - `class-loader.php`: Loads enabled modules for the integration
 
 These directories and files are essential for the security boost integration to function properly. Any additional directories created in your GitHub repository that are not included in the above list will not be mounted onto your site, and so will not be web-accessible.

@@ -10,6 +10,8 @@ function load_integration_configs_from_url() {
 	$config_api_url = vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) );
 
 	if ( ! $config_api_url ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
+		trigger_error( 'VIP_CONFIG_API_URL is not defined.', E_USER_ERROR );
 		return;
 	}
 
