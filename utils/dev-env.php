@@ -3,9 +3,10 @@
 namespace Automattic\VIP\Security\Utils;
 
 function load_integration_configs_from_url() {
-	if ( defined( 'WP_CLI' ) && constant( 'WP_CLI' ) ) {
-		return;
-	}
+	// Removed for testing user creation (i.e. notify-privileged-activity)
+	// if ( defined( 'WP_CLI' ) && constant( 'WP_CLI' ) ) {
+	//  return;
+	// }
 
 	$config_api_url = vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) );
 
