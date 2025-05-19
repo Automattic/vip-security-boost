@@ -26,13 +26,13 @@ class Notify_Privileged_Activity {
 				return;
 			}
 
-			$subject = sprintf( _s( '[%s] New Administrator User Created', 'wpvip' ),
+			$subject = sprintf( __( '[%s] New Administrator User Created', 'wpvip' ),
 				get_bloginfo( 'name' )
 			);
 
 			$message = sprintf(
 				/* Translators: %1$s is the username, %2$s is the user email. */
-				_s( 'A new user with administrator privileges has been created:\nUsername: %1$s\nEmail: %2$s', 'wpvip' ),
+				__( 'A new user with administrator privileges has been created:\nUsername: %1$s\nEmail: %2$s', 'wpvip' ),
 				$user->user_login,
 				$user->user_email
 			);
