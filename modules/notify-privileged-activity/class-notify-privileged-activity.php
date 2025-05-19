@@ -26,6 +26,7 @@ class Notify_Privileged_Activity {
 				return;
 			}
 
+			/* Translators: %s: Site name. */
 			$subject = sprintf( __( '[%s] New Administrator User Created', 'wpvip' ),
 				get_bloginfo( 'name' )
 			);
