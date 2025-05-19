@@ -40,7 +40,7 @@ class Notify_Privileged_Activity {
 			Email::send( $user_id, $admin_email, $subject, 'privileged-user-created', [
 				'user_login' => $user->user_login,
 				'user_email' => $user->user_email,
-				'user_role' => 'Administrator',
+				'user_role'  => 'Administrator',
 			] );
 		}
 	}
