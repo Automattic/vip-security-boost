@@ -36,9 +36,10 @@ class Email {
 		// Remove VIP filters that prevent emails from address being set.
 		$email_from = self::EMAIL_FROM;
 
-		add_filter( 'wp_mail_from', function () use ( $email_from ) {
+		$email_from_filter = function () use ( $email_from ) {
 			return $email_from;
-		}, 15 );
+		};
+		add_filter( 'wp_mail_from', $email_from_filter, 15 );
 
 		// User name
 		$user_name = get_user_meta( $user_id, 'user_name', true );
