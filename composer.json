@@ -16,6 +16,7 @@
 	},
 	"autoload-dev": {
 		"classmap": [
+			"./email/email.php",
 			"./modules/"
 		]
 	},
@@ -33,6 +34,7 @@
 		"format": "./vendor/bin/phpcbf --standard=.phpcs.xml.dist",
 		"phpcs": "./vendor/bin/phpcs",
 		"test": "./bin/test.sh --php 8.2 --wp 6.5",
-		"test:integration": "./vendor/bin/phpunit --bootstrap tests/integration/bootstrap.php tests/integration/"
+		"test:integration": "./vendor/bin/phpunit --bootstrap tests/integration/bootstrap.php tests/integration/",
+		"build-mjml": "./scripts/build-mjml.sh"
 	}
 }

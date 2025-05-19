@@ -1,6 +1,8 @@
 <?php
 namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 
+use Automattic\VIP\Security\Email\Email;
+
 class Notify_Privileged_Activity {
 	public static function init() {
 		add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
@@ -35,7 +37,11 @@ class Notify_Privileged_Activity {
 				$user->user_email
 			);
 
-			wp_mail( $admin_email, $subject, $message );
+			Email::send( $user_id, $admin_email, $subject, 'privileged-user-created', [
+				'user_login' => $user->user_login,
+				'user_email' => $user->user_email,
+				'user_role' => 'Administrator',
+			] );
 		}
 	}
 }
