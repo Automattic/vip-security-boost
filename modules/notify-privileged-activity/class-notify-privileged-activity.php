@@ -42,6 +42,7 @@ class Notify_Privileged_Activity {
 				'user_login' => $user->user_login,
 				'user_email' => $user->user_email,
 				'user_role'  => 'Administrator',
+				'admin_url'  => admin_url(),
 			] );
 		}
 	}

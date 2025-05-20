@@ -4,7 +4,8 @@
 	"homepage": "https://github.com/automattic/vip-security-boost-integration",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"php": ">=8.2"
+		"php": ">=8.2",
+		"spatie/mjml-php": "^1.2"
 	},
 	"require-dev": {
 		"automattic/vipwpcs": "^3",
