@@ -17,7 +17,6 @@
 	},
 	"autoload-dev": {
 		"classmap": [
-			"./email/email.php",
 			"./modules/"
 		]
 	},
