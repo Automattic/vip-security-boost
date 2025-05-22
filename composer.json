@@ -4,7 +4,8 @@
 	"homepage": "https://github.com/automattic/vip-security-boost-integration",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"php": ">=8.2"
+		"php": ">=8.2",
+		"spatie/mjml-php": "^1.2"
 	},
 	"require-dev": {
 		"automattic/vipwpcs": "^3",
@@ -33,6 +34,7 @@
 		"format": "./vendor/bin/phpcbf --standard=.phpcs.xml.dist",
 		"phpcs": "./vendor/bin/phpcs",
 		"test": "./bin/test.sh --php 8.2 --wp 6.5",
-		"test:integration": "./vendor/bin/phpunit --bootstrap tests/integration/bootstrap.php tests/integration/"
+		"test:integration": "./vendor/bin/phpunit --bootstrap tests/integration/bootstrap.php tests/integration/",
+		"build-mjml": "./scripts/build-mjml.sh"
 	}
 }
