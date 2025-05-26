@@ -146,7 +146,6 @@ class Highlight_MFA_Users {
 			];
 
 			$query->set( 'role__in', self::$roles ); // Set the configured roles
-			error_log( 'Roles: ' . print_r( self::$roles, true ) );
 			$query->set( 'meta_query', $meta_query );
 
 			// Exclude skipped users AND always exclude User ID 1
@@ -154,13 +153,11 @@ class Highlight_MFA_Users {
 			if ( ! is_array( $skipped_user_ids ) ) {
 				$skipped_user_ids = [];
 			}
-			error_log( 'Skipped user IDs: ' . print_r( $skipped_user_ids, true ) );
 			// Get any existing exclusions from the query
 			$exclude_ids = $query->get( 'exclude' );
 			if ( ! is_array( $exclude_ids ) ) {
 				$exclude_ids = [];
 			}
-			error_log( 'Exclude IDs: ' . print_r( $exclude_ids, true ) );
 
 			// Merge existing exclusions, skipped IDs from option, and User ID 1
 			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids, [ 1 ] ) );
