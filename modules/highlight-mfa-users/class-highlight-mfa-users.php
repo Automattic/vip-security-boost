@@ -16,15 +16,15 @@ class Highlight_MFA_Users {
 	public static function init() {
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = get_module_configs( 'highlight-mfa-users' );
-		self::$roles           = $highlight_mfa_configs['roles'] ?? [ 'administrator' ]; // Default to administrator if not configured
+		self::$roles           = $highlight_mfa_configs['roles'] ?? [ 'administrator', 'editor' ]; // Default to administrator and editor if not configured
 
 		if ( ! is_array( self::$roles ) ) {
 			self::$roles = [ self::$roles ];
 		}
 		self::$roles = array_filter( self::$roles );
-		// If after filtering, the array is empty, default back to administrator
+		// If after filtering, the array is empty, default back to administrator and editor
 		if ( empty( self::$roles ) ) {
-			self::$roles = [ 'administrator' ];
+			self::$roles = [ 'administrator', 'editor' ];
 		}
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );

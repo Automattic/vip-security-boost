@@ -124,7 +124,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		}
 		$this->assertTrue( $mfa_meta_clause_found, 'MFA status meta query clause not found.' );
 
-		$this->assertEquals( [ 'administrator' ], $roles_in_query );
+		$this->assertEquals( [ 'administrator', 'editor' ], $roles_in_query );
 
 		$this->assertIsArray( $exclude_query );
 		$this->assertContains( $this->admin_user_mfa_skipped_id, $exclude_query );
@@ -195,7 +195,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// The subscriber ($this->subscriber_user_id) should not be included in the notice.
 		// The notice logic uses Two_Factor_Core::is_user_using_two_factor which we've mocked.
 		// Only admin_user_mfa_disabled_id should be counted (editor doesn't have administrator role)
-		$expected_count  = 1;
+		$expected_count  = 2;
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
