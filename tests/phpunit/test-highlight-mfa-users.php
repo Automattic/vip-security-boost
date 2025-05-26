@@ -45,7 +45,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->admin_user_mfa_skipped_id = $this->factory()->user->create([
 			'role' => 'administrator',
 		]);
-		
+
 		$this->editor_user_id = $this->factory()->user->create([
 			'role' => 'editor',
 		]);
@@ -110,9 +110,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$query = new \WP_User_Query();
 		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
 
-		$meta_query      = $query->get( 'meta_query' );
-		$roles_in_query  = $query->get( 'role__in' );
-		$exclude_query   = $query->get( 'exclude' );
+		$meta_query     = $query->get( 'meta_query' );
+		$roles_in_query = $query->get( 'role__in' );
+		$exclude_query  = $query->get( 'exclude' );
 
 		$this->assertIsArray( $meta_query );
 		$mfa_meta_clause_found = false;
@@ -222,14 +222,14 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->assertEquals( $expected_output, $output );
 	}
-	  
+
 		/**
 		* Test that the admin notice is displayed correctly with the count when the list IS filtered.
 		*/
 	public function test_display_mfa_disabled_notice_shows_correct_message_when_filtered() {
 		$this->set_admin_screen_users();
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
-	  
+
 		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
 		$expected_count  = 2;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
@@ -248,13 +248,13 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 			esc_url( $show_all_url ),
 			esc_html__( 'Show all users.', 'wpvip' )
 		);
-	  
+
 		ob_start();
 		Highlight_MFA_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
-	  
+
 		$this->assertEquals( $expected_output, $output );
-	  
+
 		unset( $_GET['filter_mfa_disabled'] ); // Clean up
 	}
 
