@@ -70,6 +70,7 @@ class Highlight_MFA_Users {
 		// Query for user IDs with the configured capabilities, excluding skipped ones
 		$args       = [
 			'capability__in' => self::$capabilities,
+			'fields'         => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
 			'exclude'        => array_merge( $skipped_user_ids, [ 1 ] ),
 			'number'         => -1, // Get all relevant users
