@@ -7,9 +7,9 @@ class Highlight_MFA_Users {
 	const MFA_SKIP_USER_IDS_OPTION_KEY = 'vip_security_mfa_skip_user_ids';
 
 	/**
-	 * The capabilities used to highlight users without MFA.
+	 * The roles used to highlight users without MFA.
 	 *
-	 * @var array An array of capability slugs.
+	 * @var array An array of role slugs.
 	 */
 	private static $roles;
 
@@ -50,12 +50,18 @@ class Highlight_MFA_Users {
 			$skipped_user_ids = [];
 		}
 
+		// Exclude the wpcomvip user from the list
+		$wpcomvip = get_user_by( 'login', 'wpcomvip' );
+		if ( false !== $wpcomvip ) {
+			$skipped_user_ids[] = $wpcomvip->ID;
+		}
+
 		// Query for user IDs with the configured roles, excluding skipped ones
 		$args       = [
 			'role__in' => self::$roles,
 			'fields'   => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
-			'exclude'  => array_merge( $skipped_user_ids, [ 1 ] ),
+			'exclude'  => $skipped_user_ids,
 			'number'   => -1, // Get all relevant users
 		];
 		$user_query = new \WP_User_Query( $args );
@@ -148,19 +154,25 @@ class Highlight_MFA_Users {
 			$query->set( 'role__in', self::$roles ); // Set the configured roles
 			$query->set( 'meta_query', $meta_query );
 
-			// Exclude skipped users AND always exclude User ID 1
+			// Exclude skipped users AND always exclude User wpcomvip
 			$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
 			if ( ! is_array( $skipped_user_ids ) ) {
 				$skipped_user_ids = [];
 			}
+
+			// Exclude the wpcomvip user from the list
+			$wpcomvip = get_user_by( 'login', 'wpcomvip' );
+			if ( false !== $wpcomvip ) {
+				$skipped_user_ids[] = $wpcomvip->ID;
+			}
+
 			// Get any existing exclusions from the query
 			$exclude_ids = $query->get( 'exclude' );
 			if ( ! is_array( $exclude_ids ) ) {
 				$exclude_ids = [];
 			}
-
-			// Merge existing exclusions, skipped IDs from option, and User ID 1
-			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids, [ 1 ] ) );
+			// Merge existing exclusions, skipped IDs from option
+			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids ) );
 
 			// Set the final list of excluded IDs
 			$query->set( 'exclude', $final_exclude_ids );
