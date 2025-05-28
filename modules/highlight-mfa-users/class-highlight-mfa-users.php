@@ -5,6 +5,7 @@ use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Highlight_MFA_Users {
 	const MFA_SKIP_USER_IDS_OPTION_KEY = 'vip_security_mfa_skip_user_ids';
+	const ROLE_COLUMN_KEY              = 'role';
 
 	/**
 	 * The capabilities used to highlight users without MFA.
@@ -30,6 +31,21 @@ class Highlight_MFA_Users {
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
 		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
+		
+		// Add column for role
+		// Single site or main site admin users page
+		add_filter( 'manage_users_columns', [ __CLASS__, 'add_columns' ] );
+		// Network admin users page
+		add_filter( 'wpmu_users_columns', [ __CLASS__, 'add_columns' ] );
+		// Add content to the role column
+		add_filter( 'manage_users_custom_column', [ __CLASS__, 'manage_columns' ], 10, 3 );
+		
+		// Make columns sortable
+		add_filter( 'manage_users_sortable_columns', [ __CLASS__, 'make_columns_sortable' ] );
+		add_filter( 'manage_users-network_sortable_columns', [ __CLASS__, 'make_columns_sortable' ] );
+		
+		// Handle sorting
+		add_filter( 'users_list_table_query_args', [ __CLASS__, 'sort_columns' ] );
 	}
 
 	/**
@@ -54,7 +70,6 @@ class Highlight_MFA_Users {
 		// Query for user IDs with the configured capabilities, excluding skipped ones
 		$args       = [
 			'capability__in' => self::$capabilities,
-			'fields'         => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
 			'exclude'        => array_merge( $skipped_user_ids, [ 1 ] ),
 			'number'         => -1, // Get all relevant users
@@ -166,6 +181,89 @@ class Highlight_MFA_Users {
 			// Set the final list of excluded IDs
 			$query->set( 'exclude', $final_exclude_ids );
 		}
+	}
+
+	/**
+	 * Add Role column to the users table.
+	 *
+	 * @param array $columns The existing columns.
+	 * @return array The modified columns.
+	 */
+	public static function add_columns( $columns ) {
+		$new_columns = [];
+		
+		foreach ( $columns as $key => $title ) {
+			// Add role column if it doesn't exist
+			if ( 'name' === $key ) {
+				$new_columns[ $key ]                  = $title;
+				$new_columns[ self::ROLE_COLUMN_KEY ] = __( 'Role', 'wpvip' );
+			} else {
+				$new_columns[ $key ] = $title;
+			}
+		}
+		
+		return $new_columns;
+	}
+
+	/**
+	 * Manage the content of the custom columns.
+	 *
+	 * @param string $output      The output for the column.
+	 * @param string $column_name The name of the column.
+	 * @param int    $user_id     The ID of the user.
+	 * @return string The content for the column.
+	 */
+	public static function manage_columns( $output, $column_name, $user_id ) {
+		switch ( $column_name ) {
+			case self::ROLE_COLUMN_KEY:
+				$user = get_userdata( $user_id );
+				if ( $user ) {
+					$roles = array_map( function ( $role ) {
+						return translate_user_role( wp_roles()->roles[ $role ]['name'] );
+					}, $user->roles );
+					return esc_html( implode( ', ', $roles ) );
+				}
+				return '';
+		}
+		
+		return $output;
+	}
+
+	/**
+	 * Make the custom columns sortable.
+	 *
+	 * @param array $columns The sortable columns.
+	 * @return array The modified sortable columns.
+	 */
+	public static function make_columns_sortable( $columns ) {
+		$columns[ self::ROLE_COLUMN_KEY ] = self::ROLE_COLUMN_KEY;
+		return $columns;
+	}
+
+	/**
+	 * Handle the sorting of custom columns.
+	 *
+	 * @param array $args The query arguments.
+	 * @return array The modified query arguments.
+	 */
+	public static function sort_columns( $args ) {
+		if ( ! isset( $args['orderby'] ) ) {
+			return $args;
+		}
+
+		// The 'order' GET parameter is already handled by WP_Users_List_Table
+		// and applied to $args['order'] before this filter.
+		switch ( $args['orderby'] ) {
+			case self::ROLE_COLUMN_KEY:
+				// Sort by role using WP_User_Query arguments
+				global $wpdb;
+				$args['meta_key'] = $wpdb->prefix . 'capabilities';
+				$args['orderby']  = 'meta_value';
+				// $args['order'] (ASC/DESC) is already set by WP_Users_List_Table
+				break;
+		}
+		
+		return $args;
 	}
 }
 Highlight_MFA_Users::init();
