@@ -3,6 +3,12 @@
 use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
 
 class Test_Forced_MFA_Users extends WP_UnitTestCase {
+	public function setUp(): void {
+		parent::setUp();
+		add_action( 'wpcom_vip_is_two_factor_local_testing', '__return_true' ); // Tell the two-factor plugin we're in local testing
+		// Loads the Two_Factor_Core class (required for the wpcom_vip_should_force_two_factor to work)
+		require_once WPVIP_MU_PLUGIN_DIR . '/shared-plugins/two-factor/two-factor.php';
+	}
 	public function tearDown(): void {
 		// Remove actions/filters added by the class
 		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] );
@@ -215,4 +221,4 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true if only invalid capability types are provided.' );
 	}
-} 
+}
