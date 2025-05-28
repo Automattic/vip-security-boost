@@ -9,6 +9,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		// Loads the Two_Factor_Core class (required for the wpcom_vip_should_force_two_factor to work)
 		require_once WPVIP_MU_PLUGIN_DIR . '/shared-plugins/two-factor/two-factor.php';
 	}
+
 	public function tearDown(): void {
 		// Remove actions/filters added by the class
 		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] );
@@ -31,6 +32,20 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		// Reset current user
 		wp_set_current_user( 0 );
 		parent::tearDown();
+	}
+
+	/**
+	 * This is a dependance for our project. While we should not break the site if this function is missing, we should at least warn if it is missing.
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_ensure_wpcom_vip_should_force_two_factor_exists() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => 'manage_options' ],
+			],
+		] );
+		$this->assertTrue( function_exists( 'wpcom_vip_should_force_two_factor' ) );
 	}
 
 	/**
