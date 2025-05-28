@@ -55,7 +55,6 @@ class Highlight_MFA_Users {
 		if ( false !== $wpcomvip ) {
 			$skipped_user_ids[] = $wpcomvip->ID;
 		}
-
 		// Query for user IDs with the configured roles, excluding skipped ones
 		$args       = [
 			'role__in' => self::$roles,
