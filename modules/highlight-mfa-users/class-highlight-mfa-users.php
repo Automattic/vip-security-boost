@@ -71,8 +71,8 @@ class Highlight_MFA_Users {
 		$args       = [
 			'capability__in' => self::$capabilities,
 			'fields'         => 'ID',
-			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
-			'exclude'        => array_merge( $skipped_user_ids, [ 1 ] ),
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users
+			'exclude'        => array_merge( $skipped_user_ids ),
 			'number'         => -1, // Get all relevant users
 		];
 		$user_query = new \WP_User_Query( $args );
@@ -177,7 +177,7 @@ class Highlight_MFA_Users {
 			}
 
 			// Merge existing exclusions, skipped IDs from option, and User ID 1
-			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids, [ 1 ] ) );
+			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids ) );
 
 			// Set the final list of excluded IDs
 			$query->set( 'exclude', $final_exclude_ids );
