@@ -28,11 +28,6 @@ class Forced_MFA_Users {
 			return;
 		}
 
-		// Exclude User ID 1
-		if ( 1 === get_current_user_id() ) {
-			return;
-		}
-
 		$required_capabilities = self::$capabilities;
 
 		if ( empty( $required_capabilities ) ) {
