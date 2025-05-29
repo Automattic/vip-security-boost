@@ -70,7 +70,7 @@ class Highlight_MFA_Users {
 		$args       = [
 			'role__in' => self::$roles,
 			'fields'   => 'ID',
-			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small known set of users
 			'exclude'  => array_merge( $skipped_user_ids ),
 			'number'   => -1, // Get all relevant users
 		];

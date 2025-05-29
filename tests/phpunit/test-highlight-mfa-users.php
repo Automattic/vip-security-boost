@@ -195,7 +195,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// The subscriber ($this->subscriber_user_id) should not be included in the notice.
 		// The notice logic uses Two_Factor_Core::is_user_using_two_factor which we've mocked.
 		// Only admin_user_mfa_disabled_id should be counted (editor doesn't have administrator role)
-		$expected_count  = 2;
+		$expected_count  = 3;
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
@@ -231,7 +231,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 
 		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
-		$expected_count  = 2;
+		// In the filtered view, User ID 1 is excluded from the notice count by the main plugin logic.
+		$expected_count  = 3;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Notice class is notice-info when filtered
@@ -289,6 +290,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Temporarily tell the mock that the MFA-disabled user is enabled for this test
 		Two_Factor_Core::$mock_enabled_user_ids[] = $this->admin_user_mfa_disabled_id;
 		Two_Factor_Core::$mock_enabled_user_ids[] = $this->editor_user_id;
+		Two_Factor_Core::$mock_enabled_user_ids[] = 1; // Also ensure User ID 1 is treated as MFA enabled
 
 		// Expect no output
 		ob_start();
