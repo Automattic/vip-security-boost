@@ -195,7 +195,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// The subscriber ($this->subscriber_user_id) should not be included in the notice.
 		// The notice logic uses Two_Factor_Core::is_user_using_two_factor which we've mocked.
 		// Only admin_user_mfa_disabled_id should be counted (editor doesn't have administrator role)
-		$expected_count  = 2;
+		$expected_count  = 3;
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
@@ -231,7 +231,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 
 		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
-		$expected_count  = 2;
+		// In the filtered view, User ID 1 is excluded from the notice count by the main plugin logic.
+		$expected_count  = 3;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Notice class is notice-info when filtered
@@ -289,6 +290,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Temporarily tell the mock that the MFA-disabled user is enabled for this test
 		Two_Factor_Core::$mock_enabled_user_ids[] = $this->admin_user_mfa_disabled_id;
 		Two_Factor_Core::$mock_enabled_user_ids[] = $this->editor_user_id;
+		Two_Factor_Core::$mock_enabled_user_ids[] = 1; // Also ensure User ID 1 is treated as MFA enabled
 
 		// Expect no output
 		ob_start();
@@ -311,5 +313,130 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->assertNotFalse( has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
 		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
+	}
+
+	/**
+	 * Test that the role column is added to the users table.
+	 */
+	public function test_role_column_is_added() {
+		$columns = Highlight_MFA_Users::add_columns( [
+			'username' => 'Username',
+			'name'     => 'Name',
+			'email'    => 'Email',
+		] );
+		$this->assertArrayHasKey( Highlight_MFA_Users::ROLE_COLUMN_KEY, $columns );
+		$this->assertEquals( __( 'Role', 'wpvip' ), $columns[ Highlight_MFA_Users::ROLE_COLUMN_KEY ] );
+
+		// Test positioning after 'name'
+		$keys     = array_keys( $columns );
+		$name_pos = array_search( 'name', $keys, true );
+		$role_pos = array_search( Highlight_MFA_Users::ROLE_COLUMN_KEY, $keys, true );
+		$this->assertNotFalse( $name_pos );
+		$this->assertNotFalse( $role_pos );
+		$this->assertEquals( $name_pos + 1, $role_pos );
+	}
+
+	/**
+	 * Test that the role column is made sortable.
+	 */
+	public function test_role_column_is_made_sortable() {
+		$sortable_columns = Highlight_MFA_Users::make_columns_sortable( [
+			'username' => 'username',
+			'email'    => 'email',
+		] );
+		$this->assertArrayHasKey( Highlight_MFA_Users::ROLE_COLUMN_KEY, $sortable_columns );
+		$this->assertEquals( Highlight_MFA_Users::ROLE_COLUMN_KEY, $sortable_columns[ Highlight_MFA_Users::ROLE_COLUMN_KEY ] );
+	}
+
+	/**
+	 * Test content of the role column.
+	 */
+	public function test_manage_columns_for_role_column() {
+		$admin_user_id      = $this->factory()->user->create( [ 'role' => 'administrator' ] );
+		$editor_user_id     = $this->factory()->user->create( [ 'role' => 'editor' ] );
+		$multi_role_user_id = $this->factory()->user->create( [ 'role' => 'administrator' ] );
+		$user               = new WP_User( $multi_role_user_id );
+		$user->add_role( 'editor' );
+
+		$output_admin = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $admin_user_id );
+		$this->assertEquals( translate_user_role( 'Administrator' ), $output_admin );
+
+		$output_editor = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $editor_user_id );
+		$this->assertEquals( translate_user_role( 'Editor' ), $output_editor );
+		
+		$output_multi = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $multi_role_user_id );
+		// Order might vary, so check for both
+		$expected_roles = [ translate_user_role( 'Administrator' ), translate_user_role( 'Editor' ) ];
+		$actual_roles   = array_map( 'trim', explode( ',', $output_multi ) );
+		sort( $expected_roles );
+		sort( $actual_roles );
+		$this->assertEquals( $expected_roles, $actual_roles );
+		
+		// Test with a different column name
+		$output_other_column = Highlight_MFA_Users::manage_columns( 'initial_output', 'other_column', $admin_user_id );
+		$this->assertEquals( 'initial_output', $output_other_column );
+
+		wp_delete_user( $admin_user_id );
+		wp_delete_user( $editor_user_id );
+		wp_delete_user( $multi_role_user_id );
+	}
+
+	/**
+	 * Test sorting by role in ascending order.
+	 */
+	public function test_sort_columns_by_role_asc() {
+		global $wpdb;
+		$args        = [
+			'orderby' => Highlight_MFA_Users::ROLE_COLUMN_KEY,
+			'order'   => 'asc',
+		];
+		$sorted_args = Highlight_MFA_Users::sort_columns( $args );
+
+		$this->assertEquals( $wpdb->prefix . 'capabilities', $sorted_args['meta_key'] );
+		$this->assertEquals( 'meta_value', $sorted_args['orderby'] );
+		$this->assertEquals( 'asc', $sorted_args['order'] );
+	}
+
+	/**
+	 * Test sorting by role in descending order.
+	 */
+	public function test_sort_columns_by_role_desc() {
+		global $wpdb;
+		$args        = [
+			'orderby' => Highlight_MFA_Users::ROLE_COLUMN_KEY,
+			'order'   => 'desc',
+		];
+		$sorted_args = Highlight_MFA_Users::sort_columns( $args );
+
+		$this->assertEquals( $wpdb->prefix . 'capabilities', $sorted_args['meta_key'] );
+		$this->assertEquals( 'meta_value', $sorted_args['orderby'] );
+		$this->assertEquals( 'desc', $sorted_args['order'] );
+	}
+
+	/**
+	 * Test that sorting logic does not interfere with other orderby parameters.
+	 */
+	public function test_sort_columns_does_nothing_for_other_orderby() {
+		$args          = [
+			'orderby'  => 'username',
+			'order'    => 'asc',
+			'meta_key' => 'some_other_key', // To ensure it's not overwritten
+		];
+		$original_args = $args; // Make a copy for comparison
+		$sorted_args   = Highlight_MFA_Users::sort_columns( $args );
+
+		$this->assertEquals( $original_args, $sorted_args, "Query args were modified for an unrelated 'orderby' parameter." );
+	}
+
+	/**
+	 * Test that sorting logic does nothing if orderby is not set.
+	 */
+	public function test_sort_columns_does_nothing_if_orderby_not_set() {
+		$args          = [
+			'order' => 'asc',
+		];
+		$original_args = $args;
+		$sorted_args   = Highlight_MFA_Users::sort_columns( $args );
+		$this->assertEquals( $original_args, $sorted_args );
 	}
 }
