@@ -8,9 +8,9 @@ class Highlight_MFA_Users {
 	const ROLE_COLUMN_KEY              = 'role';
 
 	/**
-	 * The capabilities used to highlight users without MFA.
+	 * The roles used to highlight users without MFA.
 	 *
-	 * @var array An array of capability slugs.
+	 * @var array An array of role slugs.
 	 */
 	private static $roles;
 
