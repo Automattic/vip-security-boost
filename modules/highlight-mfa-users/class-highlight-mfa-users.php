@@ -95,10 +95,10 @@ class Highlight_MFA_Users {
 				printf(
 					'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
 					esc_html( sprintf(
-						/* Translators: %d is the number of users without MFA enabled being shown in the filtered list. */
+						/* Translators: %d is the number of users without 2FA enabled being shown in the filtered list. */
 						_n(
-							'Showing %d user without MFA enabled.',
-							'Showing %d users without MFA enabled.',
+							'Showing %d user without Two-Factor Authentication enabled.',
+							'Showing %d users without Two-Factor Authentication enabled.',
 							$mfa_disabled_count,
 							'wpvip'
 						),
@@ -113,10 +113,10 @@ class Highlight_MFA_Users {
 				printf(
 					'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
 					esc_html( sprintf(
-						/* Translators: %d is the number of users without MFA enabled. */
+						/* Translators: %d is the number of users without 2FA enabled. */
 						_n(
-							'There is %d user with MFA disabled.',
-							'There are %d users with MFA disabled.',
+							'There is %d user with Two-Factor Authentication disabled.',
+							'There are %d users with Two-Factor Authentication disabled.',
 							$mfa_disabled_count,
 							'wpvip'
 						),
