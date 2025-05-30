@@ -403,7 +403,8 @@ class Inactive_Users {
 			return true;
 		}
 
-		if ( array_intersect( $elevated_roles, (array) $user->roles ) ) {
+		// Ensure $user->roles is defined and is an array before using it.
+		if ( isset( $user->roles ) && is_array( $user->roles ) && array_intersect( $elevated_roles, $user->roles ) ) {
 			return true;
 		}
 
