@@ -5,28 +5,30 @@ use WP_UnitTestCase;
 
 class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;
-	
+	private $elevated_roles = [ 'administrator' ];
+
 	public function setUp(): void {
 		parent::setUp();
-		
-		// Create a test user with elevated capabilities and an old registration date
+
+		// Create a test user with elevated roles and an old registration date
 		$this->user_id = $this->factory->user->create([
-			'role'            => 'editor',
+			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
-		
+
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
 			define('VIP_SECURITY_BOOST_CONFIGS', [
 				'inactive_users' => [
 					'mode'                           => 'BLOCK',
 					'considered_inactive_after_days' => 90,
+					'roles'                          => $this->elevated_roles,
 				],
 			]);
 		}
-		
+
 		Inactive_Users::init();
 	}
-	
+
 	public function tearDown(): void {
 		wp_delete_user( $this->user_id );
 		parent::tearDown();
@@ -41,9 +43,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			'email'    => 'Email',
 			'role'     => 'Role',
 		];
-		
+
 		$result = Inactive_Users::add_last_seen_column_head( $initial_columns );
-		
+
 		$this->assertArrayHasKey( 'last_seen', $result );
 		$this->assertEquals( __( 'Last seen', 'wpvip' ), $result['last_seen'] );
 		$this->assertEquals( count( $initial_columns ) + 1, count( $result ) );
@@ -54,9 +56,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_record_activity() {
 		$result = Inactive_Users::record_activity( $this->user_id );
-		
+
 		$last_seen = get_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, true );
-		
+
 		$this->assertNotEmpty( $last_seen );
 		$this->assertTrue( is_numeric( $last_seen ) );
 		$this->assertLessThanOrEqual( time(), $last_seen );
@@ -69,7 +71,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Set last seen to 91 days ago (beyond the 90-day threshold)
 		$old_timestamp = strtotime( '-91 days' );
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, $old_timestamp );
-		
+
 		$this->assertTrue( Inactive_Users::is_considered_inactive( $this->user_id ) );
 	}
 
@@ -80,7 +82,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Set last seen to yesterday
 		$recent_timestamp = strtotime( '-1 day' );
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, $recent_timestamp );
-		
+
 		$this->assertFalse( Inactive_Users::is_considered_inactive( $this->user_id ) );
 	}
 
@@ -89,15 +91,15 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_ignore_inactivity_check_for_user() {
 		Inactive_Users::init(); // Re-initialize with test config
-   
+
 		// Set user as inactive
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
-		
+
 		// Ignore inactivity check
 		Inactive_Users::ignore_inactivity_check_for_user( $this->user_id );
-	  
+
 		$this->assertFalse( Inactive_Users::is_considered_inactive( $this->user_id ) );
-	  
+
 		// Verify the ignore until timestamp was set
 		$ignore_until = get_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, true );
 		$this->assertNotEmpty( $ignore_until );
@@ -110,12 +112,40 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	public function test_authenticate_blocks_inactive_users() {
 		// Set user as inactive
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
-		
+
 		$user   = new WP_User( $this->user_id );
 		$result = Inactive_Users::authenticate( $user );
-		
+
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'inactive_account', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that authentication for users with non elevated roles are not blocked.
+	 */
+	public function test_authenticate_does_not_block_nonelevated_roles() {
+
+		// Create a new user with a registration date that should be blocked if it has an elevated role. Starts with no role.
+		$new_user_id = $this->factory->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-91 days' ) ),
+		]);
+
+		update_user_meta( $new_user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Add all roles to the new user that are not currently elevated.
+		global $wp_roles;
+		$role_names = array_values( array_diff( array_keys( $wp_roles->roles ), $this->elevated_roles ) );
+		$new_user   = new WP_User( $new_user_id );
+
+		foreach ( $role_names as $role_key ) {
+			$new_user->add_role( $role_key );
+		}
+
+		$result = Inactive_Users::authenticate( $new_user );
+
+		$this->assertNotInstanceOf( 'WP_Error', $result );
+
+		wp_delete_user( $new_user_id );
 	}
 
 	/**
@@ -127,9 +157,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			'role'            => 'editor',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
 		]);
-		
+
 		$this->assertFalse( Inactive_Users::is_considered_inactive( $new_user_id ) );
-		
+
 		wp_delete_user( $new_user_id );
 	}
 }
