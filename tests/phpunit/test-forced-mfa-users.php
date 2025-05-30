@@ -85,20 +85,6 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 */
 	private function setup_user_and_filter( $user_role_or_roles ) {
 		$user_id = self::factory()->user->create( [ 'role' => is_string( $user_role_or_roles ) ? $user_role_or_roles : 'subscriber' ] );
-		if ( is_array( $user_role_or_roles ) ) {
-			$user = get_user_by( 'id', $user_id );
-			if ( $user ) { // Check if user creation was successful
-				// Remove default role and add the specified roles
-				$user->set_role( '' );
-				foreach ( $user_role_or_roles as $role ) {
-					if ( is_string( $role ) && ! empty( $role ) ) {
-						$user->add_role( $role );
-					}
-				}
-			} else {
-				$this->fail( 'Failed to create user for testing.' );
-			}
-		}
 		wp_set_current_user( $user_id );
 
 		// Manually trigger the action hook's callback for testing isolation
