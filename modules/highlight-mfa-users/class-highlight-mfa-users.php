@@ -30,7 +30,7 @@ class Highlight_MFA_Users {
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
 		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
-		
+
 		// Add column for role
 		// Single site or main site admin users page
 		add_filter( 'manage_users_columns', [ __CLASS__, 'add_columns' ] );
@@ -38,11 +38,11 @@ class Highlight_MFA_Users {
 		add_filter( 'wpmu_users_columns', [ __CLASS__, 'add_columns' ] );
 		// Add content to the role column
 		add_filter( 'manage_users_custom_column', [ __CLASS__, 'manage_columns' ], 10, 3 );
-		
+
 		// Make columns sortable
 		add_filter( 'manage_users_sortable_columns', [ __CLASS__, 'make_columns_sortable' ] );
 		add_filter( 'manage_users-network_sortable_columns', [ __CLASS__, 'make_columns_sortable' ] );
-		
+
 		// Handle sorting
 		add_filter( 'users_list_table_query_args', [ __CLASS__, 'sort_columns' ] );
 	}
@@ -66,12 +66,17 @@ class Highlight_MFA_Users {
 			$skipped_user_ids = [];
 		}
 
+		// Exclude the wpcomvip user from the list
+		$wpcomvip = get_user_by( 'login', 'wpcomvip' );
+		if ( false !== $wpcomvip ) {
+			$skipped_user_ids[] = $wpcomvip->ID;
+		}
 		// Query for user IDs with the configured roles, excluding skipped ones
 		$args       = [
 			'role__in' => self::$roles,
 			'fields'   => 'ID',
-			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small known set of users
-			'exclude'  => array_merge( $skipped_user_ids ),
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
+			'exclude'  => $skipped_user_ids,
 			'number'   => -1, // Get all relevant users
 		];
 		$user_query = new \WP_User_Query( $args );
@@ -164,18 +169,24 @@ class Highlight_MFA_Users {
 			$query->set( 'role__in', self::$roles ); // Set the configured roles
 			$query->set( 'meta_query', $meta_query );
 
-			// Exclude skipped users AND always exclude User ID 1
+			// Exclude skipped users AND always exclude User wpcomvip
 			$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
 			if ( ! is_array( $skipped_user_ids ) ) {
 				$skipped_user_ids = [];
 			}
+
+			// Exclude the wpcomvip user from the list
+			$wpcomvip = get_user_by( 'login', 'wpcomvip' );
+			if ( false !== $wpcomvip ) {
+				$skipped_user_ids[] = $wpcomvip->ID;
+			}
+
 			// Get any existing exclusions from the query
 			$exclude_ids = $query->get( 'exclude' );
 			if ( ! is_array( $exclude_ids ) ) {
 				$exclude_ids = [];
 			}
-
-			// Merge existing exclusions, skipped IDs from option, and User ID 1
+			// Merge existing exclusions, skipped IDs from option
 			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids ) );
 
 			// Set the final list of excluded IDs
@@ -191,7 +202,7 @@ class Highlight_MFA_Users {
 	 */
 	public static function add_columns( $columns ) {
 		$new_columns = [];
-		
+
 		foreach ( $columns as $key => $title ) {
 			// Add role column if it doesn't exist
 			if ( 'name' === $key ) {
@@ -201,7 +212,7 @@ class Highlight_MFA_Users {
 				$new_columns[ $key ] = $title;
 			}
 		}
-		
+
 		return $new_columns;
 	}
 
@@ -225,7 +236,7 @@ class Highlight_MFA_Users {
 				}
 				return '';
 		}
-		
+
 		return $output;
 	}
 
@@ -262,7 +273,7 @@ class Highlight_MFA_Users {
 				// $args['order'] (ASC/DESC) is already set by WP_Users_List_Table
 				break;
 		}
-		
+
 		return $args;
 	}
 }

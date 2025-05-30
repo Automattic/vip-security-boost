@@ -3,6 +3,13 @@
 use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
 
 class Test_Forced_MFA_Users extends WP_UnitTestCase {
+	public function setUp(): void {
+		parent::setUp();
+		add_action( 'wpcom_vip_is_two_factor_local_testing', '__return_true' ); // Tell the two-factor plugin we're in local testing
+		// Loads the Two_Factor_Core class (required for the wpcom_vip_should_force_two_factor to work)
+		require_once WPVIP_MU_PLUGIN_DIR . '/shared-plugins/two-factor/two-factor.php';
+	}
+
 	public function tearDown(): void {
 		// Remove actions/filters added by the class
 		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'filter_user_capabilities' ] );
@@ -25,6 +32,20 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		// Reset current user
 		wp_set_current_user( 0 );
 		parent::tearDown();
+	}
+
+	/**
+	 * This is a dependance for our project. While we should not break the site if this function is missing, we should at least warn if it is missing.
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_ensure_wpcom_vip_should_force_two_factor_exists() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => 'manage_options' ],
+			],
+		] );
+		$this->assertTrue( function_exists( 'wpcom_vip_should_force_two_factor' ) );
 	}
 
 	/**
@@ -215,4 +236,23 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true if only invalid capability types are provided.' );
 	}
-} 
+
+	/**
+	 * We want to test that under a normal condition, if a user has the required capability, the filter returns false because
+	 * wpcom_vip_should_force_two_factor returns false.
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_should_skip_user_if_wpcom_vip_should_force_two_factor_returns_false() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => 'edit_posts' ],
+			],
+		] );
+		Forced_MFA_Users::init();
+		add_filter( 'wpcom_vip_is_user_using_two_factor', '__return_true' ); // we're using this to change the behavior of the wpcom_vip_should_force_two_factor to return false.
+
+		$this->setup_user_and_filter( 'administrator' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true if wpcom_vip_should_force_two_factor returns false even if the user has the required capability.' );
+	}
+}

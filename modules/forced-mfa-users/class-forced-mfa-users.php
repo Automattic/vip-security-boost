@@ -27,9 +27,8 @@ class Forced_MFA_Users {
 		if ( ! is_user_logged_in() ) {
 			return;
 		}
-
-		// Exclude User ID 1
-		if ( 1 === get_current_user_id() ) {
+		// don't enforce 2FA if the user is already excluded by VIP mu-plugins logic
+		if ( function_exists( 'wpcom_vip_should_force_two_factor' ) && ! wpcom_vip_should_force_two_factor() ) {
 			return;
 		}
 

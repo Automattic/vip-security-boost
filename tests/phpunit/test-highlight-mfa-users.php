@@ -16,6 +16,7 @@ use WP_User_Query;
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {
 	private $admin_user_mfa_enabled_id;
+	private $admin_wpcomvip_ignored_id; // wpcomvip user should be ignored
 	private $admin_user_mfa_disabled_id;
 	private $admin_user_mfa_skipped_id;
 	private $editor_user_id;
@@ -37,6 +38,12 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		]);
 
 		Two_Factor_Core::$mock_enabled_user_ids[] = $this->admin_user_mfa_enabled_id;
+
+
+		$this->admin_wpcomvip_ignored_id = $this->factory()->user->create([
+			'role'       => 'administrator',
+			'user_login' => 'wpcomvip',
+		]);
 
 		$this->admin_user_mfa_disabled_id = $this->factory()->user->create([
 			'role' => 'administrator',
@@ -66,6 +73,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		wp_delete_user( $this->admin_user_mfa_disabled_id );
 		wp_delete_user( $this->admin_user_mfa_skipped_id );
 		wp_delete_user( $this->editor_user_id );
+		wp_delete_user( $this->subscriber_user_id );
+		wp_delete_user( $this->admin_wpcomvip_ignored_id );
 
 		// Clean up options
 		delete_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
@@ -128,6 +137,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->assertIsArray( $exclude_query );
 		$this->assertContains( $this->admin_user_mfa_skipped_id, $exclude_query );
+		$this->assertContains( $this->admin_wpcomvip_ignored_id, $exclude_query );
 
 		unset( $_GET['filter_mfa_disabled'] );
 	}
@@ -190,7 +200,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_display_mfa_disabled_notice_shows_when_needed() {
 		$this->set_admin_screen_users();
-		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
+		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id) and the default superadmin with ID 1
 		// The skipped admin ($this->admin_user_mfa_skipped_id) should be ignored by the notice logic.
 		// The subscriber ($this->subscriber_user_id) should not be included in the notice.
 		// The notice logic uses Two_Factor_Core::is_user_using_two_factor which we've mocked.
@@ -230,8 +240,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 
-		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id)
-		// In the filtered view, User ID 1 is excluded from the notice count by the main plugin logic.
+		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id), plus the default superadmin with ID 1
 		$expected_count  = 3;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
@@ -363,7 +372,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$output_editor = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $editor_user_id );
 		$this->assertEquals( translate_user_role( 'Editor' ), $output_editor );
-		
+
 		$output_multi = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $multi_role_user_id );
 		// Order might vary, so check for both
 		$expected_roles = [ translate_user_role( 'Administrator' ), translate_user_role( 'Editor' ) ];
@@ -371,7 +380,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		sort( $expected_roles );
 		sort( $actual_roles );
 		$this->assertEquals( $expected_roles, $actual_roles );
-		
+
 		// Test with a different column name
 		$output_other_column = Highlight_MFA_Users::manage_columns( 'initial_output', 'other_column', $admin_user_id );
 		$this->assertEquals( 'initial_output', $output_other_column );
