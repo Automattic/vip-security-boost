@@ -130,6 +130,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-91 days' ) ),
 		]);
 
+		update_user_meta( $new_user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
 		// Add all roles to the new user that are not currently elevated.
 		global $wp_roles;
 		$role_names = array_values( array_diff( array_keys( $wp_roles->roles ), $this->elevated_roles ) );
