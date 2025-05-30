@@ -44,14 +44,12 @@ class Forced_MFA_Users {
 
 		$user_has_two_factor_enforced = false;
 
-		if ( is_array( $required_roles ) ) {
-			$user = wp_get_current_user();
-			if ( $user ) {
-				foreach ( $required_roles as $role ) {
-					if ( is_string( $role ) && ! empty( $role ) && in_array( $role, (array) $user->roles, true ) ) {
-						$user_has_two_factor_enforced = true;
-						break;
-					}
+		$user = wp_get_current_user();
+		if ( is_array( $required_roles ) && $user ) {
+			foreach ( $required_roles as $role ) {
+				if ( is_string( $role ) && ! empty( $role ) && in_array( $role, (array) $user->roles, true ) ) {
+					$user_has_two_factor_enforced = true;
+					break;
 				}
 			}
 
