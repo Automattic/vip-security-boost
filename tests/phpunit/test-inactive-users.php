@@ -127,7 +127,6 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		// Create a new user with a registration date that should be blocked if it has an elevated role. Starts with no role.
 		$new_user_id = $this->factory->user->create([
-			'role'            => '',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-91 days' ) ),
 		]);
 
