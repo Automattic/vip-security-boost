@@ -29,7 +29,7 @@ class Inactive_Users {
 		self::$release_date                   = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
 		self::$considered_inactive_after_days = $inactive_user_configs['considered_inactive_after_days'] ?? 90;
-		self::$elevated_roles                 = $inactive_user_configs['roles'] ?? [ 'editor' ];
+		self::$elevated_roles                 = $inactive_user_configs['roles'] ?? [ 'administrator' ];
 
 		// Use a global cache group since users are shared among network sites.
 		wp_cache_add_global_groups( array( self::LAST_SEEN_CACHE_GROUP ) );

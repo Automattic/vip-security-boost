@@ -5,13 +5,14 @@ use WP_UnitTestCase;
 
 class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;
+	private $elevated_roles = [ 'administrator' ];
 
 	public function setUp(): void {
 		parent::setUp();
 
 		// Create a test user with elevated roles and an old registration date
 		$this->user_id = $this->factory->user->create([
-			'role'            => 'editor',
+			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
 
@@ -20,6 +21,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				'inactive_users' => [
 					'mode'                           => 'BLOCK',
 					'considered_inactive_after_days' => 90,
+					'roles'                          => $this->elevated_roles,
 				],
 			]);
 		}
@@ -116,6 +118,33 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'inactive_account', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that authentication for users with non elevated roles are not blocked.
+	 */
+	public function test_authenticate_does_not_block_nonelevated_roles() {
+
+		// Create a new user with a registration date that should be blocked if it has an elevated role. Starts with no role.
+		$new_user_id = $this->factory->user->create([
+			'role'            => '',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-91 days' ) ),
+		]);
+
+		// Add all roles to the new user that are not currently elevated.
+		global $wp_roles;
+		$role_names = array_values( array_diff( array_keys( $wp_roles->roles ), $this->elevated_roles ) );
+		$new_user   = new WP_User( $new_user_id );
+
+		foreach ( $role_names as $role_key ) {
+			$new_user->add_role( $role_key );
+		}
+
+		$result = Inactive_Users::authenticate( $new_user );
+
+		$this->assertNotInstanceOf( 'WP_Error', $result );
+
+		wp_delete_user( $new_user_id );
 	}
 
 	/**
