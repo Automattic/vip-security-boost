@@ -12,7 +12,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 	public function tearDown(): void {
 		// Remove actions/filters added by the class
-		// Clean up any actions added by the class
+		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] );
 
 		// Reset the static capability property using reflection
 		if ( class_exists( Forced_MFA_Users::class ) ) {
