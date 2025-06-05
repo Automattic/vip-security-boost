@@ -5,7 +5,11 @@ use Automattic\VIP\Security\Email\Email;
 
 class Notify_Privileged_Activity {
 	public static function init() {
-		add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
+		if ( is_multisite() ) {
+			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
+		} else {
+			add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
+		}
 	}
 
 	/**
