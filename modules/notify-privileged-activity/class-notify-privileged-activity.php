@@ -31,13 +31,6 @@ class Notify_Privileged_Activity {
 				get_bloginfo( 'name' )
 			);
 
-			$message = sprintf(
-				/* Translators: %1$s is the username, %2$s is the user email. */
-				__( 'A new user with administrator privileges has been created:\nUsername: %1$s\nEmail: %2$s', 'wpvip' ),
-				$user->user_login,
-				$user->user_email
-			);
-
 			Email::send( $user_id, $admin_email, $subject, 'privileged-user-created', [
 				'user_login' => $user->user_login,
 				'user_email' => $user->user_email,
