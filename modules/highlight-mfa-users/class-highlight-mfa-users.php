@@ -55,6 +55,11 @@ class Highlight_MFA_Users {
 			return;
 		}
 
+		// Only show the notice to admins
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
 		// Only show on the main users list table
 		$screen = get_current_screen();
 		if ( ! $screen || 'users' !== $screen->id ) {
