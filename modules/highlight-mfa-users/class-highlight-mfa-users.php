@@ -67,6 +67,7 @@ class Highlight_MFA_Users {
 		$configured_roles_for_comparison = self::$roles;
 		\sort( $configured_roles_for_comparison ); // Use global sort
 
+		// unordered array check with ==
 		$is_default_config = ( self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS === $configured_roles_for_comparison || empty( $configured_roles_for_comparison ) );
 
 		$skipped_user_ids = get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
