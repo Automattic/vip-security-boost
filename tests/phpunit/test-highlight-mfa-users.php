@@ -209,9 +209,6 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$output = ob_get_clean();
 
 		$this->assertEquals( '', $output );
-
-		// Reset current user
-		wp_set_current_user( 0 );
 	}
 
 	/**
