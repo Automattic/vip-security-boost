@@ -178,7 +178,7 @@ class Highlight_MFA_Users {
 		$notice_message_text = '';
 		if ( $is_default_config ) {
 			$notice_message_text = sprintf(
-					/* Translators: %d is the number of users with Administrator or Editor roles and 2FA disabled. */
+				/* Translators: %d is the number of users with Administrator or Editor roles and 2FA disabled. */
 				_n(
 					'There is %d user with Administrator or Editor roles with Two-Factor Authentication disabled.',
 					'There are %d users with Administrator or Editor roles with Two-Factor Authentication disabled.',
