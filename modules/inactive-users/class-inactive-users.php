@@ -101,6 +101,13 @@ class Inactive_Users {
 		}
 
 		if ( $user->ID && self::is_considered_inactive( $user->ID ) ) {
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'debug',
+					'feature'  => 'security-boost:inactive-users:authenticate',
+					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
+				]
+			);
 			if ( Context::is_xmlrpc_api() ) {
 				add_filter('xmlrpc_login_error', function () {
 					return new \IXR_Error( 403, __( 'Your account has been flagged as inactive. Please contact your site administrator.', 'wpvip' ) );
@@ -132,6 +139,13 @@ class Inactive_Users {
 		}
 
 		if ( self::is_considered_inactive( $user->ID ) ) {
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'debug',
+					'feature'  => 'security-boost:inactive-users:application-password-authentication',
+					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
+				]
+			);
 			self::$application_password_authentication_error = new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site administrator.', 'wpvip' ), array( 'status' => 403 ) );
 
 			return false;

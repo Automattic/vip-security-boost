@@ -27,6 +27,13 @@ class Loader {
 			} else {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error( 'Module not found: ' . esc_html( $module ), E_USER_WARNING );
+				\Automattic\VIP\Logstash\log2logstash(
+					[
+						'severity' => 'error',
+						'feature'  => 'security-boost:module-loader',
+						'message'  => 'Module not found: ' . $module,
+					]
+				);
 			}
 		}
 	}

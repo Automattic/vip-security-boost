@@ -18,29 +18,46 @@ class Notify_Privileged_Activity {
 	 * @param int $user_id The ID of the newly registered user.
 	 */
 	public static function notify_admin_user_creation( $user_id ) {
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
-			return;
-		}
-
-		if ( in_array( 'administrator', (array) $user->roles, true ) ) {
-			$admin_email = get_option( 'admin_email' );
-
-			if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+		try {
+			$user = get_userdata( $user_id );
+			if ( ! $user ) {
 				return;
 			}
 
-			/* Translators: %s: Site name. */
-			$subject = sprintf( __( '[%s] New Administrator User Created', 'wpvip' ),
-				get_bloginfo( 'name' )
-			);
+			if ( in_array( 'administrator', (array) $user->roles, true ) ) {
+				$admin_email = get_option( 'admin_email' );
 
-			Email::send( $user_id, $admin_email, $subject, 'privileged-user-created', [
-				'user_login' => $user->user_login,
-				'user_email' => $user->user_email,
-				'user_role'  => 'Administrator',
-				'admin_url'  => admin_url(),
-			] );
+				if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+					return;
+				}
+
+				/* Translators: %s: Site name. */
+				$subject = sprintf( __( '[%s] New Administrator User Created', 'wpvip' ),
+					get_bloginfo( 'name' )
+				);
+
+				\Automattic\VIP\Logstash\log2logstash(
+					[
+						'severity' => 'debug',
+						'feature'  => 'security-boost:notify-privileged-activity',
+						'message'  => 'New administrator user created: ' . $user->user_login,
+					]
+				);
+				Email::send( $user_id, $admin_email, $subject, 'privileged-user-created', [
+					'user_login' => $user->user_login,
+					'user_email' => $user->user_email,
+					'user_role'  => 'Administrator',
+					'admin_url'  => admin_url(),
+				] );
+			}
+		} catch ( \Exception $e ) {
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'error',
+					'feature'  => 'security-boost:notify-privileged-activity',
+					'message'  => 'Failed to notify admin user creation: ' . $e->getMessage(),
+				]
+			);
 		}
 	}
 }
