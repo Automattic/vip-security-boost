@@ -150,7 +150,7 @@ class Inactive_Users {
 		global $wp_list_table;
 
 		// Make sure we have a list table and it's the users list table
-		if ( ! $wp_list_table || ! is_a( $wp_list_table, 'WP_Users_List_Table' ) ) {
+		if ( ! $wp_list_table || ! ( $wp_list_table instanceof \WP_Users_List_Table ) ) {
 			return;
 		}
 
@@ -180,7 +180,7 @@ class Inactive_Users {
 			);
 
 			// Add the badge to the user_login field (which is what gets displayed in the username column)
-			$user->user_login = $user->user_login . '&nbsp;&nbsp' . $badge;
+			$user->user_login = esc_html( $user->user_login ) . '&nbsp;&nbsp' . $badge;
 		}
 
 		// Update the list table items

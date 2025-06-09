@@ -176,12 +176,12 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			->getMock();
 
 		// Create test user objects
-		$inactive_user = new stdClass();
-		$inactive_user->ID = $this->user_id;
+		$inactive_user             = new stdClass();
+		$inactive_user->ID         = $this->user_id;
 		$inactive_user->user_login = 'testuser';
 
-		$active_user = new stdClass();
-		$active_user->ID = $this->factory->user->create([
+		$active_user             = new stdClass();
+		$active_user->ID         = $this->factory->user->create([
 			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
 		]);
@@ -218,8 +218,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			->getMock();
 
 		// Create test user object
-		$inactive_user = new stdClass();
-		$inactive_user->ID = $this->user_id;
+		$inactive_user             = new stdClass();
+		$inactive_user->ID         = $this->user_id;
 		$inactive_user->user_login = 'testuser';
 
 		$wp_list_table->items = [ $inactive_user ];
@@ -258,7 +258,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( true ); // Should not crash
 
 		// Test with empty items
-		$wp_list_table = $this->getMockBuilder( 'WP_Users_List_Table' )
+		$wp_list_table        = $this->getMockBuilder( 'WP_Users_List_Table' )
 			->disableOriginalConstructor()
 			->getMock();
 		$wp_list_table->items = [];
