@@ -160,17 +160,47 @@ class Inactive_Users {
 		return $vars;
 	}
 
+
 	public static function last_seen_blocked_users_filter_query_args( $vars ) {
-		if ( isset( $_GET['last_seen_filter'] ) && 'blocked' === $_GET['last_seen_filter'] && isset( $_GET['last_seen_filter_nonce'] ) && wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' ) ) {
-			$vars['meta_key'] = self::LAST_SEEN_META_KEY;
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-			$vars['meta_value']   = self::get_inactivity_timestamp();
-			$vars['meta_type']    = 'NUMERIC';
-			$vars['meta_compare'] = '<';
+		if (
+		isset( $_GET['last_seen_filter'] ) &&
+		'blocked' === $_GET['last_seen_filter'] &&
+		isset( $_GET['last_seen_filter_nonce'] ) &&
+		wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' )
+		) {
+			$included_roles = self::$elevated_roles;
+
+			$role_queries = [];
+			foreach ( $included_roles as $role ) {
+				$role_queries[] = [
+					'key'     => $GLOBALS['wpdb']->get_blog_prefix() . 'capabilities',
+					'value'   => '"' . $role . '"',
+					'compare' => 'LIKE',
+				];
+			}
+
+      // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			$vars['meta_query'] = [
+				'relation' => 'AND',
+				[
+					'key'     => self::LAST_SEEN_META_KEY,
+					'value'   => self::get_inactivity_timestamp(),
+					'type'    => 'NUMERIC',
+					'compare' => '<',
+				],
+				[
+					'relation' => 'OR',
+					...$role_queries,
+				],
+			];
+
+			// ensure no conflict with top-level meta args
+			unset( $vars['meta_key'], $vars['meta_value'], $vars['meta_type'], $vars['meta_compare'] );
 		}
 
 		return $vars;
 	}
+
 
 	public static function add_last_seen_column_date( $default_value, $column_name, $user_id ) {
 		if ( 'last_seen' !== $column_name ) {
@@ -220,6 +250,7 @@ class Inactive_Users {
 				'meta_compare' => '<',
 				'count_total'  => false,
 				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
+				'role__in'     => self::$elevated_roles,
 			),
 		);
 
