@@ -170,6 +170,10 @@ class Inactive_Users {
 		) {
 			$included_roles = self::$elevated_roles;
 
+			if ( ! is_array( $included_roles ) || empty( $included_roles ) ) {
+				// Skip adding the OR clause if no elevated roles are defined
+				return $vars;
+			}
 			$role_queries = [];
 			foreach ( $included_roles as $role ) {
 				$role_queries[] = [
@@ -250,7 +254,7 @@ class Inactive_Users {
 				'meta_compare' => '<',
 				'count_total'  => false,
 				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
-				'role__in'     => self::$elevated_roles,
+				'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
 			),
 		);
 
