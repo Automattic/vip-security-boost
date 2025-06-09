@@ -18,10 +18,12 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
 			define('VIP_SECURITY_BOOST_CONFIGS', [
-				'inactive_users' => [
-					'mode'                           => 'BLOCK',
-					'considered_inactive_after_days' => 90,
-					'roles'                          => $this->elevated_roles,
+				'module_configs' => [
+					'inactive-users' => [
+						'mode'                           => 'BLOCK',
+						'considered_inactive_after_days' => 90,
+						'roles'                          => $this->elevated_roles,
+					],
 				],
 			]);
 		}
@@ -161,5 +163,121 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertFalse( Inactive_Users::is_considered_inactive( $new_user_id ) );
 
 		wp_delete_user( $new_user_id );
+	}
+
+	/**
+	 * Test that modify_users_list_table_items adds badges to inactive users
+	 */
+	public function test_modify_users_list_table_items_adds_badges() {
+		// Create a mock WP_Users_List_Table
+		global $wp_list_table;
+		$wp_list_table = $this->getMockBuilder( 'WP_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+
+		// Create test user objects
+		$inactive_user = new stdClass();
+		$inactive_user->ID = $this->user_id;
+		$inactive_user->user_login = 'testuser';
+
+		$active_user = new stdClass();
+		$active_user->ID = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+		]);
+		$active_user->user_login = 'activeuser';
+
+		// Set up the list table items
+		$wp_list_table->items = [ $inactive_user, $active_user ];
+
+		// Make the first user inactive
+		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Call the method
+		Inactive_Users::modify_users_list_table_items();
+
+		// Check that the inactive user has a badge added
+		$this->assertStringContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
+		$this->assertStringContainsString( 'testuser', $wp_list_table->items[0]->user_login );
+
+		// Check that the active user doesn't have a badge
+		$this->assertEquals( 'activeuser', $wp_list_table->items[1]->user_login );
+
+		// Clean up
+		wp_delete_user( $active_user->ID );
+	}
+
+	/**
+	 * Test that modify_users_list_table_items shows correct badge text
+	 */
+	public function test_modify_users_list_table_items_badge_text() {
+		// Create a mock WP_Users_List_Table
+		global $wp_list_table;
+		$wp_list_table = $this->getMockBuilder( 'WP_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+
+		// Create test user object
+		$inactive_user = new stdClass();
+		$inactive_user->ID = $this->user_id;
+		$inactive_user->user_login = 'testuser';
+
+		$wp_list_table->items = [ $inactive_user ];
+
+		// Make the user inactive
+		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test that a badge is added (the specific text depends on the current config)
+		Inactive_Users::modify_users_list_table_items();
+		$this->assertStringContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
+		$this->assertStringContainsString( 'testuser', $wp_list_table->items[0]->user_login );
+
+		// Should contain either "Blocked: Inactivity" or "Inactive User"
+		$login_text = $wp_list_table->items[0]->user_login;
+		$this->assertTrue(
+			strpos( $login_text, 'Blocked: Inactivity' ) !== false ||
+			strpos( $login_text, 'Inactive User' ) !== false,
+			'Badge should contain either "Blocked: Inactivity" or "Inactive User"'
+		);
+	}
+
+	/**
+	 * Test that modify_users_list_table_items handles empty or invalid list table
+	 */
+	public function test_modify_users_list_table_items_handles_invalid_input() {
+		global $wp_list_table;
+
+		// Test with no list table
+		$wp_list_table = null;
+		Inactive_Users::modify_users_list_table_items();
+		$this->assertTrue( true ); // Should not crash
+
+		// Test with wrong type of list table
+		$wp_list_table = new stdClass();
+		Inactive_Users::modify_users_list_table_items();
+		$this->assertTrue( true ); // Should not crash
+
+		// Test with empty items
+		$wp_list_table = $this->getMockBuilder( 'WP_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+		$wp_list_table->items = [];
+		Inactive_Users::modify_users_list_table_items();
+		$this->assertTrue( true ); // Should not crash
+	}
+
+	/**
+	 * Test that add_username_badge_styles outputs CSS with correct classes and colors
+	 */
+	public function test_add_username_badge_styles_outputs_css() {
+		ob_start();
+		Inactive_Users::add_username_badge_styles();
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( '.inactive-user-badge', $output );
+		$this->assertStringContainsString( '.inactive-user-badge--blocked', $output );
+		$this->assertStringContainsString( '.inactive-user-badge--inactive', $output );
+		$this->assertStringContainsString( 'background: #d63638', $output );
+		$this->assertStringContainsString( 'background: #f0b849', $output );
 	}
 }
