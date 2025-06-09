@@ -63,7 +63,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Set skipped users option
 		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
-
+		wp_set_current_user( $this->admin_user_mfa_enabled_id );
 		Highlight_MFA_Users::init();
 	}
 
@@ -85,7 +85,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$_GET                      = $this->original_get;
 		$GLOBALS['current_screen'] = $this->original_current_screen;
 		unset( $GLOBALS['current_screen'] ); // Ensure it's fully removed if it wasn't set before
-
+		wp_set_current_user( 0 );
 		parent::tearDown();
 	}
 
@@ -193,6 +193,22 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
 
 		unset( $_GET['filter_mfa_disabled'] );
+	}
+
+
+	/**
+	 * Test that the admin notice is not displayed when we're an editor
+	 */
+	public function test_display_mfa_disabled_notice_does_not_show_when_not_admin() {
+		$this->set_admin_screen_users();
+		// Set a non-admin user
+		wp_set_current_user( $this->editor_user_id );
+
+		ob_start();
+		Highlight_MFA_Users::display_mfa_disabled_notice();
+		$output = ob_get_clean();
+
+		$this->assertEquals( '', $output );
 	}
 
 	/**
