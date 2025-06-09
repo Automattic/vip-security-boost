@@ -197,7 +197,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 
 	/**
-	 * Test that the admin notice is displayed correctly when MFA-disabled admins exist.
+	 * Test that the admin notice is not displayed when we're an editor
 	 */
 	public function test_display_mfa_disabled_notice_does_not_show_when_not_admin() {
 		$this->set_admin_screen_users();
