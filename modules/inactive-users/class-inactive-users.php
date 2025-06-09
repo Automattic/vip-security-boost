@@ -150,7 +150,11 @@ class Inactive_Users {
 		global $wp_list_table;
 
 		// Make sure we have a list table and it's the users list table
-		if ( ! $wp_list_table || ! ( $wp_list_table instanceof \WP_Users_List_Table ) ) {
+		if ( ! $wp_list_table ) {
+			return;
+		}
+
+		if ( ! ( $wp_list_table instanceof \WP_Users_List_Table ) && ! ( $wp_list_table instanceof \WP_MS_Users_List_Table ) ) {
 			return;
 		}
 

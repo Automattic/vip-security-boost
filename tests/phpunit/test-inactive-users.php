@@ -267,6 +267,34 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that modify_users_list_table_items works with WP_MS_Users_List_Table for multisite
+	 */
+	public function test_modify_users_list_table_items_works_with_multisite_table() {
+		// Create a mock WP_MS_Users_List_Table
+		global $wp_list_table;
+		$wp_list_table = $this->getMockBuilder( 'WP_MS_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+
+		// Create test user object
+		$inactive_user             = new stdClass();
+		$inactive_user->ID         = $this->user_id;
+		$inactive_user->user_login = 'testuser';
+
+		$wp_list_table->items = [ $inactive_user ];
+
+		// Make the user inactive
+		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Call the method
+		Inactive_Users::modify_users_list_table_items();
+
+		// Check that the inactive user has a badge added
+		$this->assertStringContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
+		$this->assertStringContainsString( 'testuser', $wp_list_table->items[0]->user_login );
+	}
+
+	/**
 	 * Test that add_username_badge_styles outputs CSS with correct classes and colors
 	 */
 	public function test_add_username_badge_styles_outputs_css() {
