@@ -180,7 +180,7 @@ class Inactive_Users {
 			);
 
 			// Add the badge to the user_login field (which is what gets displayed in the username column)
-			$user->user_login = esc_html( $user->user_login ) . '&nbsp;&nbsp' . $badge;
+			$user->user_login = esc_html( $user->user_login ) . '&nbsp;&nbsp;' . $badge;
 		}
 
 		// Update the list table items
