@@ -68,7 +68,7 @@ class Notify_Privileged_Activity {
 	 * @param \WP_User $user    The user object.
 	 * @param string   $subject The email subject.
 	 */
-	private static function send_notification( $user, $subject,$email_title,$template ) {
+	private static function send_notification( $user, $subject, $email_title, $template ) {
 		$admin_email = get_option( 'admin_email' );
 
 		if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
