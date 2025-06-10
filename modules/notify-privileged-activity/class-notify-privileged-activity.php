@@ -10,6 +10,8 @@ class Notify_Privileged_Activity {
 		} else {
 			add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
 		}
+
+		add_action( 'set_user_role', [ __CLASS__, 'notify_user_promoted_to_admin' ], 10, 3 );
 	}
 
 	/**
@@ -24,24 +26,59 @@ class Notify_Privileged_Activity {
 		}
 
 		if ( in_array( 'administrator', (array) $user->roles, true ) ) {
-			$admin_email = get_option( 'admin_email' );
-
-			if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
-				return;
-			}
-
 			/* Translators: %s: Site name. */
 			$subject = sprintf( __( '[%s] New Administrator User Created', 'wpvip' ),
 				get_bloginfo( 'name' )
 			);
 
-			Email::send( $user_id, $admin_email, $subject, 'privileged-user-created', [
-				'user_login' => $user->user_login,
-				'user_email' => $user->user_email,
-				'user_role'  => 'Administrator',
-				'admin_url'  => admin_url(),
-			] );
+			self::send_notification( $user, $subject, 'privileged-user-created' );
 		}
+	}
+
+	/**
+	 * Handle user promotion to administrator.
+	 *
+	 * @param int    $user_id   The user ID.
+	 * @param string $new_role  The new role.
+	 * @param array  $old_roles An array of the user's previous roles.
+	 */
+	public static function notify_user_promoted_to_admin( $user_id, $new_role, $old_roles ) {
+		if ( 'administrator' !== $new_role || in_array( 'administrator', $old_roles, true ) ) {
+			return;
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
+			return;
+		}
+
+		/* Translators: %s: Site name. */
+		$subject = sprintf( __( '[%s] User Promoted to Administrator', 'wpvip' ),
+			get_bloginfo( 'name' )
+		);
+
+		self::send_notification( $user, $subject, 'privileged-user-promoted' );
+	}
+
+	/**
+	 * Send the notification email.
+	 *
+	 * @param \WP_User $user    The user object.
+	 * @param string   $subject The email subject.
+	 */
+	private static function send_notification( $user, $subject, $template ) {
+		$admin_email = get_option( 'admin_email' );
+
+		if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+			return;
+		}
+
+		Email::send( $user->ID, $admin_email, $subject, $template, [
+			'user_login' => $user->user_login,
+			'user_email' => $user->user_email,
+			'user_role'  => 'Administrator',
+			'admin_url'  => admin_url(),
+		] );
 	}
 }
 

@@ -28,6 +28,7 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 	public function test_init_adds_action() {
 		Notify_Privileged_Activity::init();
 		$this->assertNotFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was not added.' );
+		$this->assertNotFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was not added.' );
 	}
 
 	private function check_email_spy_property_exists() {
@@ -119,6 +120,7 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			'user_login' => $user_data->user_login,
 			'user_email' => $user_data->user_email,
 			'user_role'  => 'Administrator',
+			'admin_url'  => admin_url(),
 		];
 		
 		Notify_Privileged_Activity::notify_admin_user_creation( $user_id );
@@ -129,6 +131,83 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			$this->assertEquals( $admin_email_val, Email::$last_call_args_for_test['email_address'] );
 			$this->assertEquals( $expected_subject, Email::$last_call_args_for_test['subject'] );
 			$this->assertEquals( 'privileged-user-created', Email::$last_call_args_for_test['template_id'] );
+			$this->assertEquals( $expected_template_data, Email::$last_call_args_for_test['template_data'] );
+		}
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_promoted_to_admin_invalid_user_id() {
+		if ( ! $this->check_email_spy_property_exists() ) {
+			return;
+		}
+		Notify_Privileged_Activity::notify_user_promoted_to_admin( 99999, 'administrator', [ 'editor' ] );
+		$this->assertNull( Email::$last_call_args_for_test, 'Email::send was called unexpectedly for invalid user ID.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_promoted_to_admin_not_promoted_to_admin() {
+		if ( ! $this->check_email_spy_property_exists() ) {
+			return;
+		}
+		$user_id = self::factory()->user->create( [ 'role' => 'subscriber' ] );
+		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'editor', [ 'subscriber' ] );
+		$this->assertNull( Email::$last_call_args_for_test, 'Email::send was called unexpectedly for non-admin promotion.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_promoted_to_admin_already_admin() {
+		if ( ! $this->check_email_spy_property_exists() ) {
+			return;
+		}
+		$user_id = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'administrator', 'editor' ] );
+		$this->assertNull( Email::$last_call_args_for_test, 'Email::send was called unexpectedly for user who was already an admin.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_promoted_to_admin_sends_email_successfully() {
+		if ( ! $this->check_email_spy_property_exists() ) {
+			return;
+		}
+
+		$user_data       = self::factory()->user->create_and_get( [
+			'role'       => 'editor',
+			'user_login' => 'promotedadmin',
+			'user_email' => 'promotedadmin@example.com',
+		] );
+		$user_id         = $user_data->ID;
+		$admin_email_val = 'admin@example.com';
+		update_option( 'admin_email', $admin_email_val );
+		$site_name = get_bloginfo( 'name' );
+
+		$expected_subject       = sprintf( '[%s] User Promoted to Administrator', $site_name );
+		$expected_template_data = [
+			'user_login' => $user_data->user_login,
+			'user_email' => $user_data->user_email,
+			'user_role'  => 'Administrator',
+			'admin_url'  => admin_url(),
+		];
+
+		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'editor' ] );
+
+		$this->assertNotNull( Email::$last_call_args_for_test, 'Email::send was not called.' );
+		if ( Email::$last_call_args_for_test ) {
+			$this->assertEquals( $user_id, Email::$last_call_args_for_test['user_id'] );
+			$this->assertEquals( $admin_email_val, Email::$last_call_args_for_test['email_address'] );
+			$this->assertEquals( $expected_subject, Email::$last_call_args_for_test['subject'] );
+			$this->assertEquals( 'privileged-user-promoted', Email::$last_call_args_for_test['template_id'] );
 			$this->assertEquals( $expected_template_data, Email::$last_call_args_for_test['template_data'] );
 		}
 	}
