@@ -1,8 +1,10 @@
 <?php
 namespace Automattic\VIP\Security;
 
+use Automattic\VIP\Security\Constants;
+
 class Loader {
-	const LOG_FEATURE_NAME = 'security-boost:module-loader';
+	const LOG_FEATURE_NAME = 'sb_module_loader';
 	public static function init() {
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
 			throw new \Exception( 'VIP_SECURITY_BOOST_CONFIGS is not defined.' );
@@ -31,6 +33,7 @@ class Loader {
 				\Automattic\VIP\Logstash\log2logstash(
 					[
 						'severity' => 'error',
+						'plugin'   => Constants::LOG_PLUGIN_NAME,
 						'feature'  => self::LOG_FEATURE_NAME,
 						'message'  => 'Module not found: ' . $module,
 					]

@@ -2,6 +2,7 @@
 namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
+use Automattic\VIP\Security\Constants;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Inactive_Users {
@@ -10,7 +11,7 @@ class Inactive_Users {
 	private static $mode;
 	public static $release_date;
 
-	const LOG_FEATURE_NAME = 'security-boost:inactive-users';
+	const LOG_FEATURE_NAME = 'sb_inactive_users';
 
 	const LAST_SEEN_META_KEY                               = 'wpvip_last_seen';
 	const LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY = 'wpvip_last_seen_ignore_inactivity_check_until';
@@ -107,6 +108,7 @@ class Inactive_Users {
 				[
 					'severity' => 'debug',
 					'feature'  => self::LOG_FEATURE_NAME,
+					'plugin'   => Constants::LOG_PLUGIN_NAME,
 					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
 				]
 			);
@@ -145,6 +147,7 @@ class Inactive_Users {
 				[
 					'severity' => 'debug',
 					'feature'  => self::LOG_FEATURE_NAME,
+					'plugin'   => Constants::LOG_PLUGIN_NAME,
 					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
 				]
 			);
