@@ -44,7 +44,8 @@ class Notify_Privileged_Activity {
 	 * @param array  $old_roles An array of the user's previous roles.
 	 */
 	public static function notify_user_promoted_to_admin( $user_id, $new_role, $old_roles ) {
-		if ( 'administrator' !== $new_role || in_array( 'administrator', $old_roles, true ) ) {
+		// Don't send a notification if the user is being created (empty roles), or if they are already an administrator.
+		if ( empty( $old_roles ) || 'administrator' !== $new_role || in_array( 'administrator', $old_roles, true ) ) {
 			return;
 		}
 
