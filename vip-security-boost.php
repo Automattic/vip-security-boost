@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  * Plugin Name: WordPress VIP Security Boost
  * Plugin URI: https://github.com/Automattic/vip-security-boost-integration
@@ -17,6 +17,7 @@ declare(strict_types = 1);
 
 require_once __DIR__ . '/utils/configs.php';
 require_once __DIR__ . '/email/email.php';
+require_once __DIR__ . '/utils/class-constants.php';
 
 use function Automattic\VIP\Security\Utils\load_integration_configs_from_headers;
 use function Automattic\VIP\Security\Utils\load_integration_configs_from_url;
@@ -32,7 +33,7 @@ if ( $is_local_env ) {
 	if ( ! defined( 'VIP_GO_APP_ID' ) || ! constant( 'VIP_GO_APP_ID' ) ) {
 		define( 'VIP_GO_APP_ID', 101 );
 	}
-	
+
 	// Check headers for integration test configs
 	if ( isset( $_SERVER['HTTP_X_INTEGRATION_TEST'] ) ) {
 		// Load the integration configurations from the headers
