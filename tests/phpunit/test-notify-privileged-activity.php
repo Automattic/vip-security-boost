@@ -115,14 +115,15 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 		update_option( 'admin_email', $admin_email_val );
 		$site_name = get_bloginfo( 'name' );
 
-		$expected_subject       = sprintf( '[%s] New Administrator User Created', $site_name );
+		$expected_subject       = sprintf( '[%s] New Administrator Added', $site_name );
 		$expected_template_data = [
-			'user_login' => $user_data->user_login,
-			'user_email' => $user_data->user_email,
-			'user_role'  => 'Administrator',
-			'admin_url'  => admin_url(),
+			'user_login'  => $user_data->user_login,
+			'user_email'  => $user_data->user_email,
+			'user_role'   => 'Administrator',
+			'admin_url'   => admin_url(),
+			'email_title' => 'New Administrator Added',
 		];
-		
+
 		Notify_Privileged_Activity::notify_admin_user_creation( $user_id );
 
 		$this->assertNotNull( Email::$last_call_args_for_test, 'Email::send was not called.' );
@@ -194,10 +195,11 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 
 		$expected_subject       = sprintf( '[%s] User Promoted to Administrator', $site_name );
 		$expected_template_data = [
-			'user_login' => $user_data->user_login,
-			'user_email' => $user_data->user_email,
-			'user_role'  => 'Administrator',
-			'admin_url'  => admin_url(),
+			'user_login'  => $user_data->user_login,
+			'user_email'  => $user_data->user_email,
+			'user_role'   => 'Administrator',
+			'admin_url'   => admin_url(),
+			'email_title' => 'User Promoted to Administrator',
 		];
 
 		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'editor' ] );
@@ -211,4 +213,4 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			$this->assertEquals( $expected_template_data, Email::$last_call_args_for_test['template_data'] );
 		}
 	}
-} 
+}

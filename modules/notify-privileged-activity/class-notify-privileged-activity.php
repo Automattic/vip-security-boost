@@ -27,11 +27,12 @@ class Notify_Privileged_Activity {
 
 		if ( in_array( 'administrator', (array) $user->roles, true ) ) {
 			/* Translators: %s: Site name. */
-			$subject = sprintf( __( '[%s] New Administrator User Created', 'wpvip' ),
+			$subject = sprintf( __( '[%s] New Administrator Added', 'wpvip' ),
 				get_bloginfo( 'name' )
 			);
+			$email_title = sprintf( __( 'New Administrator Added', 'wpvip' ) );
 
-			self::send_notification( $user, $subject, 'privileged-user-created' );
+			self::send_notification( $user, $subject, $email_title, 'privileged-user-created' );
 		}
 	}
 
@@ -56,8 +57,9 @@ class Notify_Privileged_Activity {
 		$subject = sprintf( __( '[%s] User Promoted to Administrator', 'wpvip' ),
 			get_bloginfo( 'name' )
 		);
+		$email_title = sprintf( __( 'User Promoted to Administrator', 'wpvip' ) );
 
-		self::send_notification( $user, $subject, 'privileged-user-promoted' );
+		self::send_notification( $user, $subject, $email_title, 'privileged-user-promoted' );
 	}
 
 	/**
@@ -66,7 +68,7 @@ class Notify_Privileged_Activity {
 	 * @param \WP_User $user    The user object.
 	 * @param string   $subject The email subject.
 	 */
-	private static function send_notification( $user, $subject, $template ) {
+	private static function send_notification( $user, $subject,$email_title,$template ) {
 		$admin_email = get_option( 'admin_email' );
 
 		if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
@@ -77,6 +79,7 @@ class Notify_Privileged_Activity {
 			'user_login' => $user->user_login,
 			'user_email' => $user->user_email,
 			'user_role'  => 'Administrator',
+			'email_title' => $email_title,
 			'admin_url'  => admin_url(),
 		] );
 	}
