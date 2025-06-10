@@ -168,20 +168,7 @@ class Inactive_Users {
 		isset( $_GET['last_seen_filter_nonce'] ) &&
 		wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' )
 		) {
-			$included_roles = self::$elevated_roles;
-
-			if ( ! is_array( $included_roles ) || empty( $included_roles ) ) {
-				// Skip adding the OR clause if no elevated roles are defined
-				return $vars;
-			}
-			$role_queries = [];
-			foreach ( $included_roles as $role ) {
-				$role_queries[] = [
-					'key'     => $GLOBALS['wpdb']->get_blog_prefix() . 'capabilities',
-					'value'   => '"' . $role . '"',
-					'compare' => 'LIKE',
-				];
-			}
+			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
 
       // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$vars['meta_query'] = [
@@ -192,14 +179,7 @@ class Inactive_Users {
 					'type'    => 'NUMERIC',
 					'compare' => '<',
 				],
-				[
-					'relation' => 'OR',
-					...$role_queries,
-				],
 			];
-
-			// ensure no conflict with top-level meta args
-			unset( $vars['meta_key'], $vars['meta_value'], $vars['meta_type'], $vars['meta_compare'] );
 		}
 
 		return $vars;
