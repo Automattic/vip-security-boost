@@ -12,7 +12,7 @@ use function Automattic\VIP\Security\Utils\get_module_configs;
  * - 1-13: Number of days the session should last. WordPress default is 14 days, so we're allowing users to choose a number below it.
  */
 class Session_Control {
-
+	const LOG_FEATURE_NAME     = 'security-boost:session-control';
 	public const DEFAULT_VALUE = 'default';
 	/**
 	 * Session expiration time in days
@@ -41,7 +41,7 @@ class Session_Control {
 				\Automattic\VIP\Logstash\log2logstash(
 					[
 						'severity' => 'warning',
-						'feature'  => 'security-boost:session-control',
+						'feature'  => self::LOG_FEATURE_NAME,
 						'message'  => 'Invalid session expiration days. Must be an integer. Reverting to default.',
 					]
 				);
@@ -56,7 +56,7 @@ class Session_Control {
 				\Automattic\VIP\Logstash\log2logstash(
 					[
 						'severity' => 'warning',
-						'feature'  => 'security-boost:session-control',
+						'feature'  => self::LOG_FEATURE_NAME,
 						'message'  => 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
 					]
 				);

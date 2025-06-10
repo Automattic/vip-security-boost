@@ -10,6 +10,8 @@ class Inactive_Users {
 	private static $mode;
 	public static $release_date;
 
+	const LOG_FEATURE_NAME = 'security-boost:inactive-users';
+
 	const LAST_SEEN_META_KEY                               = 'wpvip_last_seen';
 	const LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY = 'wpvip_last_seen_ignore_inactivity_check_until';
 	const LAST_SEEN_CACHE_GROUP                            = 'wpvip_last_seen';
@@ -104,7 +106,7 @@ class Inactive_Users {
 			\Automattic\VIP\Logstash\log2logstash(
 				[
 					'severity' => 'debug',
-					'feature'  => 'security-boost:inactive-users:authenticate',
+					'feature'  => self::LOG_FEATURE_NAME,
 					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
 				]
 			);
@@ -142,7 +144,7 @@ class Inactive_Users {
 			\Automattic\VIP\Logstash\log2logstash(
 				[
 					'severity' => 'debug',
-					'feature'  => 'security-boost:inactive-users:application-password-authentication',
+					'feature'  => self::LOG_FEATURE_NAME,
 					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
 				]
 			);

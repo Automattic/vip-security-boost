@@ -4,6 +4,7 @@ namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 use Automattic\VIP\Security\Email\Email;
 
 class Notify_Privileged_Activity {
+	const LOG_FEATURE_NAME = 'security-boost:notify-privileged-activity';
 	public static function init() {
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
@@ -39,7 +40,7 @@ class Notify_Privileged_Activity {
 				\Automattic\VIP\Logstash\log2logstash(
 					[
 						'severity' => 'debug',
-						'feature'  => 'security-boost:notify-privileged-activity',
+						'feature'  => self::LOG_FEATURE_NAME,
 						'message'  => 'New administrator user created: ' . $user->user_login,
 					]
 				);
@@ -54,7 +55,7 @@ class Notify_Privileged_Activity {
 			\Automattic\VIP\Logstash\log2logstash(
 				[
 					'severity' => 'error',
-					'feature'  => 'security-boost:notify-privileged-activity',
+					'feature'  => self::LOG_FEATURE_NAME,
 					'message'  => 'Failed to notify admin user creation: ' . $e->getMessage(),
 				]
 			);
