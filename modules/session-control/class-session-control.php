@@ -38,6 +38,13 @@ class Session_Control {
 			// Validate the expiration days value (must be between 1 and 13)
 			// check if it's valid int
 			if ( ! is_numeric( $expiration_days_value ) ) {
+				\Automattic\VIP\Logstash\log2logstash(
+					[
+						'severity' => 'warning',
+						'feature'  => 'security-boost:session-control',
+						'message'  => 'Invalid session expiration days. Must be an integer. Reverting to default.',
+					]
+				);
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error( 'Invalid session expiration days. Must be an integer. Reverting to default.', E_USER_WARNING );
 				return;
@@ -45,6 +52,14 @@ class Session_Control {
 			$expiration_days = intval( $expiration_days_value );
 
 			if ( $expiration_days < 1 || $expiration_days > 13 ) {
+
+				\Automattic\VIP\Logstash\log2logstash(
+					[
+						'severity' => 'warning',
+						'feature'  => 'security-boost:session-control',
+						'message'  => 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
+					]
+				);
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.', E_USER_WARNING );
 				return;
