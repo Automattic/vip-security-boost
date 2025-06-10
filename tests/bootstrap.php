@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../utils/configs.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
+require_once __DIR__ . '/../utils/class-constants.php';
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 
