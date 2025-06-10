@@ -10,13 +10,13 @@
 						Please review the details below:
 					</mj-text>
 					<mj-text align="center" font-size="20px" line-height="5px">
-						Username: <strong>{{%=user_login%}}</strong>
+						<strong>Username</strong>: {{%=user_login%}}
 					</mj-text>
 					<mj-text align="center" font-size="20px" line-height="5px">
-						Email: <strong>{{%=user_email%}}</strong>
+						<strong>Email</strong>: {{%=user_email%}}
 					</mj-text>
 					<mj-text align="center" font-size="20px" line-height="5px">
-						Role: <strong>{{%=user_role%}}</strong>
+						<strong>Role</strong>: {{%=user_role%}}
 					</mj-text>
 					<mj-text font-size="20px" padding="14px 0px 24px" line-height="30px">
 						If you authorized this change, no action is needed.<br />
