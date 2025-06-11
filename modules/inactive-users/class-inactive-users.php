@@ -162,15 +162,16 @@ class Inactive_Users {
 
 
 	public static function last_seen_blocked_users_filter_query_args( $vars ) {
+		// Only filter when the “blocked” last_seen_filter is set and valid
 		if (
-		isset( $_GET['last_seen_filter'] ) &&
-		'blocked' === $_GET['last_seen_filter'] &&
-		isset( $_GET['last_seen_filter_nonce'] ) &&
-		wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' )
+			isset( $_GET['last_seen_filter'] ) &&
+			'blocked' === $_GET['last_seen_filter'] &&
+			isset( $_GET['last_seen_filter_nonce'] ) &&
+			wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' )
 		) {
 			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
 
-      // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$vars['meta_query'] = [
 				'relation' => 'AND',
 				[
