@@ -2,8 +2,10 @@
 namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 
 use Automattic\VIP\Security\Email\Email;
+use Automattic\VIP\Security\Constants;
 
 class Notify_Privileged_Activity {
+	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
 	public static function init() {
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
@@ -70,19 +72,40 @@ class Notify_Privileged_Activity {
 	 * @param string   $subject The email subject.
 	 */
 	private static function send_notification( $user, $subject, $email_title, $template ) {
-		$admin_email = get_option( 'admin_email' );
+		try {
+			$admin_email = get_option( 'admin_email' );
 
-		if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
-			return;
+			if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+				return;
+			}
+
+
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'debug',
+					'feature'  => self::LOG_FEATURE_NAME,
+					'plugin'   => Constants::LOG_PLUGIN_NAME,
+					'message'  => 'User granted admin roles (notification type: ' . $template . ') user: ' . $user->user_login,
+				]
+			);
+
+			Email::send( $user->ID, $admin_email, $subject, $template, [
+				'user_login'  => $user->user_login,
+				'user_email'  => $user->user_email,
+				'user_role'   => 'Administrator',
+				'email_title' => $email_title,
+				'admin_url'   => admin_url(),
+			] );
+		} catch ( \Exception $e ) {
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'error',
+					'feature'  => self::LOG_FEATURE_NAME,
+					'plugin'   => Constants::LOG_PLUGIN_NAME,
+					'message'  => 'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage(),
+				]
+			);
 		}
-
-		Email::send( $user->ID, $admin_email, $subject, $template, [
-			'user_login'  => $user->user_login,
-			'user_email'  => $user->user_email,
-			'user_role'   => 'Administrator',
-			'email_title' => $email_title,
-			'admin_url'   => admin_url(),
-		] );
 	}
 }
 
