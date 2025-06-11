@@ -16,7 +16,7 @@ class Highlight_MFA_Users {
 	private static $roles;
 
 	public static function init() {
-		// Feature is always active unless specific users are skipped via option.
+			 // Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = get_module_configs( 'highlight-mfa-users' );
 		self::$roles           = $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS; // Default to administrator and editor if not configured
 
