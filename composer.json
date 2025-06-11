@@ -32,6 +32,7 @@
 	"scripts": {
 		"lint": "./vendor/bin/phpcs --standard=.phpcs.xml.dist",
 		"format": "./vendor/bin/phpcbf --standard=.phpcs.xml.dist",
+		"format-check": "./vendor/bin/phpcs --standard=.phpcs.xml.dist --severity=4",
 		"phpcs": "./vendor/bin/phpcs",
 		"test": "./bin/test.sh --php 8.2 --wp 6.5",
 		"test:integration": "./vendor/bin/phpunit --bootstrap tests/integration/bootstrap.php tests/integration/",
