@@ -213,4 +213,45 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			$this->assertEquals( $expected_template_data, Email::$last_call_args_for_test['template_data'] );
 		}
 	}
+
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_granted_super_admin_sends_email_successfully() {
+		if ( ! $this->check_email_spy_property_exists() ) {
+			return;
+		}
+
+		$user_data       = self::factory()->user->create_and_get( [
+			'role'       => 'editor',
+			'user_login' => 'promotedadmin',
+			'user_email' => 'promotedadmin@example.com',
+		] );
+		$user_id         = $user_data->ID;
+		$admin_email_val = 'admin@example.com';
+		update_option( 'admin_email', $admin_email_val );
+		$site_name = get_bloginfo( 'name' );
+
+		$expected_subject       = sprintf( '[%s] User Granted Super Admin Privileges', $site_name );
+		$expected_template_data = [
+			'user_login'        => $user_data->user_login,
+			'user_email'        => $user_data->user_email,
+			'user_role'         => 'Super Administrator',
+			'network_admin_url' => network_admin_url(),
+			'email_title'       => 'User Granted Super Admin Privileges',
+		];
+
+		Notify_Privileged_Activity::notify_user_granted_super_admin( $user_id );
+
+		$this->assertNotNull( Email::$last_call_args_for_test, 'Email::send was not called.' );
+		if ( Email::$last_call_args_for_test ) {
+			$this->assertEquals( $user_id, Email::$last_call_args_for_test['user_id'] );
+			$this->assertEquals( $admin_email_val, Email::$last_call_args_for_test['email_address'] );
+			$this->assertEquals( $expected_subject, Email::$last_call_args_for_test['subject'] );
+			$this->assertEquals( 'privileged-user-granted-super-admin', Email::$last_call_args_for_test['template_id'] );
+			$this->assertEquals( $expected_template_data, Email::$last_call_args_for_test['template_data'] );
+		}
+	}
 }
