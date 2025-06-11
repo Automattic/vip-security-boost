@@ -50,9 +50,13 @@ class Email {
 		}
 
 		// Fetch email template and replace variables.
-		$template_data['subject']           = $subject;
-		$template_data['email_title']       = $subject;
+		$template_data['subject'] = $subject;
+		// If email_title is empty, use subject as default.
+		if ( empty( $template_data['email_title'] ) ) {
+			$template_data['email_title'] = $subject;
+		}
 		$template_data['site_url']          = home_url();
+		$template_data['site_name']         = get_bloginfo( 'name' );
 		$template_data['display_name']      = $user_name ?: $user->display_name;
 		$template_data['date']              = gmdate( 'F j, Y' );
 		$template_data['utc_time']          = gmdate( 'H:i \U\T\C' );
