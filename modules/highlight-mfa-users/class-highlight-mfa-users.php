@@ -1,9 +1,9 @@
 <?php
-namespace Automattic\VIP\Security\MFAUsers;
+namespace Automattic\VIP\Security\HighlightMfaUsers;
 
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
-class Highlight_MFA_Users {
+class Highlight_Mfa_Users {
 	const MFA_SKIP_USER_IDS_OPTION_KEY    = 'vip_security_mfa_skip_user_ids';
 	const ROLE_COLUMN_KEY                 = 'role';
 	const DEFAULT_ADMIN_EDITOR_ROLE_SLUGS = [ 'administrator', 'editor' ];
@@ -15,9 +15,14 @@ class Highlight_MFA_Users {
 	 */
 	private static $roles;
 
-	public static function init() {
+	/**
+	 * Initialize the module
+	 *
+	 * @param array $config The configuration for the module.
+	 */
+	public static function init( $config = [] ): void {
 		// Feature is always active unless specific users are skipped via option.
-		$highlight_mfa_configs = get_module_configs( 'highlight-mfa-users' );
+		$highlight_mfa_configs = $config;
 		self::$roles           = $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS; // Default to administrator and editor if not configured
 
 		if ( ! is_array( self::$roles ) ) {
@@ -350,4 +355,3 @@ class Highlight_MFA_Users {
 		return $args;
 	}
 }
-Highlight_MFA_Users::init();

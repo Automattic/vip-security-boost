@@ -3,7 +3,6 @@
 namespace Automattic\VIP\Security\SessionControl;
 
 use Automattic\VIP\Security\Constants;
-use function Automattic\VIP\Security\Utils\get_module_configs;
 
 /**
  * Session Control module for VIP Security Boost
@@ -26,13 +25,15 @@ class Session_Control {
 
 	/**
 	 * Initialize the module
+	 *
+	 * @param array $config The configuration for the module.
 	 */
-	public static function init() {
+	public static function init( $config = [] ): void {
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
 			return;
 		}
 
-		$session_configs       = get_module_configs( 'session-control' );
+		$session_configs       = $config;
 		$expiration_days_value = $session_configs['expiration_days'] ?? self::DEFAULT_VALUE;
 
 		// Only apply if a valid expiration time is set
@@ -96,5 +97,3 @@ class Session_Control {
 		return $expiration;
 	}
 }
-
-Session_Control::init();

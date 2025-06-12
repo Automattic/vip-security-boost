@@ -2,6 +2,22 @@
 
 namespace Automattic\VIP\Security\Utils;
 
+function load_dev_env_configs(): void {
+	// Define VIP_GO_APP_ID if not already defined
+	if ( ! defined( 'VIP_GO_APP_ID' ) || ! constant( 'VIP_GO_APP_ID' ) ) {
+		define( 'VIP_GO_APP_ID', 101 );
+	}
+
+	// Check headers for integration test configs
+	if ( isset( $_SERVER['HTTP_X_INTEGRATION_TEST'] ) ) {
+		// Load the integration configurations from the headers
+		load_integration_configs_from_headers();
+	} else {
+		// Load the integration configurations from the CONFIG API
+		load_integration_configs_from_url();
+	}
+}
+
 function load_integration_configs_from_url() {
 	$config_api_url = vip_get_env_var( 'VIP_CONFIG_API_URL', getenv( 'VIP_CONFIG_API_URL' ) );
 

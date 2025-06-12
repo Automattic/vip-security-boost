@@ -26,8 +26,13 @@ class Inactive_Users {
 	 */
 	private static $application_password_authentication_error;
 
-	public static function init() {
-		$inactive_user_configs = get_module_configs( 'inactive-users' );
+	/**
+	 * Initialize the module
+	 *
+	 * @param array $config The configuration for the module.
+	 */
+	public static function init( $config = [] ): void {
+		$inactive_user_configs = $config;
 
 		self::$release_date                   = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
@@ -522,5 +527,3 @@ class Inactive_Users {
 		return false;
 	}
 }
-
-Inactive_Users::init();

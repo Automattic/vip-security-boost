@@ -1,13 +1,16 @@
 <?php
 namespace Automattic\VIP\Security\XmlRpc;
 
-use function Automattic\VIP\Security\Utils\get_module_configs;
-
 class Xml_Rpc {
 	private static $mode = 'RESTRICT';
 
-	public static function init() {
-		$xmlrpc_configs = get_module_configs( 'xml-rpc' );
+	/**
+	 * Initialize the module
+	 *
+	 * @param array $config The configuration for the module.
+	 */
+	public static function init( $config = [] ): void {
+		$xmlrpc_configs = $config;
 		self::$mode     = strtoupper( $xmlrpc_configs['mode'] ?? 'RESTRICT' );
 
 		if ( vip_is_jetpack_request() ) {
@@ -81,5 +84,3 @@ class Xml_Rpc {
 		return defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST;
 	}
 }
-
-Xml_Rpc::init();
