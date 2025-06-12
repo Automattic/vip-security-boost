@@ -40,4 +40,4 @@ jobs:
 
       - name: Run tests
         run: |
-          composer test-ci -- --php ${matrix.config.php} --wp ${matrix.config.wp} --multisite ${matrix.config.ms}
+          composer test-ci -- --php ${{ matrix.config.php }} --wp ${{ matrix.config.wp }} --multisite ${{ matrix.config.ms }}
