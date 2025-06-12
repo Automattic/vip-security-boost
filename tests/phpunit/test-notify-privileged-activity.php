@@ -21,13 +21,12 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 		Notify_Privileged_Activity::init();
 		if ( is_multisite() ) {
 			$this->assertNotFalse( has_action( 'grant_super_admin', [ Notify_Privileged_Activity::class, 'notify_user_granted_super_admin' ] ), 'Action grant_super_admin was not added.' );
-			$this->assertNotFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was not added.' );
 			$this->assertFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was added.' );
 		} else {
 			$this->assertNotFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was not added.' );
 			$this->assertFalse( has_action( 'grant_super_admin', [ Notify_Privileged_Activity::class, 'notify_user_granted_super_admin' ] ), 'Action grant_super_admin was added.' );
-			$this->assertFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was added.' );
 		}
+		$this->assertNotFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was not added.' );
 	}
 
 	/**
@@ -96,6 +95,9 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			'admin_url'   => admin_url(),
 			'email_title' => 'New Administrator Added',
 		];
+		if ( is_multisite() ) {
+			$expected_template_data['network_admin_url'] = network_admin_url();
+		}
 
 		Notify_Privileged_Activity::notify_admin_user_creation( $user_id );
 
@@ -159,6 +161,9 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			'admin_url'   => admin_url(),
 			'email_title' => 'User Promoted to Administrator',
 		];
+		if ( is_multisite() ) {
+			$expected_template_data['network_admin_url'] = network_admin_url();
+		}
 
 		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'editor' ] );
 
@@ -194,6 +199,7 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 			'user_login'        => $user_data->user_login,
 			'user_email'        => $user_data->user_email,
 			'user_role'         => 'Super Administrator',
+			'admin_url'         => admin_url(),
 			'network_admin_url' => network_admin_url(),
 			'email_title'       => 'User Granted Super Admin Privileges',
 		];
