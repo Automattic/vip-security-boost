@@ -85,7 +85,6 @@ class Notify_Privileged_Activity {
 			return;
 		}
 
-
 		$network_name = get_network()->site_name;
 		if ( empty( $network_name ) ) {
 			$network_name = get_bloginfo( 'name' );
