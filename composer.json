@@ -34,6 +34,7 @@
 		"format": "./vendor/bin/phpcbf --standard=.phpcs.xml.dist",
 		"phpcs": "./vendor/bin/phpcs",
 		"test": "./bin/test.sh --php 8.2 --wp 6.8",
+		"test-ci": "./bin/test.sh ",
 		"test:multisite": "./bin/test.sh --php 8.2 --wp 6.8 --multisite 1",
 		"test:integration": "./vendor/bin/phpunit --bootstrap tests/integration/bootstrap.php tests/integration/",
 		"build-mjml": "./scripts/build-mjml.sh"
