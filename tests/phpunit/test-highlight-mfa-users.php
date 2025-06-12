@@ -11,7 +11,6 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 }
 
 use Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users;
-use WP_User_Query;
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {

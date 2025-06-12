@@ -1,19 +1,18 @@
 <?php
 
-use WP_UnitTestCase;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class ConfigsTest extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
-		
+
 		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
 			define('VIP_SECURITY_BOOST_CONFIGS', [
 				'module_configs' => '{"inactive_users":{"mode":"BLOCK","considered_inactive_after_days":90}}',
 			]);
 		}
 	}
-	
+
 	// phpcs:ignore Generic.CodeAnalysis.UselessOverridingMethod.Found
 	public function tearDown(): void {
 		parent::tearDown();

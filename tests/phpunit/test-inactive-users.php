@@ -1,7 +1,6 @@
 <?php
 
 use Automattic\VIP\Security\InactiveUsers\Inactive_Users;
-use WP_UnitTestCase;
 
 class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;

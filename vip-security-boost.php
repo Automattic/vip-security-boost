@@ -16,7 +16,7 @@
 declare(strict_types = 1);
 
 require_once __DIR__ . '/utils/configs.php';
-require_once __DIR__ . '/email/email.php';
+require_once __DIR__ . '/email/class-email.php';
 require_once __DIR__ . '/utils/class-constants.php';
 
 use function Automattic\VIP\Security\Utils\load_integration_configs_from_headers;

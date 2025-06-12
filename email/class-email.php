@@ -2,7 +2,17 @@
 
 namespace Automattic\VIP\Security\Email;
 
+use Automattic\VIP\Security\Constants;
+
 class Email {
+	/**
+	 * Stores the arguments of the last call to the send() method for testing.
+	 *
+	 * @var array|null
+	 */
+	public static $last_call_args_for_test;
+
+	const LOG_FEATURE_NAME    = 'sb_email';
 	const SUBJECT_SUFFIX      = ' - WordPress VIP';
 	const EMAIL_FROM          = 'donotreply@wpvip.com';
 	const EMAIL_REPLY_TO      = 'support@wpvip.com';
@@ -18,6 +28,8 @@ class Email {
 	 * @param array $template_data The data to replace in the email template
 	 */
 	public static function send( $user_id, $email_address, $subject, $template_id = 'generic', $template_data = [] ) {
+		self::$last_call_args_for_test = compact( 'user_id', 'email_address', 'subject', 'template_id', 'template_data' );
+
 		$user = get_user_by( 'id', $user_id );
 
 		if ( ! is_email( $email_address ) ) {
@@ -69,9 +81,23 @@ class Email {
 		$sent = wp_mail( $email_address, $subject, $email_content, $headers );
 
 		if ( $sent ) {
-			error_log( 'Email sent to ' . $email_address );
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'debug',
+					'feature'  => self::LOG_FEATURE_NAME,
+					'plugin'   => Constants::LOG_PLUGIN_NAME,
+					'message'  => 'Email sent to ' . $email_address,
+				]
+			);
 		} else {
-			error_log( 'Email not sent to ' . $email_address );
+			\Automattic\VIP\Logstash\log2logstash(
+				[
+					'severity' => 'error',
+					'feature'  => self::LOG_FEATURE_NAME,
+					'plugin'   => Constants::LOG_PLUGIN_NAME,
+					'message'  => 'Email not sent to ' . $email_address,
+				]
+			);
 		}
 	}
 
@@ -85,9 +111,10 @@ class Email {
 
 		// Check if the template exists.
 		if ( ! file_exists( $template_path ) ) {
-			Logger::log( [
+			\Automattic\VIP\Logstash\log2logstash( [
 				'severity' => 'error',
-				'feature'  => 'vip-auth:email',
+				'feature'  => self::LOG_FEATURE_NAME,
+				'plugin'   => Constants::LOG_PLUGIN_NAME,
 				'message'  => 'Email template not found',
 				'extra'    => [
 					'template_id' => $template_id,
@@ -135,5 +162,14 @@ class Email {
 	 */
 	public static function replace_email_var( string $var, string $value, string $email ) {
 		return str_replace( '{{%=' . $var . '%}}', $value, $email );
+	}
+
+	/**
+	 * Resets the last call arguments for testing purposes.
+	 *
+	 * @since NEXT_RELEASE
+	 */
+	public static function reset_last_call_args_for_test() {
+		self::$last_call_args_for_test = null;
 	}
 }
