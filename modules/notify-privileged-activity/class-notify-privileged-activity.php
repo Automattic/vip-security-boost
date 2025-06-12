@@ -120,15 +120,17 @@ class Notify_Privileged_Activity {
 					'message'  => 'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login,
 				]
 			);
-
-			Email::send( $user->ID, $admin_email, $subject, $template, [
-				'user_login'        => $user->user_login,
-				'user_email'        => $user->user_email,
-				'user_role'         => 'privileged-super-admin-granted' === $template ? 'Super Administrator' : 'Administrator',
-				'email_title'       => $email_title,
-				'admin_url'         => admin_url(),
-				'network_admin_url' => network_admin_url(),
-			] );
+			$params = [
+				'user_login'  => $user->user_login,
+				'user_email'  => $user->user_email,
+				'user_role'   => 'privileged-super-admin-granted' === $template ? 'Super Administrator' : 'Administrator',
+				'email_title' => $email_title,
+				'admin_url'   => admin_url(),
+			];
+			if ( is_multisite() ) {
+				$params['network_admin_url'] = network_admin_url();
+			}
+			Email::send( $user->ID, $admin_email, $subject, $template, $params );
 		} catch ( \Exception $e ) {
 			\Automattic\VIP\Logstash\log2logstash(
 				[
