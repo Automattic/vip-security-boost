@@ -1,8 +1,8 @@
 <?php
 
-use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
+use Automattic\VIP\Security\ForcedMfaUsers\Forced_Mfa_Users;
 
-class Test_Forced_MFA_Users extends WP_UnitTestCase {
+class Test_Forced_Mfa_Users extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 		add_action( 'wpcom_vip_is_two_factor_local_testing', '__return_true' ); // Tell the two-factor plugin we're in local testing
@@ -12,12 +12,12 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 	public function tearDown(): void {
 		// Remove actions/filters added by the class
-		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] );
+		remove_action( 'set_current_user', [ Forced_Mfa_Users::class, 'maybe_enforce_two_factor' ] );
 
 		// Reset the static capability property using reflection
-		if ( class_exists( Forced_MFA_Users::class ) ) {
+		if ( class_exists( Forced_Mfa_Users::class ) ) {
 			try {
-				$reflection = new ReflectionClass( Forced_MFA_Users::class );
+				$reflection = new ReflectionClass( Forced_Mfa_Users::class );
 				if ( $reflection->hasProperty( 'roles' ) ) {
 					$roles_prop = $reflection->getProperty( 'roles' );
 					$roles_prop->setAccessible( true );
@@ -53,15 +53,15 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @preserveGlobalState disabled
 	 */
 	public function test_init_adds_action_when_config_defined() {
-		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_Mfa_Users::class, 'maybe_enforce_two_factor' ] ) );
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'forced-mfa-users' => [ 'roles' => 'administrator' ],
 			],
 		] );
 
-		Forced_MFA_Users::init();
-		$this->assertNotFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
+		Forced_Mfa_Users::init();
+		$this->assertNotFalse( has_action( 'set_current_user', [ Forced_Mfa_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
 
 	/**
@@ -75,8 +75,8 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 		// Constant is NOT defined in this separate process
 		$this->assertFalse( defined( 'VIP_SECURITY_BOOST_CONFIGS' ) );
-		Forced_MFA_Users::init();
-		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
+		Forced_Mfa_Users::init();
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_Mfa_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
 
 	/**
@@ -88,7 +88,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		wp_set_current_user( $user_id );
 
 		// Manually trigger the action hook's callback for testing isolation
-		Forced_MFA_Users::maybe_enforce_two_factor();
+		Forced_Mfa_Users::maybe_enforce_two_factor();
 	}
 
 
@@ -102,7 +102,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => [] ],
 			],
 		] );
-		Forced_MFA_Users::init(); // Run init to set the static property
+		Forced_Mfa_Users::init(); // Run init to set the static property
 
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when no role is set.' );
@@ -118,7 +118,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => 'administrator' ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has the single required role.' );
@@ -134,7 +134,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => 'administrator' ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'subscriber' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when user lacks the single required role.' );
@@ -151,7 +151,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => $roles ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'editor' );
 		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has one of the required roles.' );
@@ -168,7 +168,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => $roles ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'author' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when user lacks all required roles.' );
@@ -185,7 +185,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => $roles ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true with an empty role array.' );
@@ -202,7 +202,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => $roles ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'editor' );
 		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has a valid role even if other array items are invalid.' );
@@ -219,7 +219,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'roles' => $roles ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when all roles in array are invalid types.' );
@@ -237,7 +237,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 				'forced-mfa-users' => [ 'capabilities' => 'edit_posts' ],
 			],
 		] );
-		Forced_MFA_Users::init();
+		Forced_Mfa_Users::init();
 		add_filter( 'wpcom_vip_is_user_using_two_factor', '__return_true' ); // we're using this to change the behavior of the wpcom_vip_should_force_two_factor to return false.
 
 		$this->setup_user_and_filter( 'administrator' );

@@ -1,12 +1,13 @@
 <?php
-namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
+namespace Automattic\VIP\Security\NotifyPrivilegedActivity;
 
 use Automattic\VIP\Security\Email\Email;
 use Automattic\VIP\Security\Constants;
 
 class Notify_Privileged_Activity {
 	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
-	public static function init() {
+
+	public static function init(): void {
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
 		} else {
@@ -142,6 +143,3 @@ class Notify_Privileged_Activity {
 		}
 	}
 }
-
-
-Notify_Privileged_Activity::init();

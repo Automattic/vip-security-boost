@@ -1,5 +1,5 @@
 <?php
-use Automattic\VIP\Security\PrivilegedActivityNotifier\Notify_Privileged_Activity;
+use Automattic\VIP\Security\NotifyPrivilegedActivity\Notify_Privileged_Activity;
 use Automattic\VIP\Security\Email\Email;
 
 class TestNotifyPrivilegedActivity extends WP_UnitTestCase {

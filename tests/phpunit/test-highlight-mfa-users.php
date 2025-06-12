@@ -10,7 +10,7 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 	}
 }
 
-use Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users;
+use Automattic\VIP\Security\HighlightMfaUsers\Highlight_Mfa_Users;
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {
@@ -61,9 +61,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		]);
 
 		// Set skipped users option
-		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
+		update_option( Highlight_Mfa_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
 		wp_set_current_user( $this->admin_user_mfa_enabled_id );
-		Highlight_MFA_Users::init();
+		Highlight_Mfa_Users::init();
 	}
 
 	public function tearDown(): void {
@@ -76,7 +76,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		wp_delete_user( $this->admin_wpcomvip_ignored_id );
 
 		// Clean up options
-		delete_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
+		delete_option( Highlight_Mfa_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
 
 		// No need to restore config state manually as setUp handles it or tests run isolated.
 
@@ -116,7 +116,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$_GET['filter_mfa_disabled'] = '1';
 
 		$query = new \WP_User_Query();
-		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
+		Highlight_Mfa_Users::filter_users_by_mfa_status( $query );
 
 		$meta_query     = $query->get( 'meta_query' );
 		$roles_in_query = $query->get( 'role__in' );
@@ -153,7 +153,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$original_capability_in_query = $query->get( 'capability__in' );
 		$original_exclude_query       = $query->get( 'exclude' );
 
-		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
+		Highlight_Mfa_Users::filter_users_by_mfa_status( $query );
 
 		// Assert that the query parameters were not modified
 		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
@@ -184,7 +184,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$original_capability_in_query = $query->get( 'capability__in' );
 		$original_exclude_query       = $query->get( 'exclude' );
 
-		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
+		Highlight_Mfa_Users::filter_users_by_mfa_status( $query );
 
 		// Assert that the query parameters were not modified
 		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
@@ -204,7 +204,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->editor_user_id );
 
 		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 
 		$this->assertEquals( '', $output );
@@ -242,7 +242,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// We need to ensure the action is hooked before calling it directly
 		// In a real scenario, WP would trigger this via do_action('admin_notices')
 		// For isolated testing, we call the method directly after ensuring hooks via init() in setUp.
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 
 		$this->assertEquals( $expected_output, $output );
@@ -275,7 +275,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		);
 
 		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 
 		$this->assertEquals( $expected_output, $output );
@@ -301,7 +301,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Expect no output
 		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 		$this->assertEmpty( $output );
 	}
@@ -318,7 +318,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Expect no output
 		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 		$this->assertEmpty( $output );
 	}
@@ -331,7 +331,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 
 		// Set custom roles using reflection
-		$reflection_class = new \ReflectionClass( Highlight_MFA_Users::class );
+		$reflection_class = new \ReflectionClass( Highlight_Mfa_Users::class );
 		$roles_property   = $reflection_class->getProperty( 'roles' );
 		$roles_property->setAccessible( true );
 		$custom_roles = [ 'author', 'contributor' ];
@@ -363,7 +363,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		);
 
 		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 
 		$this->assertEquals( $expected_output, $output );
@@ -378,10 +378,10 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 
 		// Set custom roles using reflection
-		$reflection_class = new \ReflectionClass( Highlight_MFA_Users::class );
+		$reflection_class = new \ReflectionClass( Highlight_Mfa_Users::class );
 		$roles_property   = $reflection_class->getProperty( 'roles' );
 		$roles_property->setAccessible( true );
-		// Highlight_MFA_Users::init() in setUp already set roles to default.
+		// Highlight_Mfa_Users::init() in setUp already set roles to default.
 		// We are overriding them here for this specific test.
 		$custom_roles = [ 'author', 'contributor' ];
 		$roles_property->setValue( null, $custom_roles );
@@ -415,13 +415,13 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		);
 
 		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
+		Highlight_Mfa_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
 
 		$this->assertEquals( $expected_output, $output );
 
 		// No need to explicitly clean up $author_user_id, $contributor_user_id as WP_UnitTestCase handles factory users.
-		// No need to restore Highlight_MFA_Users::$roles as the next test's setUp() will call init() again.
+		// No need to restore Highlight_Mfa_Users::$roles as the next test's setUp() will call init() again.
 	}
 
 	/**
@@ -431,31 +431,31 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		remove_all_actions( 'admin_notices' );
 		remove_all_actions( 'pre_get_users' );
 
-		Highlight_MFA_Users::init();
+		Highlight_Mfa_Users::init();
 
-		$this->assertNotFalse( has_action( 'admin_notices', [ Highlight_MFA_Users::class, 'display_mfa_disabled_notice' ] ) );
-		$this->assertEquals( 10, has_action( 'admin_notices', [ Highlight_MFA_Users::class, 'display_mfa_disabled_notice' ] ) );
+		$this->assertNotFalse( has_action( 'admin_notices', [ Highlight_Mfa_Users::class, 'display_mfa_disabled_notice' ] ) );
+		$this->assertEquals( 10, has_action( 'admin_notices', [ Highlight_Mfa_Users::class, 'display_mfa_disabled_notice' ] ) );
 
-		$this->assertNotFalse( has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
-		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
+		$this->assertNotFalse( has_action( 'pre_get_users', [ Highlight_Mfa_Users::class, 'filter_users_by_mfa_status' ] ) );
+		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_Mfa_Users::class, 'filter_users_by_mfa_status' ] ) );
 	}
 
 	/**
 	 * Test that the role column is added to the users table.
 	 */
 	public function test_role_column_is_added() {
-		$columns = Highlight_MFA_Users::add_columns( [
+		$columns = Highlight_Mfa_Users::add_columns( [
 			'username' => 'Username',
 			'name'     => 'Name',
 			'email'    => 'Email',
 		] );
-		$this->assertArrayHasKey( Highlight_MFA_Users::ROLE_COLUMN_KEY, $columns );
-		$this->assertEquals( __( 'Role', 'wpvip' ), $columns[ Highlight_MFA_Users::ROLE_COLUMN_KEY ] );
+		$this->assertArrayHasKey( Highlight_Mfa_Users::ROLE_COLUMN_KEY, $columns );
+		$this->assertEquals( __( 'Role', 'wpvip' ), $columns[ Highlight_Mfa_Users::ROLE_COLUMN_KEY ] );
 
 		// Test positioning after 'name'
 		$keys     = array_keys( $columns );
 		$name_pos = array_search( 'name', $keys, true );
-		$role_pos = array_search( Highlight_MFA_Users::ROLE_COLUMN_KEY, $keys, true );
+		$role_pos = array_search( Highlight_Mfa_Users::ROLE_COLUMN_KEY, $keys, true );
 		$this->assertNotFalse( $name_pos );
 		$this->assertNotFalse( $role_pos );
 		$this->assertEquals( $name_pos + 1, $role_pos );
@@ -465,12 +465,12 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	 * Test that the role column is made sortable.
 	 */
 	public function test_role_column_is_made_sortable() {
-		$sortable_columns = Highlight_MFA_Users::make_columns_sortable( [
+		$sortable_columns = Highlight_Mfa_Users::make_columns_sortable( [
 			'username' => 'username',
 			'email'    => 'email',
 		] );
-		$this->assertArrayHasKey( Highlight_MFA_Users::ROLE_COLUMN_KEY, $sortable_columns );
-		$this->assertEquals( Highlight_MFA_Users::ROLE_COLUMN_KEY, $sortable_columns[ Highlight_MFA_Users::ROLE_COLUMN_KEY ] );
+		$this->assertArrayHasKey( Highlight_Mfa_Users::ROLE_COLUMN_KEY, $sortable_columns );
+		$this->assertEquals( Highlight_Mfa_Users::ROLE_COLUMN_KEY, $sortable_columns[ Highlight_Mfa_Users::ROLE_COLUMN_KEY ] );
 	}
 
 	/**
@@ -483,13 +483,13 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$user               = new WP_User( $multi_role_user_id );
 		$user->add_role( 'editor' );
 
-		$output_admin = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $admin_user_id );
+		$output_admin = Highlight_Mfa_Users::manage_columns( '', Highlight_Mfa_Users::ROLE_COLUMN_KEY, $admin_user_id );
 		$this->assertEquals( translate_user_role( 'Administrator' ), $output_admin );
 
-		$output_editor = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $editor_user_id );
+		$output_editor = Highlight_Mfa_Users::manage_columns( '', Highlight_Mfa_Users::ROLE_COLUMN_KEY, $editor_user_id );
 		$this->assertEquals( translate_user_role( 'Editor' ), $output_editor );
 
-		$output_multi = Highlight_MFA_Users::manage_columns( '', Highlight_MFA_Users::ROLE_COLUMN_KEY, $multi_role_user_id );
+		$output_multi = Highlight_Mfa_Users::manage_columns( '', Highlight_Mfa_Users::ROLE_COLUMN_KEY, $multi_role_user_id );
 		// Order might vary, so check for both
 		$expected_roles = [ translate_user_role( 'Administrator' ), translate_user_role( 'Editor' ) ];
 		$actual_roles   = array_map( 'trim', explode( ',', $output_multi ) );
@@ -498,7 +498,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertEquals( $expected_roles, $actual_roles );
 
 		// Test with a different column name
-		$output_other_column = Highlight_MFA_Users::manage_columns( 'initial_output', 'other_column', $admin_user_id );
+		$output_other_column = Highlight_Mfa_Users::manage_columns( 'initial_output', 'other_column', $admin_user_id );
 		$this->assertEquals( 'initial_output', $output_other_column );
 
 		wp_delete_user( $admin_user_id );
@@ -512,10 +512,10 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	public function test_sort_columns_by_role_asc() {
 		global $wpdb;
 		$args        = [
-			'orderby' => Highlight_MFA_Users::ROLE_COLUMN_KEY,
+			'orderby' => Highlight_Mfa_Users::ROLE_COLUMN_KEY,
 			'order'   => 'asc',
 		];
-		$sorted_args = Highlight_MFA_Users::sort_columns( $args );
+		$sorted_args = Highlight_Mfa_Users::sort_columns( $args );
 
 		$this->assertEquals( $wpdb->prefix . 'capabilities', $sorted_args['meta_key'] );
 		$this->assertEquals( 'meta_value', $sorted_args['orderby'] );
@@ -528,10 +528,10 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	public function test_sort_columns_by_role_desc() {
 		global $wpdb;
 		$args        = [
-			'orderby' => Highlight_MFA_Users::ROLE_COLUMN_KEY,
+			'orderby' => Highlight_Mfa_Users::ROLE_COLUMN_KEY,
 			'order'   => 'desc',
 		];
-		$sorted_args = Highlight_MFA_Users::sort_columns( $args );
+		$sorted_args = Highlight_Mfa_Users::sort_columns( $args );
 
 		$this->assertEquals( $wpdb->prefix . 'capabilities', $sorted_args['meta_key'] );
 		$this->assertEquals( 'meta_value', $sorted_args['orderby'] );
@@ -548,7 +548,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 			'meta_key' => 'some_other_key', // To ensure it's not overwritten
 		];
 		$original_args = $args; // Make a copy for comparison
-		$sorted_args   = Highlight_MFA_Users::sort_columns( $args );
+		$sorted_args   = Highlight_Mfa_Users::sort_columns( $args );
 
 		$this->assertEquals( $original_args, $sorted_args, "Query args were modified for an unrelated 'orderby' parameter." );
 	}
@@ -561,7 +561,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 			'order' => 'asc',
 		];
 		$original_args = $args;
-		$sorted_args   = Highlight_MFA_Users::sort_columns( $args );
+		$sorted_args   = Highlight_Mfa_Users::sort_columns( $args );
 		$this->assertEquals( $original_args, $sorted_args );
 	}
 }
