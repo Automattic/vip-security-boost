@@ -19,8 +19,15 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 	 */
 	public function test_init_adds_action() {
 		Notify_Privileged_Activity::init();
-		$this->assertNotFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was not added.' );
-		$this->assertNotFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was not added.' );
+		if ( is_multisite() ) {
+			$this->assertNotFalse( has_action( 'grant_super_admin', [ Notify_Privileged_Activity::class, 'notify_user_granted_super_admin' ] ), 'Action grant_super_admin was not added.' );
+			$this->assertNotFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was not added.' );
+			$this->assertFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was added.' );
+		} else {
+			$this->assertNotFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was not added.' );
+			$this->assertFalse( has_action( 'grant_super_admin', [ Notify_Privileged_Activity::class, 'notify_user_granted_super_admin' ] ), 'Action grant_super_admin was added.' );
+			$this->assertFalse( has_action( 'set_user_role', [ Notify_Privileged_Activity::class, 'notify_user_promoted_to_admin' ] ), 'Action set_user_role was added.' );
+		}
 	}
 
 	/**
@@ -180,7 +187,7 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 		$user_id         = $user_data->ID;
 		$admin_email_val = 'admin@example.com';
 		update_option( 'admin_email', $admin_email_val );
-		$site_name = get_bloginfo( 'name' );
+		$site_name = get_network()->site_name;
 
 		$expected_subject       = sprintf( '[%s] User Granted Super Admin Privileges', $site_name );
 		$expected_template_data = [
