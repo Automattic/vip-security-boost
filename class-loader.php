@@ -13,6 +13,11 @@ class Loader {
 		$configs         = constant( 'VIP_SECURITY_BOOST_CONFIGS' );
 		$enabled_modules = $configs['enabled_modules'] ?? [];
 
+		// return if there are no enabled modules (empty array or string)
+		if ( empty( $enabled_modules ) ) {
+			return;
+		}
+
 		// If enabled_modules is a string, convert it to an array
 		// I noticed the integrations-config can output a string so we need to handle that
 		if ( is_string( $enabled_modules ) ) {
