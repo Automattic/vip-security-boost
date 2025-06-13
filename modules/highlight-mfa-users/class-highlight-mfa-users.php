@@ -1,6 +1,7 @@
 <?php
 namespace Automattic\VIP\Security\MFAUsers;
 
+use Automattic\VIP\Security\Utils\Tracking;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Highlight_MFA_Users {
@@ -31,6 +32,7 @@ class Highlight_MFA_Users {
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
 		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
+		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_tracking_scripts' ] );
 
 		// Add column for role
 		// Single site or main site admin users page
@@ -107,6 +109,9 @@ class Highlight_MFA_Users {
 			// Check if the filter is currently active
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
 			$is_filtered = isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'];
+
+			// Track MFA display with filter status
+			Tracking::track_mfa_display( $is_filtered );
 
 			if ( $is_filtered ) {
 				// Display info notice for when the list IS filtered
@@ -348,6 +353,30 @@ class Highlight_MFA_Users {
 		}
 
 		return $args;
+	}
+
+	/**
+	 * Enqueue tracking scripts for MFA interactions.
+	 */
+	public static function enqueue_tracking_scripts() {
+		$screen = get_current_screen();
+		if ( ! $screen || 'users' !== $screen->id ) {
+			return;
+		}
+
+		// Track filter clicks when the page loads with filter parameter
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
+		if ( isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
+			Tracking::track_mfa_filter_click( 'mfa_disabled' );
+		}
+
+		// Track sorting when the page loads with orderby parameter
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
+		if ( isset( $_GET['orderby'] ) && self::ROLE_COLUMN_KEY === $_GET['orderby'] ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
+			$sort_order = isset( $_GET['order'] ) ? sanitize_text_field( wp_unslash( $_GET['order'] ) ) : 'asc';
+			Tracking::track_mfa_sorting( self::ROLE_COLUMN_KEY, $sort_order );
+		}
 	}
 }
 Highlight_MFA_Users::init();
