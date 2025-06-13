@@ -4,6 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../utils/configs.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
 require_once __DIR__ . '/../utils/class-constants.php';
+require_once __DIR__ . '/../email/class-email.php';
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 
@@ -85,3 +86,7 @@ tests_add_filter( 'translations_api', '_vip_tests_disable_translations_api' );
 
 // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 require $_tests_dir . '/includes/bootstrap.php';
+
+if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+	define( 'VIP_GO_APP_ENVIRONMENT', 'test' );
+}
