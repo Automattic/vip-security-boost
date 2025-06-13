@@ -1,7 +1,6 @@
 <?php
 namespace Automattic\VIP\Security\MFAUsers;
 
-use Automattic\VIP\Security\Utils\Tracking;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Highlight_MFA_Users {
@@ -111,7 +110,7 @@ class Highlight_MFA_Users {
 			$is_filtered = isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'];
 
 			// Track MFA display with filter status
-			Tracking::track_mfa_display( $is_filtered );
+			do_action( 'vip_security_mfa_display', $is_filtered );
 
 			if ( $is_filtered ) {
 				// Display info notice for when the list IS filtered
@@ -367,7 +366,7 @@ class Highlight_MFA_Users {
 		// Track filter clicks when the page loads with filter parameter
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
 		if ( isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
-			Tracking::track_mfa_filter_click( 'mfa_disabled' );
+			do_action( 'vip_security_mfa_filter_click', 'mfa_disabled' );
 		}
 
 		// Track sorting when the page loads with orderby parameter
@@ -375,7 +374,7 @@ class Highlight_MFA_Users {
 		if ( isset( $_GET['orderby'] ) && self::ROLE_COLUMN_KEY === $_GET['orderby'] ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
 			$sort_order = isset( $_GET['order'] ) ? sanitize_text_field( wp_unslash( $_GET['order'] ) ) : 'asc';
-			Tracking::track_mfa_sorting( self::ROLE_COLUMN_KEY, $sort_order );
+			do_action( 'vip_security_mfa_sorting', self::ROLE_COLUMN_KEY, $sort_order );
 		}
 	}
 }

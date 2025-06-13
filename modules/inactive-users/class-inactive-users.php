@@ -3,7 +3,6 @@ namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Constants;
-use Automattic\VIP\Security\Utils\Tracking;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Inactive_Users {
@@ -266,7 +265,7 @@ class Inactive_Users {
 			wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' )
 		) {
 			// Track blocked users view
-			Tracking::track_blocked_users_view();
+			do_action( 'vip_security_blocked_users_view' );
 
 			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
 
@@ -397,7 +396,7 @@ class Inactive_Users {
 			// Track successful user unblock
 			$user      = get_userdata( $user_id );
 			$user_role = $user && ! empty( $user->roles ) ? $user->roles[0] : '';
-			Tracking::track_user_unblock( $user_id, $user_role );
+			do_action( 'vip_security_user_unblock', $user_id, $user_role );
 		}
 
 		if ( $error ) {
