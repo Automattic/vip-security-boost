@@ -3,6 +3,7 @@ namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 
 use Automattic\VIP\Security\Email\Email;
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Tracking;
 
 class Notify_Privileged_Activity {
 	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
@@ -96,6 +97,9 @@ class Notify_Privileged_Activity {
 				'email_title' => $email_title,
 				'admin_url'   => admin_url(),
 			] );
+
+			// Track successful email notification
+			Tracking::track_privileged_email_sent( $template, 'administrator' );
 		} catch ( \Exception $e ) {
 			\Automattic\VIP\Logstash\log2logstash(
 				[
