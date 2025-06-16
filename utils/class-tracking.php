@@ -153,10 +153,10 @@ class Tracking {
 	private static function record_stats( $stat_name, $value = 1 ) {
 		$prefixed_group = "vip-security-boost:{$stat_name}";
 		// We're tracking the stats in production only
-		// if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-		// 	Logger::info( 'vip-security-boost', "Bumping stats for https://mc.a8c.com/s/{$prefixed_group}/{$stat_name}" );
-		// 	return;
-		// }
+		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		 Logger::info( 'vip-security-boost', "Bumping stats for https://mc.a8c.com/s/{$prefixed_group}/{$stat_name}" );
+		 return;
+		}
 
 		if ( function_exists( '\Automattic\VIP\Stats\send_pixel' ) ) {
 			try {
@@ -164,6 +164,7 @@ class Tracking {
 			} catch ( \Exception $e ) {
 				Logger::error( 'vip-security-boost', 'Stats recording failed', [
 					'stat_name' => $stat_name,
+					'value'     => $value,
 					'error'     => $e->getMessage(),
 				] );
 			}
