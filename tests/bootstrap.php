@@ -4,6 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../utils/configs.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
 require_once __DIR__ . '/../utils/class-constants.php';
+require_once __DIR__ . '/../utils/class-logger.php';
 require_once __DIR__ . '/../email/class-email.php';
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
@@ -46,6 +47,8 @@ function _manually_load_plugin() {
 	require_once __DIR__ . '/../mu-plugins/vip-plugins.php';
 
 	require_once __DIR__ . '/../mu-plugins/wp-cli.php';
+
+	require_once __DIR__ . '/../mu-plugins/logstash/logstash.php';
 
 	require_once __DIR__ . '/../mu-plugins/z-client-mu-plugins.php';
 }
