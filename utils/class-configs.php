@@ -40,8 +40,8 @@ class Configs {
 
 		if ( ! is_array( $module_configs ) ) {
 			self::$cached_module_configs = [];
+		} else {
+			self::$cached_module_configs = $module_configs;
 		}
-
-		self::$cached_module_configs = $module_configs;
 	}
 }
