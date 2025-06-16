@@ -49,3 +49,6 @@ if ( $is_local_env ) {
 
 // Load the modules
 require_once __DIR__ . '/class-loader.php';
+
+// Initialize tracking hooks
+\Automattic\VIP\Security\Utils\Tracking::setup_action_hooks();
