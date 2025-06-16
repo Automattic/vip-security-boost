@@ -10,9 +10,11 @@ class Notify_Privileged_Activity {
 	public static function init() {
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
-		} else {
-			add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
 		}
+
+
+		// Also listen for user_register for WP-CLI generated users
+		add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
 
 		add_action( 'set_user_role', [ __CLASS__, 'notify_user_promoted_to_admin' ], 10, 3 );
 
