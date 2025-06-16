@@ -12,9 +12,8 @@ class Tracking {
 	/**
 	 * Pixel URL.
 	 */
-	const PIXEL         = 'https://pixel.wp.com/t.gif';
-	const TRACKS_PREFIX = 'vip_security_boost';
-	const STATS_PREFIX  = 'vip-security-boost';
+	const PIXEL  = 'https://pixel.wp.com/t.gif';
+	const PREFIX = 'vip_security_boost';
 
 	private Counter $mfa_display_counter;
 	private Counter $mfa_filter_click_counter;
@@ -68,13 +67,13 @@ class Tracking {
 	}
 
 	public function mfa_display( $filter_enabled ) {
-		$stats_name = self::STATS_PREFIX . '-mfa-display' . ( $filter_enabled ? '-filtered' : '' );
+		$stats_name = self::PREFIX . '-mfa-display' . ( $filter_enabled ? '-filtered' : '' );
 		self::record_stats( $stats_name );
 	}
 
 	public function mfa_filter_click( $filter_type ) {
 		self::record_tracks_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
-		self::record_stats( self::STATS_PREFIX . '-mfa-filter-click' );
+		self::record_stats( self::PREFIX . '-mfa-filter-click' );
 	}
 
 	public function mfa_sorting( $sort_column, $sort_order ) {
@@ -82,12 +81,12 @@ class Tracking {
 			'sort_column' => $sort_column,
 			'sort_order'  => $sort_order,
 		] );
-		self::record_stats( self::STATS_PREFIX . '-mfa-sorting' );
+		self::record_stats( self::PREFIX . '-mfa-sorting' );
 	}
 
 	public function blocked_users_view() {
 		self::record_tracks_event( 'blocked_users_view' );
-		self::record_stats( self::STATS_PREFIX . '-blocked-users-view' );
+		self::record_stats( self::PREFIX . '-blocked-users-view' );
 	}
 
 	public function user_unblock( $user_id, $user_role ) {
@@ -95,26 +94,20 @@ class Tracking {
 			'user_role'   => $user_role,
 			'has_user_id' => ! empty( $user_id ),
 		] );
-		self::record_stats( self::STATS_PREFIX . '-user-unblock' );
+		self::record_stats( self::PREFIX . '-user-unblock' );
 	}
 
 	public function privileged_email_sent( $email_type, $recipient_role ) {
-		$stats_name = self::STATS_PREFIX . '-privileged-email-sent';
+		$stats_name = self::PREFIX . '-privileged-email-sent';
 		if ( ! empty( $email_type ) ) {
 			$stats_name .= '-' . $email_type;
 		}
 		self::record_stats( $stats_name );
 
-		\Automattic\VIP\Logstash\log2logstash([
-			'severity' => 'info',
-			'feature'  => 'vip_security_email_tracking',
-			'plugin'   => Constants::LOG_PLUGIN_NAME,
-			'message'  => 'Privileged user email notification sent',
-			'extra'    => [
-				'email_type'     => $email_type,
-				'recipient_role' => $recipient_role,
-			],
-		]);
+		Logger::info( 'vip-security-boost', 'Privileged user email notification sent', [
+			'email_type'     => $email_type,
+			'recipient_role' => $recipient_role,
+		] );
 	}
 
 	/**
@@ -125,14 +118,6 @@ class Tracking {
 	 * @return bool True on success, false on failure.
 	 */
 	private static function record_tracks_event( $event_name, $event_properties = [] ): bool {
-		// Skip if we're running tests
-		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			Logger::info( 'vip-security-boost', 'Skipping tracks event in local environment', [
-				'event_name' => $event_name,
-			] );
-			return false;
-		}
-
 		$event_name_prefixed = $event_name;
 		$prefix              = self::get_prefix();
 		if ( ! str_starts_with( $event_name, $prefix ) ) {
@@ -156,7 +141,6 @@ class Tracking {
 		] );
 
 		$pixel = esc_url_raw( self::PIXEL . '?' . http_build_query( $merged_properties ) );
-
 		return self::record_pixel( $pixel );
 	}
 
@@ -167,15 +151,16 @@ class Tracking {
 	 * @param mixed  $value Stat value.
 	 */
 	private static function record_stats( $stat_name, $value = 1 ) {
-		// Only track stats in production
-		Logger::info( 'vip-security-boost', 'Record stat in non-production', [
-			'stat_name' => $stat_name,
-			'value'     => $value,
-		] );
+		$prefixed_group = "vip-security-boost:{$stat_name}";
+		// We're tracking the stats in production only
+		// if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		// 	Logger::info( 'vip-security-boost', "Bumping stats for https://mc.a8c.com/s/{$prefixed_group}/{$stat_name}" );
+		// 	return;
+		// }
 
 		if ( function_exists( '\Automattic\VIP\Stats\send_pixel' ) ) {
 			try {
-				\Automattic\VIP\Stats\send_pixel( [ $stat_name => $value ] );
+				\Automattic\VIP\Stats\send_pixel( [ $prefixed_group => $stat_name ] );
 			} catch ( \Exception $e ) {
 				Logger::error( 'vip-security-boost', 'Stats recording failed', [
 					'stat_name' => $stat_name,
@@ -196,10 +181,10 @@ class Tracking {
 	 */
 	protected static function get_prefix(): string {
 		if ( 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			return self::TRACKS_PREFIX . '_' . constant( 'VIP_GO_APP_ENVIRONMENT' );
+			return self::PREFIX . '_' . constant( 'VIP_GO_APP_ENVIRONMENT' );
 		}
 
-		return self::TRACKS_PREFIX;
+		return self::PREFIX;
 	}
 
 	/**
