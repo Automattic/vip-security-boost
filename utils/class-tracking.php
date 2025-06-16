@@ -67,13 +67,12 @@ class Tracking {
 	}
 
 	public function mfa_display( $filter_enabled ) {
-		$stats_name = self::PREFIX . '-mfa-display' . ( $filter_enabled ? '-filtered' : '' );
-		self::record_stats( $stats_name );
+		self::record_stats( 'mfa-display' . ( $filter_enabled ? '-filtered' : '' ) );
 	}
 
 	public function mfa_filter_click( $filter_type ) {
 		self::record_tracks_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
-		self::record_stats( self::PREFIX . '-mfa-filter-click' );
+		self::record_stats( 'mfa-filter-click' );
 	}
 
 	public function mfa_sorting( $sort_column, $sort_order ) {
@@ -81,12 +80,12 @@ class Tracking {
 			'sort_column' => $sort_column,
 			'sort_order'  => $sort_order,
 		] );
-		self::record_stats( self::PREFIX . '-mfa-sorting' );
+		self::record_stats( 'mfa-sorting' );
 	}
 
 	public function blocked_users_view() {
 		self::record_tracks_event( 'blocked_users_view' );
-		self::record_stats( self::PREFIX . '-blocked-users-view' );
+		self::record_stats( 'blocked-users-view' );
 	}
 
 	public function user_unblock( $user_id, $user_role ) {
@@ -94,15 +93,11 @@ class Tracking {
 			'user_role'   => $user_role,
 			'has_user_id' => ! empty( $user_id ),
 		] );
-		self::record_stats( self::PREFIX . '-user-unblock' );
+		self::record_stats( 'user-unblock' );
 	}
 
 	public function privileged_email_sent( $email_type, $recipient_role ) {
-		$stats_name = self::PREFIX . '-privileged-email-sent';
-		if ( ! empty( $email_type ) ) {
-			$stats_name .= '-' . $email_type;
-		}
-		self::record_stats( $stats_name );
+		self::record_stats( 'privileged-email-sent' );
 
 		Logger::info( 'vip-security-boost', 'Privileged user email notification sent', [
 			'email_type'     => $email_type,
@@ -150,23 +145,22 @@ class Tracking {
 	 * @param string $stat_name Stat name.
 	 * @param mixed  $value Stat value.
 	 */
-	private static function record_stats( $stat_name, $value = 1 ) {
+	private static function record_stats( $stat_name ) {
 		// We're tracking the stats in production only
 		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			Logger::info( 'vip-security-boost', "Bumping stats for https://mc.a8c.com/s/{$stat_name}/{$value}", [
+			Logger::info( 'vip-security-boost', 'Bumping stats for https://mc.a8c.com/s/' . self::PREFIX . "/{$stat_name}", [
 				'stat_name' => $stat_name,
-				'value'     => $value,
 			] );
 			return;
 		}
 
 		if ( function_exists( '\Automattic\VIP\Stats\send_pixel' ) ) {
 			try {
-				\Automattic\VIP\Stats\send_pixel( [ $stat_name => $value ] );
+				\Automattic\VIP\Stats\send_pixel( [ self::PREFIX => $stat_name ] );
 			} catch ( \Exception $e ) {
 				Logger::error( 'vip-security-boost', 'Stats recording failed', [
 					'stat_name' => $stat_name,
-					'value'     => $value,
+					
 					'error'     => $e->getMessage(),
 				] );
 			}
