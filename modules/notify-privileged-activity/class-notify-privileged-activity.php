@@ -131,6 +131,9 @@ class Notify_Privileged_Activity {
 				$params['network_admin_url'] = network_admin_url();
 			}
 			Email::send( $user->ID, $admin_email, $subject, $template, $params );
+
+			// Track successful email notification
+			do_action( 'vip_security_privileged_email_sent', $template, 'administrator' );
 		} catch ( \Exception $e ) {
 			\Automattic\VIP\Logstash\log2logstash(
 				[
