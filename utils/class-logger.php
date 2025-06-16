@@ -41,8 +41,9 @@ class Logger {
 			}
 		}
 
-		// Log to error_log if not in production
-		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		// Log to error_log if not in production and not during testing
+		$is_testing = ( defined( 'VIP_GO_APP_ENVIRONMENT' ) && 'test' === constant( 'VIP_GO_APP_ENVIRONMENT' ) );
+		if ( ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) && ! $is_testing ) {
 			$log_message = sprintf(
 				'[VIP Security Boost] %s: %s',
 				strtoupper( $data['severity'] ?? 'info' ),
