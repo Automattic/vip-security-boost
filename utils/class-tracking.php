@@ -154,8 +154,8 @@ class Tracking {
 		$prefixed_group = "vip-security-boost:{$stat_name}";
 		// We're tracking the stats in production only
 		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-		 Logger::info( 'vip-security-boost', "Bumping stats for https://mc.a8c.com/s/{$prefixed_group}/{$stat_name}" );
-		 return;
+			Logger::info( 'vip-security-boost', "Bumping stats for https://mc.a8c.com/s/{$prefixed_group}/{$stat_name}" );
+			return;
 		}
 
 		if ( function_exists( '\Automattic\VIP\Stats\send_pixel' ) ) {
