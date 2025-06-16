@@ -3,6 +3,7 @@
 namespace Automattic\VIP\Security\SessionControl;
 
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 /**
@@ -40,12 +41,11 @@ class Session_Control {
 			// Validate the expiration days value (must be between 1 and 13)
 			// check if it's valid int
 			if ( ! is_numeric( $expiration_days_value ) ) {
-				\Automattic\VIP\Logstash\log2logstash(
+				Logger::warning(
+					self::LOG_FEATURE_NAME,
+					'Invalid session expiration days. Must be an integer. Reverting to default.',
 					[
-						'severity' => 'warning',
-						'feature'  => self::LOG_FEATURE_NAME,
-						'plugin'   => Constants::LOG_PLUGIN_NAME,
-						'message'  => 'Invalid session expiration days. Must be an integer. Reverting to default.',
+						'plugin' => Constants::LOG_PLUGIN_NAME,
 					]
 				);
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
@@ -56,12 +56,11 @@ class Session_Control {
 
 			if ( $expiration_days < 1 || $expiration_days > 13 ) {
 
-				\Automattic\VIP\Logstash\log2logstash(
+				Logger::warning(
+					self::LOG_FEATURE_NAME,
+					'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
 					[
-						'severity' => 'warning',
-						'feature'  => self::LOG_FEATURE_NAME,
-						'plugin'   => Constants::LOG_PLUGIN_NAME,
-						'message'  => 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
+						'plugin' => Constants::LOG_PLUGIN_NAME,
 					]
 				);
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error

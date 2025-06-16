@@ -3,6 +3,7 @@ namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 
 use Automattic\VIP\Security\Email\Email;
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 
 class Notify_Privileged_Activity {
 	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
@@ -111,12 +112,11 @@ class Notify_Privileged_Activity {
 				return;
 			}
 
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login,
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login,
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 			$params = [
@@ -135,12 +135,11 @@ class Notify_Privileged_Activity {
 			// Track successful email notification
 			do_action( 'vip_security_privileged_email_sent', $template, 'administrator' );
 		} catch ( \Exception $e ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage(),
 				[
-					'severity' => 'error',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage(),
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 		}

@@ -3,6 +3,7 @@ namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 use function Automattic\VIP\Security\Utils\get_module_configs;
 
 class Inactive_Users {
@@ -110,12 +111,11 @@ class Inactive_Users {
 		}
 
 		if ( $user->ID && self::is_considered_inactive( $user->ID ) ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 			if ( Context::is_xmlrpc_api() ) {
@@ -149,12 +149,11 @@ class Inactive_Users {
 		}
 
 		if ( self::is_considered_inactive( $user->ID ) ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 			self::$application_password_authentication_error = new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site administrator.', 'wpvip' ), array( 'status' => 403 ) );

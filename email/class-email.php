@@ -3,6 +3,7 @@
 namespace Automattic\VIP\Security\Email;
 
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 
 class Email {
 	/**
@@ -81,21 +82,19 @@ class Email {
 		$sent = wp_mail( $email_address, $subject, $email_content, $headers );
 
 		if ( $sent ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'Email sent to ' . $email_address,
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'Email sent to ' . $email_address,
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 		} else {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'Email not sent to ' . $email_address,
 				[
-					'severity' => 'error',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'Email not sent to ' . $email_address,
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 		}
@@ -111,15 +110,14 @@ class Email {
 
 		// Check if the template exists.
 		if ( ! file_exists( $template_path ) ) {
-			\Automattic\VIP\Logstash\log2logstash( [
-				'severity' => 'error',
-				'feature'  => self::LOG_FEATURE_NAME,
-				'plugin'   => Constants::LOG_PLUGIN_NAME,
-				'message'  => 'Email template not found',
-				'extra'    => [
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'Email template not found',
+				[
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 					'template_id' => $template_id,
-				],
-			] );
+				]
+			);
 
 			throw new \Exception( 'Email template not found' );
 		}
