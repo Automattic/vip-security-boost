@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../utils/configs.php';
+require_once __DIR__ . '/../utils/class-configs.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
 require_once __DIR__ . '/../utils/class-constants.php';
 require_once __DIR__ . '/../utils/class-logger.php';

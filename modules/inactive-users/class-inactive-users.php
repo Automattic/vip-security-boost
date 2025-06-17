@@ -4,7 +4,7 @@ namespace Automattic\VIP\Security\InactiveUsers;
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Logger;
-use function Automattic\VIP\Security\Utils\get_module_configs;
+use Automattic\VIP\Security\Utils\Configs;
 
 class Inactive_Users {
 	private static $considered_inactive_after_days;
@@ -28,7 +28,7 @@ class Inactive_Users {
 	private static $application_password_authentication_error;
 
 	public static function init() {
-		$inactive_user_configs = get_module_configs( 'inactive-users' );
+		$inactive_user_configs = Configs::get_module_configs( 'inactive-users' );
 
 		self::$release_date                   = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
