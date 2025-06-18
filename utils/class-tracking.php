@@ -66,16 +66,16 @@ class Tracking {
 		);
 	}
 
-	public function mfa_display( $filter_enabled ) {
+	public static function mfa_display( $filter_enabled ) {
 		self::record_stats( 'mfa-display' . ( $filter_enabled ? '-filtered' : '' ) );
 	}
 
-	public function mfa_filter_click( $filter_type ) {
+	public static function mfa_filter_click( $filter_type ) {
 		self::record_tracks_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
 		self::record_stats( 'mfa-filter-click' );
 	}
 
-	public function mfa_sorting( $sort_column, $sort_order ) {
+	public static function mfa_sorting( $sort_column, $sort_order ) {
 		self::record_tracks_event( 'mfa_sorting', [
 			'sort_column' => $sort_column,
 			'sort_order'  => $sort_order,
@@ -83,12 +83,12 @@ class Tracking {
 		self::record_stats( 'mfa-sorting' );
 	}
 
-	public function blocked_users_view() {
+	public static function blocked_users_view() {
 		self::record_tracks_event( 'blocked_users_view' );
 		self::record_stats( 'blocked-users-view' );
 	}
 
-	public function user_unblock( $user_id, $user_role ) {
+	public static function user_unblock( $user_id, $user_role ) {
 		self::record_tracks_event( 'user_unblock', [
 			'user_role'   => $user_role,
 			'has_user_id' => ! empty( $user_id ),
@@ -96,7 +96,11 @@ class Tracking {
 		self::record_stats( 'user-unblock' );
 	}
 
-	public function privileged_email_sent( $email_type, $recipient_role ) {
+	public static function privileged_email_sent( $email_type, $recipient_role ) {
+		self::record_tracks_event( 'privileged_email_sent', [
+			'email_type'     => $email_type,
+			'recipient_role' => $recipient_role,
+		] );
 		self::record_stats( 'privileged-email-sent' );
 
 		Logger::info( 'vip-security-boost', 'Privileged user email notification sent', [
@@ -113,6 +117,11 @@ class Tracking {
 	 * @return bool True on success, false on failure.
 	 */
 	private static function record_tracks_event( $event_name, $event_properties = [] ): bool {
+		// Skip tracking in test environments
+		if ( 'test' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+			return false;
+		}
+
 		$event_name_prefixed = $event_name;
 		$prefix              = self::get_prefix();
 		if ( ! str_starts_with( $event_name, $prefix ) ) {
@@ -123,12 +132,22 @@ class Tracking {
 			'_et' => self::build_timestamp(),
 		];
 
+		// Add user tracking data
+		//phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__HTTP_USER_AGENT__
+		$data['_via_ua'] = isset( $_SERVER['HTTP_USER_AGENT'] ) ? filter_var( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		//phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+		$data['_via_ip'] = isset( $_SERVER['REMOTE_ADDR'] ) ? filter_var( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$data['_lg']     = isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ? filter_var( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) : '';
+
+		// Get user identity
+		$identity = self::get_identity( get_current_user_id() );
+
 		$default_properties = [
 			'plugin_name' => Constants::LOG_PLUGIN_NAME,
 			'site_id'     => defined( 'VIP_GO_APP_ID' ) ? VIP_GO_APP_ID : 0,
 		];
 
-		$merged_properties = array_merge( $default_properties, $event_properties, $data );
+		$merged_properties = array_merge( $default_properties, $event_properties, $data, $identity );
 
 		Logger::info( 'vip-security-boost', 'Tracks event recorded', [
 			'event_name' => $event_name_prefixed,
@@ -160,7 +179,6 @@ class Tracking {
 			} catch ( \Exception $e ) {
 				Logger::error( 'vip-security-boost', 'Stats recording failed', [
 					'stat_name' => $stat_name,
-					
 					'error'     => $e->getMessage(),
 				] );
 			}
@@ -178,10 +196,28 @@ class Tracking {
 	 */
 	protected static function get_prefix(): string {
 		if ( 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			return self::PREFIX . '_' . constant( 'VIP_GO_APP_ENVIRONMENT' );
+			return self::PREFIX . '_dev' ;
 		}
 
 		return self::PREFIX;
+	}
+
+	/**
+	 * Get the identity of the current user for Tracks.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array Identity properties.
+	 */
+	protected static function get_identity( $user_id ): array {
+		$identify = [];
+
+		if ( $user_id && 0 !== $user_id ) {
+			$current_user    = get_user_by( 'ID', $user_id );
+			$identify['_ui'] = hash( 'sha256', $user_id );
+			$identify['_ut'] = hash( 'sha256', strtolower( $current_user->user_email ) );
+		}
+
+		return $identify;
 	}
 
 	/**
@@ -222,13 +258,11 @@ class Tracking {
 	 * Set up action hooks for tracking events (similar to VIP Auth pattern)
 	 */
 	public static function setup_action_hooks() {
-		$instance = new self();
-		
-		add_action( 'vip_security_mfa_display', [ $instance, 'mfa_display' ], 10, 1 );
-		add_action( 'vip_security_mfa_filter_click', [ $instance, 'mfa_filter_click' ], 10, 1 );
-		add_action( 'vip_security_mfa_sorting', [ $instance, 'mfa_sorting' ], 10, 2 );
-		add_action( 'vip_security_blocked_users_view', [ $instance, 'blocked_users_view' ] );
-		add_action( 'vip_security_user_unblock', [ $instance, 'user_unblock' ], 10, 2 );
-		add_action( 'vip_security_privileged_email_sent', [ $instance, 'privileged_email_sent' ], 10, 2 );
+		add_action( 'vip_security_mfa_display', [ __CLASS__, 'mfa_display' ], 10, 1 );
+		add_action( 'vip_security_mfa_filter_click', [ __CLASS__, 'mfa_filter_click' ], 10, 1 );
+		add_action( 'vip_security_mfa_sorting', [ __CLASS__, 'mfa_sorting' ], 10, 2 );
+		add_action( 'vip_security_blocked_users_view', [ __CLASS__, 'blocked_users_view' ] );
+		add_action( 'vip_security_user_unblock', [ __CLASS__, 'user_unblock' ], 10, 2 );
+		add_action( 'vip_security_privileged_email_sent', [ __CLASS__, 'privileged_email_sent' ], 10, 2 );
 	}
 }
