@@ -138,7 +138,7 @@ class Tracking {
 		//phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders,WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__REMOTE_ADDR__,WordPressVIPMinimum.Security.PHPFilterFunctions.MissingSecondParameter
 		$data['_via_ip'] = isset( $_SERVER['REMOTE_ADDR'] ) ? filter_var( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		//phpcs:ignore WordPressVIPMinimum.Security.PHPFilterFunctions.MissingSecondParameter
-		$data['_lg']     = isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ? filter_var( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) : '';
+		$data['_lg'] = isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ? filter_var( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) : '';
 
 		// Get user identity
 		$identity = self::get_identity( get_current_user_id() );
