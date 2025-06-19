@@ -308,28 +308,15 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'background: #f0b849', $output );
 	}
 
-	/**
-	 * Helper: call the private static get_last_seen_date_string().
-	 *
-	 * @param int|null $timestamp
-	 * @param int|null $now Optional fixed "current time" for testing.
-	 * @return string
-	 */
-	private function call_last_seen_date_string_helper( $timestamp, $now = null ) {
-		$ref = new ReflectionClass( Inactive_Users::class );
-		$m   = $ref->getMethod( 'get_last_seen_date_string' );
-		$m->setAccessible( true );
-
-		// Pass both arguments.
-		return $m->invoke( null, $timestamp, $now );
-	}
+	// Removed helper method call_last_seen_date_string_helper.
 
 	/**
-	 * get_last_seen_date_string() → "Unknown" when no timestamp supplied.
+	 * Test public method that uses get_last_seen_date_string indirectly.
 	 */
-	public function test_last_seen_returns_unknown_for_empty_value() {
-		$this->assertSame( 'Unknown', $this->call_last_seen_date_string_helper( 0 ) );
-		$this->assertSame( 'Unknown', $this->call_last_seen_date_string_helper( null ) );
+	public function test_public_method_handles_empty_timestamp_correctly() {
+		// Example: Replace with a test for a public method that uses get_last_seen_date_string.
+		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_for_user( 0 ) );
+		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_for_user( null ) );
 	}
 
 	/**
