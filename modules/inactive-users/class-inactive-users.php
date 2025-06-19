@@ -334,7 +334,7 @@ class Inactive_Users {
 		}
 
 		// If the last-seen date is within the last month, show a human-readable diff.
-		if ( $diff >= 0 && $diff < MONTH_IN_SECONDS ) {
+		if ( $diff < MONTH_IN_SECONDS ) {
 			return sprintf(
 			/* translators: %s: Human-readable time difference, e.g. "5 hours". */
 				__( '%s ago', 'wpvip' ),
