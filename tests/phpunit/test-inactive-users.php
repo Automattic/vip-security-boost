@@ -307,4 +307,70 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'background: #d63638', $output );
 		$this->assertStringContainsString( 'background: #f0b849', $output );
 	}
+
+	/**
+	 * Helper: call the private static get_last_seen_date_string().
+	 *
+	 * @param int|null $timestamp
+	 * @param int|null $now Optional fixed "current time" for testing.
+	 * @return string
+	 */
+	private function call_last_seen_date_string_helper( $timestamp, $now = null ) {
+		$ref = new ReflectionClass( Inactive_Users::class );
+		$m   = $ref->getMethod( 'get_last_seen_date_string' );
+		$m->setAccessible( true );
+
+		// Pass both arguments.
+		return $m->invoke( null, $timestamp, $now );
+	}
+
+	/**
+	 * get_last_seen_date_string() → "Unknown" when no timestamp supplied.
+	 */
+	public function test_last_seen_returns_unknown_for_empty_value() {
+		$this->assertSame( 'Unknown', $this->call_last_seen_date_string_helper( 0 ) );
+		$this->assertSame( 'Unknown', $this->call_last_seen_date_string_helper( null ) );
+	}
+
+	/**
+	 * get_last_seen_date_string() returns a relative phrase (< 1 day old).
+	 */
+	public function test_last_seen_uses_relative_time_for_recent_activity() {
+		$fixed_now = 1_700_000_000;                     // 2023-11-14 22:13 UTC
+		$two_hours = $fixed_now - 2 * HOUR_IN_SECONDS;  // 2 hours earlier
+
+		$this->assertSame(
+			'2 hours ago',
+			$this->call_last_seen_date_string_helper( $two_hours, $fixed_now )
+		);
+	}
+
+	/**
+	 * get_last_seen_date_string() falls back to absolute date/time (≥ 30 days old).
+	 */
+	public function test_last_seen_uses_absolute_time_for_older_activity() {
+		$fixed_now      = 1_700_000_000;
+		$sixty_days_ago = $fixed_now - 60 * DAY_IN_SECONDS;
+
+		// Use deterministic site formats and remember originals.
+		$old_date_format = get_option( 'date_format' );
+		$old_time_format = get_option( 'time_format' );
+		update_option( 'date_format', 'j M Y' ); // "9 Dec 2023"
+		update_option( 'time_format', 'H:i' );   // "05:33"
+
+		$expected = sprintf(
+			'%1$s at %2$s',
+			date_i18n( get_option( 'date_format' ), $sixty_days_ago ),
+			date_i18n( get_option( 'time_format' ), $sixty_days_ago )
+		);
+
+		$this->assertSame(
+			$expected,
+			$this->call_last_seen_date_string_helper( $sixty_days_ago, $fixed_now )
+		);
+
+		// Restore environment.
+		update_option( 'date_format', $old_date_format );
+		update_option( 'time_format', $old_time_format );
+	}
 }

@@ -291,15 +291,7 @@ class Inactive_Users {
 
 		$last_seen_timestamp = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
 
-		$date = __( 'Unknown', 'wpvip' );
-		if ( $last_seen_timestamp ) {
-			$date = sprintf(
-				/* translators: 1: Comment date, 2: Comment time. */
-				__( '%1$s at %2$s' ),
-				date_i18n( get_option( 'date_format' ), $last_seen_timestamp ),
-				date_i18n( get_option( 'time_format' ), $last_seen_timestamp )
-			);
-		}
+		$date = self::get_last_seen_date_string( $last_seen_timestamp );
 
 		if ( ! self::is_block_action_enabled() || ! self::is_considered_inactive( $user_id ) ) {
 			return sprintf( '<span>%s</span>', esc_html( $date ) );
@@ -316,6 +308,41 @@ class Inactive_Users {
 			$unblock_link = "<div class='row-actions'><span>User blocked due to inactivity. <a class='reset_last_seen_action' href='" . esc_url( $url ) . "'>" . __( 'Unblock', 'wpvip' ) . '</a></span></div>';
 		}
 		return sprintf( '<span class="wp-ui-text-notification">%s</span>' . $unblock_link, esc_html( $date ) );
+	}
+
+	/**
+	 * Return a readable “last-seen” string.
+	 *
+	 * – If the event happened < 1 month ago  → “5 hours ago”.
+	 * – Otherwise                            → “12 Mar 2025 at 14:07”.
+	 *
+	 * @param int      $last_seen_timestamp Unix timestamp (already adjusted for site TZ).
+	 * @param int|null $now                 Optional. Timestamp to compare against. Defaults to now.
+	 * @return string
+	 */
+	private static function get_last_seen_date_string( $last_seen_timestamp, $now = null ): string {
+		if ( ! $last_seen_timestamp ) {
+			return __( 'Unknown', 'wpvip' );
+		}
+
+		$now  = $now ?? current_datetime()->getTimestamp();
+		$diff = $now - $last_seen_timestamp;
+
+		// If the last-seen date is within the last month, show a human-readable diff.
+		if ( $diff >= 0 && $diff < MONTH_IN_SECONDS ) {
+			return sprintf(
+			/* translators: %s: Human-readable time difference, e.g. "5 hours". */
+				__( '%s ago', 'wpvip' ),
+				human_time_diff( $last_seen_timestamp, $now )
+			);
+		}
+
+		return sprintf(
+		/* translators: 1: Last-seen date, 2: Last-seen time. */
+			__( '%1$s at %2$s', 'wpvip' ),
+			date_i18n( get_option( 'date_format' ), $last_seen_timestamp ),
+			date_i18n( get_option( 'time_format' ), $last_seen_timestamp )
+		);
 	}
 
 	public static function add_blocked_users_filter( $views ) {
