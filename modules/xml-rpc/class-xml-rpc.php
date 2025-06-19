@@ -20,11 +20,12 @@ class Xml_Rpc {
 				// Completely disable XML-RPC.
 				self::disable_xml_rpc();
 				break;
-
 			case 'RESTRICT':
-			default:
 				// Restrict XML-RPC to only allow Application Passwords.
 				self::restrict_xmlrpc();
+				break;
+			default:
+				// Do nothing.
 				break;
 		}
 	}
