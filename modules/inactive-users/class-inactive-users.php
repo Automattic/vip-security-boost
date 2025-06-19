@@ -289,7 +289,7 @@ class Inactive_Users {
 
 		$last_seen_timestamp = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
 
-		$date = __( 'Indeterminate', 'wpvip' );
+		$date = __( 'Unknown', 'wpvip' );
 		if ( $last_seen_timestamp ) {
 			$date = sprintf(
 				/* translators: 1: Comment date, 2: Comment time. */
