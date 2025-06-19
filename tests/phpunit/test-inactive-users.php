@@ -308,8 +308,6 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'background: #f0b849', $output );
 	}
 
-	// Removed helper method call_last_seen_date_string_helper.
-
 	/**
 	 * Test public method that uses get_last_seen_date_string indirectly.
 	 */
