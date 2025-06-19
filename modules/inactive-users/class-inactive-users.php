@@ -320,7 +320,7 @@ class Inactive_Users {
 	 * @param int|null $now                 Optional. Timestamp to compare against. Defaults to now.
 	 * @return string
 	 */
-	protected static function get_last_seen_date_string( $last_seen_timestamp, $now = null ): string {
+	public static function get_last_seen_date_string( $last_seen_timestamp, $now = null ): string {
 		if ( ! $last_seen_timestamp ) {
 			return __( 'Unknown', 'wpvip' );
 		}
