@@ -3,6 +3,7 @@ namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 
 class Inactive_Users {
@@ -110,12 +111,11 @@ class Inactive_Users {
 		}
 
 		if ( $user->ID && self::is_considered_inactive( $user->ID ) ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 			if ( Context::is_xmlrpc_api() ) {
@@ -149,12 +149,11 @@ class Inactive_Users {
 		}
 
 		if ( self::is_considered_inactive( $user->ID ) ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 			self::$application_password_authentication_error = new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site administrator.', 'wpvip' ), array( 'status' => 403 ) );
@@ -264,6 +263,9 @@ class Inactive_Users {
 			isset( $_GET['last_seen_filter_nonce'] ) &&
 			wp_verify_nonce( sanitize_text_field( $_GET['last_seen_filter_nonce'] ), 'last_seen_filter' )
 		) {
+			// Track blocked users view
+			do_action( 'vip_security_blocked_users_view' );
+
 			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
 
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -389,6 +391,11 @@ class Inactive_Users {
 		$ignore_inactivity_check_until = strtotime( '+2 days' );
 		if ( ! $error && ! self::ignore_inactivity_check_for_user( $user_id, $ignore_inactivity_check_until ) ) {
 			$error = __( 'Unable to unblock user.', 'wpvip' );
+		} else {
+			// Track successful user unblock
+			$user      = get_userdata( $user_id );
+			$user_role = $user && ! empty( $user->roles ) ? $user->roles[0] : '';
+			do_action( 'vip_security_user_unblock', $user_id, $user_role );
 		}
 
 		if ( $error ) {

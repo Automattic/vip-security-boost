@@ -2,6 +2,7 @@
 namespace Automattic\VIP\Security;
 
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 
 class Loader {
 	const LOG_FEATURE_NAME = 'sb_module_loader';
@@ -35,12 +36,11 @@ class Loader {
 			} else {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error( 'Module not found: ' . esc_html( $module ), E_USER_WARNING );
-				\Automattic\VIP\Logstash\log2logstash(
+				Logger::error(
+					self::LOG_FEATURE_NAME,
+					'Module not found: ' . $module,
 					[
-						'severity' => 'error',
-						'plugin'   => Constants::LOG_PLUGIN_NAME,
-						'feature'  => self::LOG_FEATURE_NAME,
-						'message'  => 'Module not found: ' . $module,
+						'plugin' => Constants::LOG_PLUGIN_NAME,
 					]
 				);
 			}

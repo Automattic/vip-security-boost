@@ -3,15 +3,18 @@ namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 
 use Automattic\VIP\Security\Email\Email;
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 
 class Notify_Privileged_Activity {
 	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
 	public static function init() {
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
-		} else {
-			add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
 		}
+
+
+		// Also listen for user_register for WP-CLI generated users
+		add_action( 'user_register', [ __CLASS__, 'notify_admin_user_creation' ] );
 
 		add_action( 'set_user_role', [ __CLASS__, 'notify_user_promoted_to_admin' ], 10, 3 );
 
@@ -111,12 +114,11 @@ class Notify_Privileged_Activity {
 				return;
 			}
 
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login,
 				[
-					'severity' => 'debug',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login,
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 			$params = [
@@ -126,17 +128,20 @@ class Notify_Privileged_Activity {
 				'email_title' => $email_title,
 				'admin_url'   => admin_url(),
 			];
+			
 			if ( is_multisite() ) {
 				$params['network_admin_url'] = network_admin_url();
 			}
 			Email::send( $user->ID, $admin_email, $subject, $template, $params );
+
+			// Track successful email notification
+			do_action( 'vip_security_privileged_email_sent', $template, 'administrator' );
 		} catch ( \Exception $e ) {
-			\Automattic\VIP\Logstash\log2logstash(
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage(),
 				[
-					'severity' => 'error',
-					'feature'  => self::LOG_FEATURE_NAME,
-					'plugin'   => Constants::LOG_PLUGIN_NAME,
-					'message'  => 'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage(),
+					'plugin' => Constants::LOG_PLUGIN_NAME,
 				]
 			);
 		}

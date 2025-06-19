@@ -21,7 +21,7 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 		Notify_Privileged_Activity::init();
 		if ( is_multisite() ) {
 			$this->assertNotFalse( has_action( 'grant_super_admin', [ Notify_Privileged_Activity::class, 'notify_user_granted_super_admin' ] ), 'Action grant_super_admin was not added.' );
-			$this->assertFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was added.' );
+			$this->assertNotFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was not added.' );
 		} else {
 			$this->assertNotFalse( has_action( 'user_register', [ Notify_Privileged_Activity::class, 'notify_admin_user_creation' ] ), 'Action user_register was not added.' );
 			$this->assertFalse( has_action( 'grant_super_admin', [ Notify_Privileged_Activity::class, 'notify_user_granted_super_admin' ] ), 'Action grant_super_admin was added.' );
