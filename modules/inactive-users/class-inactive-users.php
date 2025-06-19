@@ -328,6 +328,11 @@ class Inactive_Users {
 		$now  = $now ?? current_datetime()->getTimestamp();
 		$diff = $now - $last_seen_timestamp;
 
+		// If the last-seen date is in the future, return "Unknown".
+		if ( $diff < 0 ) {
+			return __( 'Unknown', 'wpvip' );
+		}
+
 		// If the last-seen date is within the last month, show a human-readable diff.
 		if ( $diff >= 0 && $diff < MONTH_IN_SECONDS ) {
 			return sprintf(

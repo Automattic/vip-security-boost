@@ -311,10 +311,23 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	/**
 	 * Test public method that uses get_last_seen_date_string indirectly.
 	 */
-	public function test_public_method_handles_empty_timestamp_correctly() {
+	public function test_get_last_seen_date_string_handles_empty_timestamp_correctly() {
 		// Example: Replace with a test for a public method that uses get_last_seen_date_string.
-		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_for_user( 0 ) );
-		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_for_user( null ) );
+		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_string( 0 ) );
+		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_string( null ) );
+	}
+
+	/**
+	 * get_last_seen_date_string() returns unknown (date in the future).
+	 */
+	public function test_get_last_seen_date_string__handles_future_timestamp_correctly() {
+		$fixed_now = 1_700_000_000;                     // 2023-11-14 22:13 UTC
+		$two_hours = $fixed_now + 2 * HOUR_IN_SECONDS;  // 2 hours in the future
+
+		$this->assertSame(
+			'Unknown',
+			Inactive_Users::get_last_seen_date_string( $two_hours, $fixed_now )
+		);
 	}
 
 	/**
@@ -326,7 +339,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			'2 hours ago',
-			$this->call_last_seen_date_string_helper( $two_hours, $fixed_now )
+			Inactive_Users::get_last_seen_date_string( $two_hours, $fixed_now )
 		);
 	}
 
@@ -351,7 +364,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			$expected,
-			$this->call_last_seen_date_string_helper( $sixty_days_ago, $fixed_now )
+			Inactive_Users::get_last_seen_date_string( $sixty_days_ago, $fixed_now )
 		);
 
 		// Restore environment.
