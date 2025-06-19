@@ -35,7 +35,7 @@ class Tracking {
 	private static function get_tracks(): ?Tracks {
 		if ( null === self::$tracks && class_exists( '\Automattic\VIP\Telemetry\Tracks' ) ) {
 			self::$tracks = new Tracks(
-				self::PREFIX,
+				self::PREFIX . '_',
 				[
 					'plugin_name' => Constants::LOG_PLUGIN_NAME,
 					'site_id'     => defined( 'VIP_GO_APP_ID' ) ? VIP_GO_APP_ID : 0,
