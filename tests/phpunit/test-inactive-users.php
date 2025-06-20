@@ -307,4 +307,68 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'background: #d63638', $output );
 		$this->assertStringContainsString( 'background: #f0b849', $output );
 	}
+
+	/**
+	 * Test public method that uses get_last_seen_date_string indirectly.
+	 */
+	public function test_get_last_seen_date_string_handles_empty_timestamp_correctly() {
+		// Example: Replace with a test for a public method that uses get_last_seen_date_string.
+		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_string( 0 ) );
+		$this->assertSame( 'Unknown', Inactive_Users::get_last_seen_date_string( null ) );
+	}
+
+	/**
+	 * get_last_seen_date_string() returns unknown (date in the future).
+	 */
+	public function test_get_last_seen_date_string__handles_future_timestamp_correctly() {
+		$fixed_now = 1_700_000_000;                     // 2023-11-14 22:13 UTC
+		$two_hours = $fixed_now + 2 * HOUR_IN_SECONDS;  // 2 hours in the future
+
+		$this->assertSame(
+			'Unknown',
+			Inactive_Users::get_last_seen_date_string( $two_hours, $fixed_now )
+		);
+	}
+
+	/**
+	 * get_last_seen_date_string() returns a relative phrase (< 1 day old).
+	 */
+	public function test_last_seen_uses_relative_time_for_recent_activity() {
+		$fixed_now = 1_700_000_000;                     // 2023-11-14 22:13 UTC
+		$two_hours = $fixed_now - 2 * HOUR_IN_SECONDS;  // 2 hours earlier
+
+		$this->assertSame(
+			'2 hours ago',
+			Inactive_Users::get_last_seen_date_string( $two_hours, $fixed_now )
+		);
+	}
+
+	/**
+	 * get_last_seen_date_string() falls back to absolute date/time (≥ 30 days old).
+	 */
+	public function test_last_seen_uses_absolute_time_for_older_activity() {
+		$fixed_now      = 1_700_000_000;
+		$sixty_days_ago = $fixed_now - 60 * DAY_IN_SECONDS;
+
+		// Use deterministic site formats and remember originals.
+		$old_date_format = get_option( 'date_format' );
+		$old_time_format = get_option( 'time_format' );
+		update_option( 'date_format', 'j M Y' ); // "9 Dec 2023"
+		update_option( 'time_format', 'H:i' );   // "05:33"
+
+		$expected = sprintf(
+			'%1$s at %2$s',
+			date_i18n( get_option( 'date_format' ), $sixty_days_ago ),
+			date_i18n( get_option( 'time_format' ), $sixty_days_ago )
+		);
+
+		$this->assertSame(
+			$expected,
+			Inactive_Users::get_last_seen_date_string( $sixty_days_ago, $fixed_now )
+		);
+
+		// Restore environment.
+		update_option( 'date_format', $old_date_format );
+		update_option( 'time_format', $old_time_format );
+	}
 }
