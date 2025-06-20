@@ -1,4 +1,4 @@
-# WordPress VIP Security Boost Integration
+# WordPress VIP - WordPress Security Control Integration
 
 Welcome to WordPress VIP! This repository is a starting point for building your WordPress VIP application, including all the base directories.
 
@@ -16,15 +16,16 @@ We recommend starting with one of the following WordPress VIP guidebooks:
 
 ## Directories
 
-- `modules/`: Contains modular components of the security boost integration.
+- `modules/`: Contains modular components of the WordPress Security Control integration.
 - `utils/`: Contains utility functions and helper classes.
 - `vip-config/`: For [custom configurations](https://docs.wpvip.com/technical-references/vip-codebase/vip-config-directory/) and additional [`sunrise.php` changes](https://docs.wpvip.com/technical-references/multisites/sunrise-php/). This folder's `vip-config.php` can be used to supply things usually found in `wp-config.php`.
 
 Key files in the root directory:
+
 - `vip-security-boost.php`: Main plugin file
 - `class-loader.php`: Loads enabled modules for the integration
 
-These directories and files are essential for the security boost integration to function properly. Any additional directories created in your GitHub repository that are not included in the above list will not be mounted onto your site, and so will not be web-accessible.
+These directories and files are essential for the WordPress Security Control integration to function properly. Any additional directories created in your GitHub repository that are not included in the above list will not be mounted onto your site, and so will not be web-accessible.
 
 For more information on how our codebase is structured, see https://docs.wpvip.com/technical-references/vip-codebase/.
 
