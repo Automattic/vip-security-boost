@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WordPress VIP WordPress Security Control
+ * Plugin Name: WordPress Security Control
  * Plugin URI: https://github.com/Automattic/vip-security-boost-integration
  * Description: A comprehensive security suite that protects WordPress VIP sites against common vulnerabilities and implements industry-standard security hardening measures.
  * Author: WordPress VIP
