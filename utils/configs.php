@@ -53,7 +53,7 @@ function parse_module_configs( $configs ): array {
 function get_all_module_configs() {
 	if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-		trigger_error( '[WordPress Security Control] VIP_SECURITY_BOOST_CONFIGS is not defined.', E_USER_WARNING );
+		trigger_error( '[WordPress Security Controls] VIP_SECURITY_BOOST_CONFIGS is not defined.', E_USER_WARNING );
 		return [];
 	}
 
