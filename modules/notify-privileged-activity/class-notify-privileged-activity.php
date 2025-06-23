@@ -116,10 +116,7 @@ class Notify_Privileged_Activity {
 
 			Logger::info(
 				self::LOG_FEATURE_NAME,
-				'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login,
-				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
-				]
+				'User granted privileged roles (notification type: ' . $template . ') user: ' . $user->user_login
 			);
 			$params = [
 				'user_login'  => $user->user_login,
@@ -128,7 +125,7 @@ class Notify_Privileged_Activity {
 				'email_title' => $email_title,
 				'admin_url'   => admin_url(),
 			];
-			
+
 			if ( is_multisite() ) {
 				$params['network_admin_url'] = network_admin_url();
 			}
@@ -139,10 +136,7 @@ class Notify_Privileged_Activity {
 		} catch ( \Exception $e ) {
 			Logger::error(
 				self::LOG_FEATURE_NAME,
-				'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage(),
-				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
-				]
+				'Failed to notify admin user creation (type: ' . $template . ') user: ' . $user->user_login . ' - error: ' . $e->getMessage()
 			);
 		}
 	}

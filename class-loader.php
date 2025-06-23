@@ -38,10 +38,7 @@ class Loader {
 				trigger_error( 'Module not found: ' . esc_html( $module ), E_USER_WARNING );
 				Logger::error(
 					self::LOG_FEATURE_NAME,
-					'Module not found: ' . $module,
-					[
-						'plugin' => Constants::LOG_PLUGIN_NAME,
-					]
+					'Module not found: ' . $module
 				);
 			}
 		}
