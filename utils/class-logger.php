@@ -43,23 +43,6 @@ class Logger {
 			}
 		}
 
-		// Log to error_log if not in production and not during testing
-		$is_testing = ( defined( 'VIP_GO_APP_ENVIRONMENT' ) && 'test' === constant( 'VIP_GO_APP_ENVIRONMENT' ) );
-		if ( ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) && ! $is_testing ) {
-			$log_message = sprintf(
-				'[VIP Security Boost] %s: %s',
-				strtoupper( $data['severity'] ?? 'info' ),
-				$data['message'] ?? 'No message'
-			);
-
-			if ( isset( $data['extra'] ) && ! empty( $data['extra'] ) ) {
-				$log_message .= ' | Extra: ' . wp_json_encode( $data['extra'] );
-			}
-
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( $log_message );
-		}
-
 		// Send to Logstash
 		\Automattic\VIP\Logstash\Logger::log2logstash( $data );
 	}
