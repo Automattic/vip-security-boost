@@ -161,7 +161,7 @@ class Tracking {
 	private static function record_stats( $stat_name ) {
 		// We're tracking the stats in production only
 		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			Logger::info( 'vip-security-boost', 'Bumping stats for https://mc.a8c.com/s/' . self::PREFIX . "/{$stat_name}", [
+			Logger::info( 'vip-security-boost', 'Bumping stats for /s/' . self::PREFIX . "/{$stat_name}", [
 				'stat_name' => $stat_name,
 			] );
 			return;
