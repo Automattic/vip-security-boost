@@ -113,10 +113,7 @@ class Inactive_Users {
 		if ( $user->ID && self::is_considered_inactive( $user->ID ) ) {
 			Logger::info(
 				self::LOG_FEATURE_NAME,
-				'User ' . $user->user_login . ' is flagged as inactive, login was blocked.',
-				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
-				]
+				'User ' . $user->user_login . ' is flagged as inactive, login was blocked.'
 			);
 			if ( Context::is_xmlrpc_api() ) {
 				add_filter('xmlrpc_login_error', function () {
@@ -151,10 +148,7 @@ class Inactive_Users {
 		if ( self::is_considered_inactive( $user->ID ) ) {
 			Logger::info(
 				self::LOG_FEATURE_NAME,
-				'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.',
-				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
-				]
+				'User ' . $user->user_login . ' is flagged as inactive, application password authentication was blocked.'
 			);
 			self::$application_password_authentication_error = new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site administrator.', 'wpvip' ), array( 'status' => 403 ) );
 

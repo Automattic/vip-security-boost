@@ -43,10 +43,7 @@ class Session_Control {
 			if ( ! is_numeric( $expiration_days_value ) ) {
 				Logger::warning(
 					self::LOG_FEATURE_NAME,
-					'Invalid session expiration days. Must be an integer. Reverting to default.',
-					[
-						'plugin' => Constants::LOG_PLUGIN_NAME,
-					]
+					'Invalid session expiration days. Must be an integer. Reverting to default.'
 				);
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error( 'Invalid session expiration days. Must be an integer. Reverting to default.', E_USER_WARNING );
@@ -58,10 +55,7 @@ class Session_Control {
 
 				Logger::warning(
 					self::LOG_FEATURE_NAME,
-					'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
-					[
-						'plugin' => Constants::LOG_PLUGIN_NAME,
-					]
+					'Invalid session expiration days. Must be between 1 and 13. Reverting to default.'
 				);
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 				trigger_error( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.', E_USER_WARNING );

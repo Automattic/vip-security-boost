@@ -84,18 +84,12 @@ class Email {
 		if ( $sent ) {
 			Logger::info(
 				self::LOG_FEATURE_NAME,
-				'Email sent to ' . $email_address,
-				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
-				]
+				'Email sent to ' . $email_address
 			);
 		} else {
 			Logger::error(
 				self::LOG_FEATURE_NAME,
-				'Email not sent to ' . $email_address,
-				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
-				]
+				'Email not sent to ' . $email_address
 			);
 		}
 	}
@@ -114,7 +108,6 @@ class Email {
 				self::LOG_FEATURE_NAME,
 				'Email template not found',
 				[
-					'plugin' => Constants::LOG_PLUGIN_NAME,
 					'template_id' => $template_id,
 				]
 			);

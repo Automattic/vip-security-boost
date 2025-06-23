@@ -5,6 +5,8 @@
 
 namespace Automattic\VIP\Security\Utils;
 
+use Automattic\VIP\Security\Constants;
+
 class Logger {
 	/**
 	 * Log data to both error_log (non-production) and Logstash
@@ -19,7 +21,7 @@ class Logger {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
 			$backtrace  = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 2 );
 			$base_index = 0;
-			
+
 			if ( isset( $backtrace[ $base_index ]['file'] ) ) {
 				$data['file'] = $backtrace[ $base_index ]['file'];
 			}
@@ -49,11 +51,11 @@ class Logger {
 				strtoupper( $data['severity'] ?? 'info' ),
 				$data['message'] ?? 'No message'
 			);
-			
+
 			if ( isset( $data['extra'] ) && ! empty( $data['extra'] ) ) {
 				$log_message .= ' | Extra: ' . wp_json_encode( $data['extra'] );
 			}
-			
+
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( $log_message );
 		}
@@ -74,6 +76,7 @@ class Logger {
 			'severity' => 'info',
 			'feature'  => $feature,
 			'message'  => $message,
+			'plugin'   => Constants::LOG_PLUGIN_NAME,
 			'extra'    => $extra,
 		] );
 	}
@@ -90,6 +93,7 @@ class Logger {
 			'severity' => 'warning',
 			'feature'  => $feature,
 			'message'  => $message,
+			'plugin'   => Constants::LOG_PLUGIN_NAME,
 			'extra'    => $extra,
 		] );
 	}
@@ -106,6 +110,7 @@ class Logger {
 			'severity' => 'error',
 			'feature'  => $feature,
 			'message'  => $message,
+			'plugin'   => Constants::LOG_PLUGIN_NAME,
 			'extra'    => $extra,
 		] );
 	}
