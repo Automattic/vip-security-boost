@@ -175,7 +175,7 @@ class XmlRpcTest extends TestCase {
 																				<member><name>isPrimary</name><value><boolean>1</boolean></value></member>
 																				<member><name>url</name><value><string>http://vip-security-boost.vipdev.lndo.site/</string></value></member>
 																				<member><name>blogid</name><value><string>1</string></value></member>
-																				<member><name>blogName</name><value><string>VIP Security Boost</string></value></member>
+																				<member><name>blogName</name><value><string>VIP WordPress Security Controls</string></value></member>
 																				<member><name>xmlrpc</name><value><string>http://vip-security-boost.vipdev.lndo.site/xmlrpc.php</string></value></member>
 																		</struct>
 																</value>
@@ -234,7 +234,7 @@ class XmlRpcTest extends TestCase {
 																				<member><name>isPrimary</name><value><boolean>1</boolean></value></member>
 																				<member><name>url</name><value><string>http://vip-security-boost.vipdev.lndo.site/</string></value></member>
 																				<member><name>blogid</name><value><string>1</string></value></member>
-																				<member><name>blogName</name><value><string>VIP Security Boost</string></value></member>
+																				<member><name>blogName</name><value><string>VIP WordPress Security Controls</string></value></member>
 																				<member><name>xmlrpc</name><value><string>http://vip-security-boost.vipdev.lndo.site/xmlrpc.php</string></value></member>
 																		</struct>
 																</value>
