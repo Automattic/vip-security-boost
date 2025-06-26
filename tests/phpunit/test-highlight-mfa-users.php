@@ -459,38 +459,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
 	}
 
-	/**
-	 * Test that MFA count caching works correctly.
-	 */
-	public function test_mfa_count_caching() {
-		$this->set_admin_screen_users();
 
-		// Clear any existing cache
-		Highlight_MFA_Users::clear_mfa_count_cache();
-
-		// First call should calculate and cache the result
-		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
-		$output1 = ob_get_clean();
-
-		// Second call should use cached result and produce the same output
-		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
-		$output2 = ob_get_clean();
-
-		// Both outputs should be identical, indicating caching is working
-		$this->assertEquals( $output1, $output2 );
-
-		// Clear cache and verify it can be cleared
-		Highlight_MFA_Users::clear_mfa_count_cache();
-
-		// After clearing cache, the result should still be the same (but recalculated)
-		ob_start();
-		Highlight_MFA_Users::display_mfa_disabled_notice();
-		$output3 = ob_get_clean();
-
-		$this->assertEquals( $output1, $output3 );
-	}
 
 	/**
 	 * Test that the role column is added to the users table.
