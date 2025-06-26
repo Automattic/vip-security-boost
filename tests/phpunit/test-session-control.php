@@ -33,7 +33,7 @@ class SessionControlTest extends WP_UnitTestCase {
 		define('VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
 				'session-control' => [
-					'expiration_days' => Session_Control::DEFAULT_VALUE,
+					'expiration_days' => 'default',
 				],
 			],
 		]);
