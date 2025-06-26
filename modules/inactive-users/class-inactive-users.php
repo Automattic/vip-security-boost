@@ -2,7 +2,6 @@
 namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
-use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 
