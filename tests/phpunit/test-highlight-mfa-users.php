@@ -4,6 +4,8 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 		/** @var array<int> Stores user IDs that the mock should treat as MFA enabled */
 		public static $mock_enabled_user_ids = [];
 
+		const ENABLED_PROVIDERS_USER_META_KEY = '_two_factor_enabled_providers';
+
 		public static function is_user_using_two_factor( $user_id ) {
 			return in_array( (int) $user_id, self::$mock_enabled_user_ids, true );
 		}
@@ -25,6 +27,11 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 	public function setUp(): void {
 		parent::setUp();
+
+		// Define the config constant if not already defined
+		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
+			define( 'VIP_SECURITY_BOOST_CONFIGS', [] );
+		}
 
 		Two_Factor_Core::$mock_enabled_user_ids = [];
 
@@ -77,6 +84,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Clean up options
 		delete_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
+
+		// Clear MFA count cache to ensure clean state for next test
+		Highlight_MFA_Users::clear_mfa_count_cache();
 
 		// No need to restore config state manually as setUp handles it or tests run isolated.
 
@@ -438,6 +448,48 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->assertNotFalse( has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
 		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
+
+		// Test that cache clearing actions are hooked
+		$this->assertNotFalse( has_action( 'two_factor_user_settings_action', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'updated_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
+		$this->assertNotFalse( has_action( 'user_register', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'delete_user', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'set_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'add_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+	}
+
+	/**
+	 * Test that MFA count caching works correctly.
+	 */
+	public function test_mfa_count_caching() {
+		$this->set_admin_screen_users();
+
+		// Clear any existing cache
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// First call should calculate and cache the result
+		ob_start();
+		Highlight_MFA_Users::display_mfa_disabled_notice();
+		$output1 = ob_get_clean();
+
+		// Second call should use cached result and produce the same output
+		ob_start();
+		Highlight_MFA_Users::display_mfa_disabled_notice();
+		$output2 = ob_get_clean();
+
+		// Both outputs should be identical, indicating caching is working
+		$this->assertEquals( $output1, $output2 );
+
+		// Clear cache and verify it can be cleared
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// After clearing cache, the result should still be the same (but recalculated)
+		ob_start();
+		Highlight_MFA_Users::display_mfa_disabled_notice();
+		$output3 = ob_get_clean();
+
+		$this->assertEquals( $output1, $output3 );
 	}
 
 	/**

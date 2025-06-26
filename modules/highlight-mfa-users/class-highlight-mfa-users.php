@@ -7,6 +7,9 @@ class Highlight_MFA_Users {
 	const MFA_SKIP_USER_IDS_OPTION_KEY    = 'vip_security_mfa_skip_user_ids';
 	const ROLE_COLUMN_KEY                 = 'role';
 	const DEFAULT_ADMIN_EDITOR_ROLE_SLUGS = [ 'administrator', 'editor' ];
+	const MFA_COUNT_CACHE_GROUP           = 'vip_security_mfa_count';
+	const MFA_COUNT_CACHE_KEY             = 'mfa_disabled_count';
+	const MFA_COUNT_CACHE_TTL             = HOUR_IN_SECONDS; // Cache for 1 hour
 
 	/**
 	 * The roles used to highlight users without MFA.
@@ -16,6 +19,20 @@ class Highlight_MFA_Users {
 	private static $roles;
 
 	public static function init() {
+		// If plugins_loaded has already fired (e.g., in tests), register hooks immediately
+		if ( did_action( 'plugins_loaded' ) ) {
+			self::register_hooks();
+		} else {
+			add_action( 'plugins_loaded', [ __CLASS__, 'register_hooks' ] );
+		}
+	}
+
+	public static function register_hooks() {
+		// Ensure the Two Factor plugin is active
+		if ( ! class_exists( '\Two_Factor_Core' ) ) {
+			return;
+		}
+
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
 		self::$roles           = $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS; // Default to administrator and editor if not configured
@@ -28,6 +45,9 @@ class Highlight_MFA_Users {
 		if ( empty( self::$roles ) ) {
 			self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
 		}
+
+		// Use a global cache group since users are shared among network sites.
+		wp_cache_add_global_groups( array( self::MFA_COUNT_CACHE_GROUP ) );
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
 		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
@@ -47,16 +67,92 @@ class Highlight_MFA_Users {
 
 		// Handle sorting
 		add_filter( 'users_list_table_query_args', [ __CLASS__, 'sort_columns' ] );
+
+		// Clear cache when users or MFA settings change
+		add_action( 'two_factor_user_settings_action', [ __CLASS__, 'clear_mfa_count_cache' ] );
+		add_action( 'updated_user_meta', [ __CLASS__, 'clear_mfa_count_cache_on_meta_update' ], 10, 3 );
+		add_action( 'user_register', [ __CLASS__, 'clear_mfa_count_cache' ] );
+		add_action( 'delete_user', [ __CLASS__, 'clear_mfa_count_cache' ] );
+		add_action( 'set_user_role', [ __CLASS__, 'clear_mfa_count_cache' ] );
+		add_action( 'add_user_role', [ __CLASS__, 'clear_mfa_count_cache' ] );
+		add_action( 'remove_user_role', [ __CLASS__, 'clear_mfa_count_cache' ] );
 	}
 
 	/**
-		* Display an admin notice on the Users page showing the count of users with MFA disabled.
-		*/
-	public static function display_mfa_disabled_notice() {
-		if ( ! class_exists( '\Two_Factor_Core' ) ) {
-			return;
+	 * Get the count of users with MFA disabled, with caching.
+	 *
+	 * @return int The number of users with MFA disabled.
+	 */
+	private static function get_mfa_disabled_count() {
+		// Try to get from cache first
+		$cached_count = wp_cache_get( self::MFA_COUNT_CACHE_KEY, self::MFA_COUNT_CACHE_GROUP );
+		if ( false !== $cached_count ) {
+			return (int) $cached_count;
 		}
 
+		// Cache miss - calculate the count
+		$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
+		if ( ! is_array( $skipped_user_ids ) ) {
+			$skipped_user_ids = [];
+		}
+
+		// Exclude the wpcomvip user from the list
+		$wpcomvip = get_user_by( 'login', 'wpcomvip' );
+		if ( false !== $wpcomvip ) {
+			$skipped_user_ids[] = $wpcomvip->ID;
+		}
+		$skipped_user_ids = array_unique( array_filter( array_map( 'intval', $skipped_user_ids ) ) );
+
+		// Cache miss - calculate the count
+		$args       = [
+			'role__in' => self::$roles,
+			'fields'   => 'ID',
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
+			'exclude'  => $skipped_user_ids,
+			'number'   => -1, // Get all relevant users
+		];
+		$user_query = new \WP_User_Query( $args );
+		$user_ids   = $user_query->get_results();
+
+		$mfa_disabled_count = 0;
+		foreach ( $user_ids as $user_id ) {
+			if ( ! \Two_Factor_Core::is_user_using_two_factor( $user_id ) ) {
+				++$mfa_disabled_count;
+			}
+		}
+
+		// Cache the result
+		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+		wp_cache_set( self::MFA_COUNT_CACHE_KEY, $mfa_disabled_count, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
+
+		return $mfa_disabled_count;
+	}
+
+	/**
+	 * Clear the MFA disabled count cache.
+	 * Called when user MFA settings or roles change.
+	 */
+	public static function clear_mfa_count_cache() {
+		wp_cache_delete( self::MFA_COUNT_CACHE_KEY, self::MFA_COUNT_CACHE_GROUP );
+	}
+
+	/**
+	 * Clear the MFA count cache when Two Factor user meta is updated.
+	 *
+	 * @param int    $meta_id  ID of updated metadata entry.
+	 * @param int    $user_id  User ID.
+	 * @param string $meta_key Metadata key.
+	 */
+	public static function clear_mfa_count_cache_on_meta_update( $meta_id, $user_id, $meta_key ) {
+		if ( \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY === $meta_key ) {
+			self::clear_mfa_count_cache();
+		}
+	}
+
+	/**
+	* Display an admin notice on the Users page showing the count of users with MFA disabled.
+	*/
+	public static function display_mfa_disabled_notice() {
 		// Only show the notice to admins
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -76,33 +172,8 @@ class Highlight_MFA_Users {
 		// unordered array check with ==
 		$is_default_config = ( self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS === $configured_roles_for_comparison || empty( $configured_roles_for_comparison ) );
 
-		$skipped_user_ids = get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
-		if ( ! is_array( $skipped_user_ids ) ) {
-			$skipped_user_ids = [];
-		}
-
-		// Exclude the wpcomvip user from the list
-		$wpcomvip = get_user_by( 'login', 'wpcomvip' );
-		if ( false !== $wpcomvip ) {
-			$skipped_user_ids[] = $wpcomvip->ID;
-		}
-		// Query for user IDs with the configured roles, excluding skipped ones
-		$args       = [
-			'role__in' => self::$roles,
-			'fields'   => 'ID',
-			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
-			'exclude'  => $skipped_user_ids,
-			'number'   => -1, // Get all relevant users
-		];
-		$user_query = new \WP_User_Query( $args );
-		$user_ids   = $user_query->get_results();
-
-		$mfa_disabled_count = 0;
-		foreach ( $user_ids as $user_id ) {
-			if ( ! \Two_Factor_Core::is_user_using_two_factor( $user_id ) ) {
-				++$mfa_disabled_count;
-			}
-		}
+		// Get the cached MFA disabled count
+		$mfa_disabled_count = self::get_mfa_disabled_count();
 
 		if ( $mfa_disabled_count > 0 ) {
 			// Check if the filter is currently active
