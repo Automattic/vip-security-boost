@@ -459,8 +459,6 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
 	}
 
-
-
 	/**
 	 * Test that the role column is added to the users table.
 	 */
