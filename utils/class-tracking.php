@@ -50,12 +50,13 @@ class Tracking {
 	 *
 	 * @return string `local_` if local, `nonprod_` if nonproduction, empty otherwise.
 	 */
-	private static function maybe_get_non_production_prefix(): string {
+	private static function maybe_get_non_production_prefix( $trailining_underscore = true ): string {
+		$trailing_underscore = $trailining_underscore ? '_' : '';
 		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			return 'local_';
+			return 'local' . $trailing_underscore;
 		}
 		if ( 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			return 'nonprod_';
+			return 'nonprod' . $trailing_underscore;
 		}
 		return '';
 	}
@@ -177,7 +178,7 @@ class Tracking {
 	 * @param mixed  $value Stat value.
 	 */
 	private static function record_stats( $stat_name ) {
-		$env_prefix = self::maybe_get_non_production_prefix();
+		$env_prefix = self::maybe_get_non_production_prefix( false );
 		$stat_code  = self::PREFIX;
 		if ( ! empty( $env_prefix ) ) {
 			$stat_code = self::PREFIX . '_' . $env_prefix;
