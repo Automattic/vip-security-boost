@@ -122,10 +122,7 @@ class Tracking {
 	}
 
 	public static function mfa_display( $filter_enabled ) {
-		$telemetry = self::get_telemetry();
-		if ( $telemetry ) {
-			$telemetry->record_event( 'mfa_page_view', [ 'filtered' => $filter_enabled ] );
-		}
+		self::record_event( 'mfa_page_view', [ 'filtered' => $filter_enabled ] );
 		self::record_stats( 'mfa-display' . ( $filter_enabled ? '-filtered' : '' ) );
 	}
 
