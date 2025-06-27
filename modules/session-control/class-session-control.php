@@ -110,7 +110,10 @@ class Session_Control {
 		if ( empty( self::$invalid_config ) ) {
 			return $user;
 		}
-		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config['warning'], [ 'expiration_days' => self::$invalid_config['expiration_days'], 'error_code' => self::$invalid_config['error_code'] ] );
+		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config['warning'], [
+			'expiration_days' => self::$invalid_config['expiration_days'],
+			'error_code'      => self::$invalid_config['error_code'],
+		] );
 		return $user;
 	}
 }
