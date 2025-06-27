@@ -23,14 +23,10 @@
 	<exclude-pattern>./vendor/</exclude-pattern>
 
 	<!-- How to scan -->
-	<arg value="sp"/>
-	<!-- Show sniff and progress -->
-	<arg name="colors"/>
-	<!-- Show results with colors. Disable if working on Windows -->
-	<arg name="basepath" value="."/>
-	<!-- Strip the file paths down to the relevant bit -->
-	<arg name="parallel" value="8"/>
-	<!-- Enables parallel processing when available for faster results -->
+	<arg value="sp"/> <!-- Show sniff and progress -->
+	<arg name="colors"/> <!-- Show results with colors. Disable if working on Windows -->
+	<arg name="basepath" value="."/> <!-- Strip the file paths down to the relevant bit -->
+	<arg name="parallel" value="8"/> <!-- Enables parallel processing when available for faster results -->
 	<arg name="extensions" value="php,js"/>
 	<!-- Limit to PHP and JS files -->
 
@@ -59,8 +55,7 @@
 
 	<!-- Rules: WordPress Coding Standards - see
 		https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards -->
-	<rule ref="WordPress-Extra"/>
-	<!-- Includes WordPress-Core -->
+	<rule ref="WordPress-Extra"/> <!-- Includes WordPress-Core -->
 	<!--<rule ref="WordPress-Docs"/>-->
 	<!-- For help in understanding this minimum_supported_wp_version:
 		https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards/wiki/Customizable-sniff-properties#setting-minimum-supported-wp-version-for-all-sniffs-in-one-go-wpcs-0140 -->
