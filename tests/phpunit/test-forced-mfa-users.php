@@ -1,6 +1,7 @@
 <?php
 
 use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
+use Automattic\VIP\Security\Utils\Testable_Logger;
 
 class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function setUp(): void {
@@ -69,10 +70,6 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	 * @preserveGlobalState disabled
 	 */
 	public function test_init_does_not_add_action_when_config_not_defined() {
-		// Expect the warning from get_all_module_configs() when the constant is missing
-		$this->expectWarning();
-		$this->expectWarningMessageMatches( '/VIP_SECURITY_BOOST_CONFIGS is not defined/' );
-
 		// Constant is NOT defined in this separate process
 		$this->assertFalse( defined( 'VIP_SECURITY_BOOST_CONFIGS' ) );
 		Forced_MFA_Users::init();

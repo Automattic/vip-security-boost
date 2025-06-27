@@ -102,4 +102,30 @@ class Logger {
 			'extra'    => $extra,
 		] );
 	}
+
+
+	/**
+	 * This is a dedicated function to log warnings only if the user is logged in. The idea is that
+	 * we don't want to accidentally log too many warnings in production
+	 */
+	public static function warning_log_if_user_logged_in( string $feature, string $message, array $extra = [] ): void {
+		if ( function_exists( 'is_local_env' ) && is_local_env() ) {
+			self::warning(
+				$feature,
+				$message,
+				$extra
+			);
+			return;
+		}
+
+		add_action('set_current_user', function () use ( $feature, $message, $extra ) {
+			if ( is_user_logged_in() ) {
+				Logger::warning(
+					$feature,
+					$message,
+					$extra
+				);
+			}
+		});
+	}
 }
