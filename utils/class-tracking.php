@@ -51,7 +51,7 @@ class Tracking {
 	 * @return string `local_` if local, `nonprod_` if nonproduction, empty otherwise.
 	 */
 	private static function maybe_get_non_production_prefix(): string {
-		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 			return 'local_';
 		}
 		if ( 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
@@ -60,49 +60,47 @@ class Tracking {
 		return '';
 	}
 
+	/**
+	 * Initialize stats used by the class-colletor.php for the prometheus stats.
+	 */
 	public function initialize( RegistryInterface $registry ): void {
-		$env_prefix = self::maybe_get_non_production_prefix();
-		$stat_name  = self::PREFIX;
-		if ( ! empty( $env_prefix ) ) {
-			$stat_name .= '_' . $env_prefix;
-		}
 		$this->mfa_display_counter = $registry->getOrRegisterCounter(
-			$stat_name,
+			'vip_security_boost',
 			'mfa_display_total',
 			'Number of MFA display views',
 			[ 'filtered' ]
 		);
 
 		$this->mfa_filter_click_counter = $registry->getOrRegisterCounter(
-			$stat_name,
+			'vip_security_boost',
 			'mfa_filter_click_total',
 			'Number of MFA filter clicks',
 			[ 'filter_type' ]
 		);
 
 		$this->mfa_sorting_counter = $registry->getOrRegisterCounter(
-			$stat_name,
+			'vip_security_boost',
 			'mfa_sorting_total',
 			'Number of MFA sorting actions',
 			[ 'sort_column', 'sort_order' ]
 		);
 
 		$this->blocked_users_view_counter = $registry->getOrRegisterCounter(
-			$stat_name,
+			'vip_security_boost',
 			'blocked_users_view_total',
 			'Number of blocked users view accesses',
 			[]
 		);
 
 		$this->user_unblock_counter = $registry->getOrRegisterCounter(
-			$stat_name,
+			'vip_security_boost',
 			'user_unblock_total',
 			'Number of user unblock actions',
 			[ 'user_role' ]
 		);
 
 		$this->privileged_email_sent_counter = $registry->getOrRegisterCounter(
-			$stat_name,
+			'vip_security_boost',
 			'privileged_email_sent_total',
 			'Number of privileged activity emails sent',
 			[ 'email_type', 'recipient_role' ]
@@ -179,9 +177,14 @@ class Tracking {
 	 * @param mixed  $value Stat value.
 	 */
 	private static function record_stats( $stat_name ) {
+		$env_prefix = self::maybe_get_non_production_prefix();
+		$stat_code  = self::PREFIX;
+		if ( ! empty( $env_prefix ) ) {
+			$stat_code = self::PREFIX . '_' . $env_prefix;
+		}
 		// We're tracking the stats in production only
 		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
-			Logger::info( 'vip-security-boost', 'Bumping stats for /s/' . self::PREFIX . "/{$stat_name}", [
+			Logger::info( 'vip-security-boost', 'Bumping stats for /s/' . $stat_code . '/' . $stat_name, [
 				'stat_name' => $stat_name,
 			] );
 			return;
@@ -189,7 +192,7 @@ class Tracking {
 
 		if ( function_exists( '\Automattic\VIP\Stats\send_pixel' ) ) {
 			try {
-				\Automattic\VIP\Stats\send_pixel( [ self::PREFIX => $stat_name ] );
+				\Automattic\VIP\Stats\send_pixel( [ $stat_code => $stat_name ] );
 			} catch ( \Exception $e ) {
 				Logger::error( 'vip-security-boost', 'Stats recording failed', [
 					'stat_name' => $stat_name,
