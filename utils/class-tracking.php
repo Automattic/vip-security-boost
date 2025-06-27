@@ -46,6 +46,19 @@ class Tracking {
 	}
 
 	/**
+	 * Record an event using Telemetry, only if Telemetry class is available.
+	 *
+	 * @param string $event_name Event name.
+	 * @param array  $event_data Event data.
+	 */
+	private static function record_event( $event_name, $event_data ) {
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( $event_name, $event_data );
+		}
+	}
+
+	/**
 	 * Get the prefix for stats and events.
 	 *
 	 * @return string `local_` if local, `nonprod_` if nonproduction, empty otherwise.
@@ -117,51 +130,37 @@ class Tracking {
 	}
 
 	public static function mfa_filter_click( $filter_type ) {
-		$telemetry = self::get_telemetry();
-		if ( $telemetry ) {
-			$telemetry->record_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
-		}
+		self::record_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
 		self::record_stats( 'mfa-filter-click' );
 	}
 
 	public static function mfa_sorting( $sort_column, $sort_order ) {
-		$telemetry = self::get_telemetry();
-		if ( $telemetry ) {
-			$telemetry->record_event( 'mfa_sort', [
-				'sort_column' => $sort_column,
-				'sort_order'  => $sort_order,
-			] );
-		}
+		self::record_event( 'mfa_sort', [
+			'sort_column' => $sort_column,
+			'sort_order'  => $sort_order,
+		] );
 		self::record_stats( 'mfa-sorting' );
 	}
 
 	public static function blocked_users_view() {
-		$telemetry = self::get_telemetry();
-		if ( $telemetry ) {
-			$telemetry->record_event( 'blocked_users_view' );
-		}
+		self::record_event( 'blocked_users_view' );
 		self::record_stats( 'blocked-users-view' );
 	}
 
 	public static function user_unblock( $user_id, $user_role ) {
-		$telemetry = self::get_telemetry();
-		if ( $telemetry ) {
-			$telemetry->record_event( 'blocked_users_unblock', [
-				'user_role'   => $user_role,
-				'has_user_id' => ! empty( $user_id ),
-			] );
-		}
+		self::record_event( 'blocked_users_unblock', [
+			'user_role'   => $user_role,
+			'has_user_id' => ! empty( $user_id ),
+		] );
 		self::record_stats( 'user-unblock' );
 	}
 
 	public static function privileged_email_sent( $email_type, $recipient_role ) {
-		$telemetry = self::get_telemetry();
-		if ( $telemetry ) {
-			$telemetry->record_event( 'privileged_activity_email_sent', [
-				'email_type'     => $email_type,
-				'recipient_role' => $recipient_role,
-			] );
-		}
+		self::record_event( 'privileged_activity_email_sent', [
+			'email_type'     => $email_type,
+			'recipient_role' => $recipient_role,
+		] );
+
 		self::record_stats( 'privileged-email-sent' );
 
 		Logger::info( 'vip-security-boost', 'Privileged user email notification sent', [
