@@ -24,6 +24,13 @@ class Session_Control {
 	 */
 	private static $expiration_days = self::DEFAULT_VALUE;
 
+	/**
+	 * Stores the reason for invalid configuration, if any.
+	 *
+	 * @var string
+	 */
+	private static $invalid_config_warning = '';
+
 
 	/**
 	 * Initialize the module
@@ -41,24 +48,16 @@ class Session_Control {
 			// Validate the expiration days value (must be between 1 and 13)
 			// check if it's valid int
 			if ( ! is_numeric( $expiration_days_value ) ) {
-				Logger::warning(
-					self::LOG_FEATURE_NAME,
-					'Invalid session expiration days. Must be an integer. Reverting to default.'
-				);
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-				trigger_error( 'Invalid session expiration days. Must be an integer. Reverting to default.', E_USER_WARNING );
+				self::$invalid_config_warning = 'Invalid session expiration days. Must be an integer. Reverting to default.';
+				// Add filter to trigger error only during authentication
+				add_filter( 'wp_login', array( __CLASS__, 'maybe_log_invalid_config' ), 10, 2 );
 				return;
 			}
 			$expiration_days = intval( $expiration_days_value );
 
 			if ( $expiration_days < 1 || $expiration_days > 13 ) {
-
-				Logger::warning(
-					self::LOG_FEATURE_NAME,
-					'Invalid session expiration days. Must be between 1 and 13. Reverting to default.'
-				);
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-				trigger_error( 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.', E_USER_WARNING );
+				self::$invalid_config_warning = 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.';
+				add_filter( 'wp_login', array( __CLASS__, 'maybe_log_invalid_config' ), 10, 2 );
 				return;
 			}
 			self::$expiration_days = $expiration_days;
@@ -87,6 +86,22 @@ class Session_Control {
 
 		// Return the default expiration if "Remember Me" is not checked
 		return $expiration;
+	}
+
+	/**
+	 * If configuration is invalid, log the stored warning during user authentication.
+	 *
+	 * @param string $user_login The username.
+	 * @param \WP_User $user The user object.
+	 *
+	 * @return \WP_User The unmodified user object.
+	 */
+	public static function maybe_log_invalid_config( $user_login, $user ) {
+		if ( empty( self::$invalid_config_warning ) ) {
+			return $user;
+		}
+		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config_warning );
+		return $user;
 	}
 }
 
