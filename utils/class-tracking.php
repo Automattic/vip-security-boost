@@ -61,44 +61,48 @@ class Tracking {
 	}
 
 	public function initialize( RegistryInterface $registry ): void {
-		$event_name                = self::PREFIX . '_' . self::maybe_get_non_production_prefix();
+		$env_prefix = self::maybe_get_non_production_prefix();
+		$stat_name  = self::PREFIX;
+		if ( ! empty( $env_prefix ) ) {
+			$stat_name .= '_' . $env_prefix;
+		}
 		$this->mfa_display_counter = $registry->getOrRegisterCounter(
-			$event_name,
+			$stat_name,
 			'mfa_display_total',
 			'Number of MFA display views',
 			[ 'filtered' ]
 		);
 
 		$this->mfa_filter_click_counter = $registry->getOrRegisterCounter(
-			$event_name,
+			$stat_name,
 			'mfa_filter_click_total',
 			'Number of MFA filter clicks',
 			[ 'filter_type' ]
 		);
 
 		$this->mfa_sorting_counter = $registry->getOrRegisterCounter(
-			$event_name,
+			$stat_name,
 			'mfa_sorting_total',
 			'Number of MFA sorting actions',
 			[ 'sort_column', 'sort_order' ]
 		);
 
 		$this->blocked_users_view_counter = $registry->getOrRegisterCounter(
-			$event_name,
+			$stat_name,
 			'blocked_users_view_total',
 			'Number of blocked users view accesses',
 			[]
 		);
 
 		$this->user_unblock_counter = $registry->getOrRegisterCounter(
-			$event_name,
+			$stat_name,
 			'user_unblock_total',
 			'Number of user unblock actions',
 			[ 'user_role' ]
 		);
 
 		$this->privileged_email_sent_counter = $registry->getOrRegisterCounter(
-			$event_name,
+			$stat_name,
 			'privileged_email_sent_total',
 			'Number of privileged activity emails sent',
 			[ 'email_type', 'recipient_role' ]
