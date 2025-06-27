@@ -29,8 +29,7 @@ class Session_Control {
 	 *
 	 * @var string
 	 */
-	private static $invalid_config_warning = '';
-
+	private static $invalid_config;
 
 	/**
 	 * Initialize the module
@@ -48,7 +47,11 @@ class Session_Control {
 			// Validate the expiration days value (must be between 1 and 13)
 			// check if it's valid int
 			if ( ! is_numeric( $expiration_days_value ) ) {
-				self::$invalid_config_warning = 'Invalid session expiration days. Must be an integer. Reverting to default.';
+				self::$invalid_config = [
+					'warning'         => 'Invalid session expiration days. Must be an integer. Reverting to default.',
+					'expiration_days' => $expiration_days_value,
+				];
+
 				// Add filter to trigger error only during authentication
 				add_filter( 'wp_login', array( __CLASS__, 'maybe_log_invalid_config' ), 10, 2 );
 				return;
@@ -56,7 +59,12 @@ class Session_Control {
 			$expiration_days = intval( $expiration_days_value );
 
 			if ( $expiration_days < 1 || $expiration_days > 13 ) {
-				self::$invalid_config_warning = 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.';
+				self::$invalid_config = [
+					'warning'         => 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
+					'expiration_days' => $expiration_days_value,
+				];
+
+				// Add filter to trigger error only during authentication
 				add_filter( 'wp_login', array( __CLASS__, 'maybe_log_invalid_config' ), 10, 2 );
 				return;
 			}
@@ -97,10 +105,10 @@ class Session_Control {
 	 * @return \WP_User The unmodified user object.
 	 */
 	public static function maybe_log_invalid_config( $user_login, $user ) {
-		if ( empty( self::$invalid_config_warning ) ) {
+		if ( empty( self::$invalid_config ) ) {
 			return $user;
 		}
-		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config_warning );
+		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config['warning'], [ 'expiration_days' => self::$invalid_config['expiration_days'] ] );
 		return $user;
 	}
 }
