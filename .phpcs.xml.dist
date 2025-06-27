@@ -27,8 +27,7 @@
 	<arg name="colors"/> <!-- Show results with colors. Disable if working on Windows -->
 	<arg name="basepath" value="."/> <!-- Strip the file paths down to the relevant bit -->
 	<arg name="parallel" value="8"/> <!-- Enables parallel processing when available for faster results -->
-	<arg name="extensions" value="php,js"/>
-	<!-- Limit to PHP and JS files -->
+	<arg name="extensions" value="php,js"/> <!-- Limit to PHP and JS files -->
 
 	<!--
 	Set default PHPCS severity level to 1 to match VIP Code Analysis Bot defaults.
