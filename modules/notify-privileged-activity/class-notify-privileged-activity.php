@@ -109,7 +109,7 @@ class Notify_Privileged_Activity {
 	 */
 	private static function send_notification( $user, $subject, $email_title, $template ) {
 		// Skip notification for VIP Support users
-		if ( class_exists( '\Automattic\VIP\Support_User\User' ) && Support_User::user_has_vip_support_role( $user->ID ) ) {
+		if ( class_exists( Support_User::class ) && Support_User::user_has_vip_support_role( $user->ID ) ) {
 			Logger::info(
 				self::LOG_FEATURE_NAME,
 				'Skipping notification for VIP Support user: ' . $user->ID
