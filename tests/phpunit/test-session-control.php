@@ -14,7 +14,7 @@ class SessionControlTest extends WP_UnitTestCase {
 			'role' => 'editor',
 		]);
 		// this is the mocked logger from mock-logger.php
-		Logger::set_entries( [] );
+		Logger::clear_entries();
 	}
 
 	public function tearDown(): void {

@@ -67,7 +67,7 @@ class Logger {
 		] );
 	}
 
-	public static function set_entries( array $entries ): void {
+	public static function clear_entries(): void {
 		static::$logged_entries = [];
 	}
 
