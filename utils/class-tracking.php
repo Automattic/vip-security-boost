@@ -35,7 +35,7 @@ class Tracking {
 	private static function get_telemetry(): ?Telemetry {
 		if ( null === self::$telemetry && class_exists( '\Automattic\VIP\Telemetry\Telemetry' ) ) {
 			self::$telemetry = new Telemetry(
-				self::PREFIX . '_',
+				self::PREFIX . '_' . self::maybe_get_non_production_prefix(),
 				[
 					'plugin_name' => Constants::LOG_PLUGIN_NAME,
 					'site_id'     => defined( 'VIP_GO_APP_ID' ) ? VIP_GO_APP_ID : 0,
@@ -45,44 +45,60 @@ class Tracking {
 		return self::$telemetry;
 	}
 
+	/**
+	 * Get the prefix for stats and events.
+	 *
+	 * @return string `local_` if local, `nonprod_` if nonproduction, empty otherwise.
+	 */
+	private static function maybe_get_non_production_prefix(): string {
+		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+			return 'local_';
+		}
+		if ( 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+			return 'nonprod_';
+		}
+		return '';
+	}
+
 	public function initialize( RegistryInterface $registry ): void {
+		$event_name                = self::PREFIX . '_' . self::maybe_get_non_production_prefix();
 		$this->mfa_display_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
+			$event_name,
 			'mfa_display_total',
 			'Number of MFA display views',
 			[ 'filtered' ]
 		);
 
 		$this->mfa_filter_click_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
+			$event_name,
 			'mfa_filter_click_total',
 			'Number of MFA filter clicks',
 			[ 'filter_type' ]
 		);
 
 		$this->mfa_sorting_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
+			$event_name,
 			'mfa_sorting_total',
 			'Number of MFA sorting actions',
 			[ 'sort_column', 'sort_order' ]
 		);
 
 		$this->blocked_users_view_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
+			$event_name,
 			'blocked_users_view_total',
 			'Number of blocked users view accesses',
 			[]
 		);
 
 		$this->user_unblock_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
+			$event_name,
 			'user_unblock_total',
 			'Number of user unblock actions',
 			[ 'user_role' ]
 		);
 
 		$this->privileged_email_sent_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
+			$event_name,
 			'privileged_email_sent_total',
 			'Number of privileged activity emails sent',
 			[ 'email_type', 'recipient_role' ]
