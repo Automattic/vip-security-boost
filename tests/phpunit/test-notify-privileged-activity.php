@@ -11,6 +11,11 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 	protected function tearDown(): void {
 		parent::tearDown();
 		delete_option( 'admin_email' );
+		
+		// Reset VIP Support User mock if it exists
+		if ( class_exists( '\Automattic\VIP\Support_User\User' ) && method_exists( '\Automattic\VIP\Support_User\User', 'reset_mock' ) ) {
+			\Automattic\VIP\Support_User\User::reset_mock();
+		}
 	}
 
 	/**
@@ -287,17 +292,7 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 	 */
 	private function mock_vip_support_user_class() {
 		if ( ! class_exists( '\Automattic\VIP\Support_User\User' ) ) {
-			eval( '
-				namespace Automattic\VIP\Support_User;
-				
-				class User {
-					public static $mock_vip_support_users = [];
-					
-					public static function user_has_vip_support_role( $user_id ) {
-						return in_array( $user_id, self::$mock_vip_support_users, true );
-					}
-				}
-			' );
+			require_once __DIR__ . '/mocks/class-support-user-mock.php';
 		}
 	}
 }
