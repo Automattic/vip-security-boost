@@ -1,7 +1,6 @@
 <?php
 
 use Automattic\VIP\Security\SessionControl\Session_Control;
-//use Automattic\VIP\Security\Utils\Logger;
 use PHPUnit\Framework\Error\Warning;
 use Automattic\VIP\Security\Utils\Testable_Logger;
 
