@@ -6,7 +6,7 @@
 namespace Automattic\VIP\Security\Utils;
 
 use Automattic\VIP\Security\Constants;
-use Automattic\VIP\Telemetry\Tracks;
+use Automattic\VIP\Telemetry\Telemetry;
 
 class Tracking {
 
@@ -16,9 +16,9 @@ class Tracking {
 	const PREFIX = 'vip_security_boost';
 
 	/**
-	 * Tracks instance.
+	 * Telemetry instance.
 	 */
-	private static ?Tracks $tracks = null;
+	private static ?Telemetry $telemetry = null;
 
 	private Counter $mfa_display_counter;
 	private Counter $mfa_filter_click_counter;
@@ -28,13 +28,13 @@ class Tracking {
 	private Counter $privileged_email_sent_counter;
 
 	/**
-	 * Get the Tracks instance.
+	 * Get the Telemetry instance.
 	 *
-	 * @return Tracks|null The Tracks instance or null if not available.
+	 * @return Telemetry|null The Telemetry instance or null if not available.
 	 */
-	private static function get_tracks(): ?Tracks {
-		if ( null === self::$tracks && class_exists( '\Automattic\VIP\Telemetry\Tracks' ) ) {
-			self::$tracks = new Tracks(
+	private static function get_telemetry(): ?Telemetry {
+		if ( null === self::$telemetry && class_exists( '\Automattic\VIP\Telemetry\Telemetry' ) ) {
+			self::$telemetry = new Telemetry(
 				self::PREFIX . '_',
 				[
 					'plugin_name' => Constants::LOG_PLUGIN_NAME,
@@ -42,7 +42,7 @@ class Tracking {
 				]
 			);
 		}
-		return self::$tracks;
+		return self::$telemetry;
 	}
 
 	public function initialize( RegistryInterface $registry ): void {
@@ -90,25 +90,25 @@ class Tracking {
 	}
 
 	public static function mfa_display( $filter_enabled ) {
-		$tracks = self::get_tracks();
-		if ( $tracks ) {
-			$tracks->record_event( 'mfa_page_view', [ 'filtered' => $filter_enabled ] );
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( 'mfa_page_view', [ 'filtered' => $filter_enabled ] );
 		}
 		self::record_stats( 'mfa-display' . ( $filter_enabled ? '-filtered' : '' ) );
 	}
 
 	public static function mfa_filter_click( $filter_type ) {
-		$tracks = self::get_tracks();
-		if ( $tracks ) {
-			$tracks->record_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( 'mfa_filter_click', [ 'filter_type' => $filter_type ] );
 		}
 		self::record_stats( 'mfa-filter-click' );
 	}
 
 	public static function mfa_sorting( $sort_column, $sort_order ) {
-		$tracks = self::get_tracks();
-		if ( $tracks ) {
-			$tracks->record_event( 'mfa_sort', [
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( 'mfa_sort', [
 				'sort_column' => $sort_column,
 				'sort_order'  => $sort_order,
 			] );
@@ -117,17 +117,17 @@ class Tracking {
 	}
 
 	public static function blocked_users_view() {
-		$tracks = self::get_tracks();
-		if ( $tracks ) {
-			$tracks->record_event( 'blocked_users_view' );
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( 'blocked_users_view' );
 		}
 		self::record_stats( 'blocked-users-view' );
 	}
 
 	public static function user_unblock( $user_id, $user_role ) {
-		$tracks = self::get_tracks();
-		if ( $tracks ) {
-			$tracks->record_event( 'blocked_users_unblock', [
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( 'blocked_users_unblock', [
 				'user_role'   => $user_role,
 				'has_user_id' => ! empty( $user_id ),
 			] );
@@ -136,9 +136,9 @@ class Tracking {
 	}
 
 	public static function privileged_email_sent( $email_type, $recipient_role ) {
-		$tracks = self::get_tracks();
-		if ( $tracks ) {
-			$tracks->record_event( 'privileged_activity_email_sent', [
+		$telemetry = self::get_telemetry();
+		if ( $telemetry ) {
+			$telemetry->record_event( 'privileged_activity_email_sent', [
 				'email_type'     => $email_type,
 				'recipient_role' => $recipient_role,
 			] );
