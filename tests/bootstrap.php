@@ -6,7 +6,8 @@ require_once __DIR__ . '/../utils/class-configs.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
 require_once __DIR__ . '/../utils/class-constants.php';
 require_once __DIR__ . '/../email/class-email.php';
-require_once __DIR__ . '/mock-logger.php';
+require_once __DIR__ . '/../utils/class-logger.php';
+require_once __DIR__ . '/class-testable-logger.php';
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 
@@ -94,3 +95,5 @@ require $_tests_dir . '/includes/bootstrap.php';
 if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 	define( 'VIP_GO_APP_ENVIRONMENT', 'test' );
 }
+
+\Automattic\VIP\Security\Utils\Testable_Logger::set_track_logs( true );

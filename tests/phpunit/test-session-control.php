@@ -1,8 +1,10 @@
 <?php
 
 use Automattic\VIP\Security\SessionControl\Session_Control;
-use Automattic\VIP\Security\Utils\Logger;
+//use Automattic\VIP\Security\Utils\Logger;
 use PHPUnit\Framework\Error\Warning;
+use Automattic\VIP\Security\Utils\Testable_Logger;
+
 
 class SessionControlTest extends WP_UnitTestCase {
 	private $user_id;
@@ -14,7 +16,7 @@ class SessionControlTest extends WP_UnitTestCase {
 			'role' => 'editor',
 		]);
 		// this is the mocked logger from mock-logger.php
-		Logger::clear_entries();
+		Testable_Logger::clear_entries();
 	}
 
 	public function tearDown(): void {
@@ -66,7 +68,7 @@ class SessionControlTest extends WP_UnitTestCase {
 			'The wp_login filter should NOT be added when configuration is valid.'
 		);
 		// No logs were generated
-		$entries = Logger::get_entries();
+		$entries = Testable_Logger::get_entries();
 		$this->assertEmpty( $entries );
 	}
 
@@ -111,7 +113,7 @@ class SessionControlTest extends WP_UnitTestCase {
 		$expected = $test_days * DAY_IN_SECONDS;
 
 		$this->assertEquals( $expected, $result, 'Custom expiration should be applied when "remember me" is checked' );
-		$entries = Logger::get_entries();
+		$entries = Testable_Logger::get_entries();
 		$this->assertEmpty( $entries );
 	}
 
@@ -195,7 +197,7 @@ class SessionControlTest extends WP_UnitTestCase {
 		// Run the wp_login filter for logging invalid configuration
 		do_action( 'wp_login', 'test', new \WP_User() );
 
-		$entries = Logger::get_entries();
+		$entries = Testable_Logger::get_entries();
 		$this->assertNotEmpty( $entries );
 		$this->assertEquals( $error_code, $entries[0]['extra']['error_code'] );
 		$this->assertEquals( $expiration_days, $entries[0]['extra']['expiration_days'] );

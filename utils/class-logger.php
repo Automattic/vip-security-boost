@@ -8,6 +8,8 @@ namespace Automattic\VIP\Security\Utils;
 use Automattic\VIP\Security\Constants;
 
 class Logger {
+	protected static $logged_entries = [];
+	protected static $track_logs     = false;
 	/**
 	 * Log data to both error_log (non-production) and Logstash
 	 *
@@ -42,7 +44,10 @@ class Logger {
 				}
 			}
 		}
-
+		// this is for testing purposes
+		if ( self::$track_logs ) {
+			self::$logged_entries[] = $data;
+		}
 		// Send to Logstash
 		\Automattic\VIP\Logstash\Logger::log2logstash( $data );
 	}
