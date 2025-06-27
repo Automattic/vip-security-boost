@@ -27,7 +27,7 @@ class Session_Control {
 	/**
 	 * Stores the reason for invalid configuration, if any.
 	 *
-	 * @var string
+	 * @var array { warning: string, expiration_days: string | int }
 	 */
 	private static $invalid_config;
 
