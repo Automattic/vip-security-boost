@@ -193,7 +193,7 @@ class SessionControlTest extends WP_UnitTestCase {
 		$this->assertEquals( $default_expiration, $result, 'Expiration should not be modified when config is invalid' );
 
 		// Run the wp_login filter for logging invalid configuration
-		do_action( 'wp_login', new \WP_User(), 'test' );
+		do_action( 'wp_login', 'test', new \WP_User() );
 
 		$entries = Logger::get_entries();
 		$this->assertNotEmpty( $entries );
