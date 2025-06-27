@@ -75,7 +75,7 @@ class Tracking {
 	}
 
 	/**
-	 * Initialize stats used by the class-colletor.php for the prometheus stats.
+	 * Initialize stats used by the class-collector.php for the prometheus stats.
 	 */
 	public function initialize( RegistryInterface $registry ): void {
 		$this->mfa_display_counter = $registry->getOrRegisterCounter(
