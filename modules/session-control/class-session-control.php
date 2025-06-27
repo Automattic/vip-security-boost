@@ -50,6 +50,7 @@ class Session_Control {
 				self::$invalid_config = [
 					'warning'         => 'Invalid session expiration days. Must be an integer. Reverting to default.',
 					'expiration_days' => $expiration_days_value,
+					'error_code'      => 'is-not-numeric',
 				];
 
 				// Add filter to trigger error only during authentication
@@ -62,6 +63,7 @@ class Session_Control {
 				self::$invalid_config = [
 					'warning'         => 'Invalid session expiration days. Must be between 1 and 13. Reverting to default.',
 					'expiration_days' => $expiration_days_value,
+					'error_code'      => 'is-out-of-range',
 				];
 
 				// Add filter to trigger error only during authentication
@@ -108,7 +110,7 @@ class Session_Control {
 		if ( empty( self::$invalid_config ) ) {
 			return $user;
 		}
-		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config['warning'], [ 'expiration_days' => self::$invalid_config['expiration_days'] ] );
+		Logger::warning( self::LOG_FEATURE_NAME, self::$invalid_config['warning'], [ 'expiration_days' => self::$invalid_config['expiration_days'], 'error_code' => self::$invalid_config['error_code'] ] );
 		return $user;
 	}
 }

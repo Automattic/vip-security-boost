@@ -1,7 +1,7 @@
 <?php
 
 use Automattic\VIP\Security\SessionControl\Session_Control;
-
+use Automattic\VIP\Security\Utils\Logger;
 use PHPUnit\Framework\Error\Warning;
 
 class SessionControlTest extends WP_UnitTestCase {
@@ -13,6 +13,8 @@ class SessionControlTest extends WP_UnitTestCase {
 		$this->user_id = self::factory()->user->create([
 			'role' => 'editor',
 		]);
+		// this is the mocked logger from mock-logger.php
+		Logger::set_entries( [] );
 	}
 
 	public function tearDown(): void {
@@ -38,6 +40,12 @@ class SessionControlTest extends WP_UnitTestCase {
 		// Initialize the module
 		Session_Control::init();
 
+		// Ensure that the wp_login filter for invalid configuration has NOT been added.
+		$this->assertFalse(
+			has_filter( 'wp_login', [ Session_Control::class, 'maybe_log_invalid_config' ] ),
+			'The wp_login filter should NOT be added when configuration is valid.'
+		);
+
 		// Default WordPress expiration is 2 days (172800 seconds) without "remember me"
 		$default_expiration = 2 * DAY_IN_SECONDS;
 
@@ -51,6 +59,15 @@ class SessionControlTest extends WP_UnitTestCase {
 		// Test with "remember me"
 		$result = Session_Control::set_auth_cookie_expiration( $default_remember_expiration, $this->user_id, true );
 		$this->assertEquals( $default_remember_expiration, $result, 'Default expiration should not be modified when set to "default"' );
+
+		// Ensure that the wp_login filter for invalid configuration has NOT been added.
+		$this->assertFalse(
+			has_filter( 'wp_login', [ Session_Control::class, 'maybe_log_invalid_config' ] ),
+			'The wp_login filter should NOT be added when configuration is valid.'
+		);
+		// No logs were generated
+		$entries = Logger::get_entries();
+		$this->assertEmpty( $entries );
 	}
 
 	/**
@@ -72,6 +89,12 @@ class SessionControlTest extends WP_UnitTestCase {
 		// Initialize the module
 		Session_Control::init();
 
+		// Ensure that the wp_login filter for invalid configuration has NOT been added.
+		$this->assertFalse(
+			has_filter( 'wp_login', [ Session_Control::class, 'maybe_log_invalid_config' ] ),
+			'The wp_login filter should NOT be added when configuration is valid.'
+		);
+
 		// Default WordPress expiration is 2 days (172800 seconds) without "remember me"
 		$default_expiration = 2 * DAY_IN_SECONDS;
 
@@ -88,6 +111,8 @@ class SessionControlTest extends WP_UnitTestCase {
 		$expected = $test_days * DAY_IN_SECONDS;
 
 		$this->assertEquals( $expected, $result, 'Custom expiration should be applied when "remember me" is checked' );
+		$entries = Logger::get_entries();
+		$this->assertEmpty( $entries );
 	}
 
 
@@ -106,7 +131,7 @@ class SessionControlTest extends WP_UnitTestCase {
 			],
 		]);
 
-		$this->validate_invalid_expiration_days();
+		$this->validate_invalid_expiration_days( 'is-out-of-range', 31 );
 	}
 
 	/**
@@ -124,7 +149,7 @@ class SessionControlTest extends WP_UnitTestCase {
 			],
 		]);
 
-		$this->validate_invalid_expiration_days();
+		$this->validate_invalid_expiration_days( 'is-out-of-range', 0 );
 	}
 
 
@@ -143,16 +168,22 @@ class SessionControlTest extends WP_UnitTestCase {
 			],
 		]);
 
-		$this->validate_invalid_expiration_days();
+		$this->validate_invalid_expiration_days( 'is-not-numeric', 'invalid' );
 	}
 
 	/**
 	 * Helper method to validate that invalid expiration days are handled correctly
 	 */
-	private function validate_invalid_expiration_days() {
-		$this->expectException( Warning::class );
+	private function validate_invalid_expiration_days( $error_code, $expiration_days ) {
 		// Initialize the module
 		Session_Control::init();
+
+		// Ensure that the wp_login filter for logging invalid configuration has been added.
+		$this->assertSame(
+			10,
+			has_filter( 'wp_login', [ Session_Control::class, 'maybe_log_invalid_config' ] ),
+			'The wp_login filter should be added with priority 10 when configuration is invalid.'
+		);
 
 		// Default WordPress expiration
 		$default_expiration = 14 * DAY_IN_SECONDS;
@@ -160,5 +191,13 @@ class SessionControlTest extends WP_UnitTestCase {
 		// Test with "remember me" - should not be modified due to invalid config
 		$result = Session_Control::set_auth_cookie_expiration( $default_expiration, $this->user_id, true );
 		$this->assertEquals( $default_expiration, $result, 'Expiration should not be modified when config is invalid' );
+
+		// Run the wp_login filter for logging invalid configuration
+		do_action( 'wp_login', new \WP_User(), 'test' );
+
+		$entries = Logger::get_entries();
+		$this->assertNotEmpty( $entries );
+		$this->assertEquals( $error_code, $entries[0]['extra']['error_code'] );
+		$this->assertEquals( $expiration_days, $entries[0]['extra']['expiration_days'] );
 	}
 }
