@@ -117,7 +117,6 @@ class Tracking {
 	 * Record stats using VIP Stats
 	 *
 	 * @param string $stat_name Stat name.
-	 * @param mixed  $value Stat value.
 	 */
 	private static function record_stats( $stat_name ) {
 		$env_prefix = self::maybe_get_non_production_prefix( false );
