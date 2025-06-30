@@ -68,3 +68,7 @@ function get_all_module_configs() {
 function is_local_env() {
 	return ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' );
 }
+
+function is_production_env() {
+	return defined( 'VIP_GO_APP_ENVIRONMENT' ) && 'production' === constant( 'VIP_GO_APP_ENVIRONMENT' );
+}
