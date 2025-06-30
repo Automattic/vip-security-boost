@@ -1,6 +1,10 @@
+# Linting and Static Analysis
+
+This document outlines the tools and procedures for linting and static analysis in this project.
+
 ## PHPCS for checking coding standards
 
-We check against the following standards/rulesets
+We check against the following standards/rulesets:
 
 - [VIP Coding Standards](https://github.com/Automattic/VIP-Coding-Standards)
 - [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards)
