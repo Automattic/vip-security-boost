@@ -18,6 +18,8 @@ class Inactive_Users {
 	const LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY = 'wpvip_last_seen_ignore_inactivity_check_until';
 	const LAST_SEEN_CACHE_GROUP                            = 'wpvip_last_seen';
 	const LAST_SEEN_UPDATE_USER_META_CACHE_TTL             = MINUTE_IN_SECONDS * 5; // Store last seen once every five minute to avoid too many write DB operations
+	const BLOCKED_USERS_CACHE_KEY                          = 'wpvip_blocked_users_';
+	const BLOCKED_USERS_CACHE_TTL                          = MINUTE_IN_SECONDS * 5;
 	const LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY      = 'wpvip_last_seen_release_date_timestamp';
 
 	/**
@@ -344,27 +346,41 @@ class Inactive_Users {
 		);
 	}
 
+	public static function get_blocked_users_cache_key() {
+		return self::BLOCKED_USERS_CACHE_KEY . ( is_network_admin() ? null : get_current_blog_id() );
+	}
+
 	public static function add_blocked_users_filter( $views ) {
 		$blog_id = is_network_admin() ? null : get_current_blog_id();
 
-		$users_query = new \WP_User_Query(
-			array(
-				'blog_id'      => $blog_id,
-				'fields'       => 'ID',
-				'meta_key'     => self::LAST_SEEN_META_KEY,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'meta_value'   => self::get_inactivity_timestamp(),
-				'meta_type'    => 'NUMERIC',
-				'meta_compare' => '<',
-				'count_total'  => false,
-				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
-				'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
-			),
-		);
+		$cache_key         = self::get_blocked_users_cache_key();
+		$has_blocked_users = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+
+		if ( false === $has_blocked_users ) {
+			$users_query = new \WP_User_Query(
+				array(
+					'blog_id'      => $blog_id,
+					'fields'       => 'ID',
+					'meta_key'     => self::LAST_SEEN_META_KEY,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+					'meta_value'   => self::get_inactivity_timestamp(),
+					'meta_type'    => 'NUMERIC',
+					'meta_compare' => '<',
+					'count_total'  => false,
+					'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
+					'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
+				),
+			);
+
+			$has_blocked_users = ! empty( $users_query->get_results() ) ? 1 : 0;
+
+			// we're using the same granularity for the cache as for the last seen meta
+			wp_cache_set( $cache_key, $has_blocked_users, self::LAST_SEEN_CACHE_GROUP, self::BLOCKED_USERS_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+		}
 
 		$views['blocked_users'] = __( 'Blocked Users', 'wpvip' );
 
-		if ( ! $users_query->get_results() ) {
+		if ( ! $has_blocked_users ) {
 			return $views;
 		}
 
@@ -422,6 +438,10 @@ class Inactive_Users {
 			$user      = get_userdata( $user_id );
 			$user_role = $user && ! empty( $user->roles ) ? $user->roles[0] : '';
 			do_action( 'vip_security_user_unblock', $user_id, $user_role );
+
+			$cache_key = self::get_blocked_users_cache_key();
+			// clearing the cache
+			wp_cache_delete( $cache_key, self::LAST_SEEN_CACHE_GROUP );
 		}
 
 		if ( $error ) {
