@@ -21,7 +21,7 @@ function get_module_configs( $module_name, $configs = false ) {
 
 	$current_module_config = [];
 
-	if ( is_array( $module_configs ) && isset( $module_configs[ $module_name ] ) ) {
+	if ( isset( $module_configs[ $module_name ] ) ) {
 		$current_module_config = $module_configs[ $module_name ];
 	}
 
