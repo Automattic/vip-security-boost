@@ -20,13 +20,6 @@ class Tracking {
 	 */
 	private static ?Telemetry $telemetry = null;
 
-	private Counter $mfa_display_counter;
-	private Counter $mfa_filter_click_counter;
-	private Counter $mfa_sorting_counter;
-	private Counter $blocked_users_view_counter;
-	private Counter $user_unblock_counter;
-	private Counter $privileged_email_sent_counter;
-
 	/**
 	 * Get the Telemetry instance.
 	 *
@@ -72,53 +65,6 @@ class Tracking {
 			return 'nonprod' . $trailing_underscore;
 		}
 		return '';
-	}
-
-	/**
-	 * Initialize stats used by the class-collector.php for the prometheus stats.
-	 */
-	public function initialize( RegistryInterface $registry ): void {
-		$this->mfa_display_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
-			'mfa_display_total',
-			'Number of MFA display views',
-			[ 'filtered' ]
-		);
-
-		$this->mfa_filter_click_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
-			'mfa_filter_click_total',
-			'Number of MFA filter clicks',
-			[ 'filter_type' ]
-		);
-
-		$this->mfa_sorting_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
-			'mfa_sorting_total',
-			'Number of MFA sorting actions',
-			[ 'sort_column', 'sort_order' ]
-		);
-
-		$this->blocked_users_view_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
-			'blocked_users_view_total',
-			'Number of blocked users view accesses',
-			[]
-		);
-
-		$this->user_unblock_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
-			'user_unblock_total',
-			'Number of user unblock actions',
-			[ 'user_role' ]
-		);
-
-		$this->privileged_email_sent_counter = $registry->getOrRegisterCounter(
-			'vip_security_boost',
-			'privileged_email_sent_total',
-			'Number of privileged activity emails sent',
-			[ 'email_type', 'recipient_role' ]
-		);
 	}
 
 	public static function mfa_display( $filter_enabled ) {
