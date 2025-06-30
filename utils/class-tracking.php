@@ -63,8 +63,8 @@ class Tracking {
 	 *
 	 * @return string `local_` if local, `nonprod_` if nonproduction, empty otherwise.
 	 */
-	private static function maybe_get_non_production_prefix( $trailining_underscore = true ): string {
-		$trailing_underscore = $trailining_underscore ? '_' : '';
+	private static function maybe_get_non_production_prefix( $trailing_underscore = true ): string {
+		$trailing_underscore = $trailing_underscore ? '_' : '';
 		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 			return 'local' . $trailing_underscore;
 		}
