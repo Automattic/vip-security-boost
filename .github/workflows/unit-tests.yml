@@ -33,6 +33,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: mu-plugins cache
+        uses: actions/cache@v4
+        with:
+          path: mu-plugins
+          key: ${{ runner.os }}-build-pr-${{ github.event.pull_request.number }}
+          restore-keys: |
+            ${{ runner.os }}-build-pr-
+
       - uses: php-actions/composer@v6
         with:
           php_version: "${{ matrix.config.php }}"
