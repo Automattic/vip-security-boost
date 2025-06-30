@@ -37,6 +37,11 @@ jobs:
         env:
           fail-fast: "true"
 
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
       - name: Install PHP dependencies
         uses: ramsey/composer-install@57532f8be5bda426838819c5ee9afb8af389d51a # 3.0.0
 

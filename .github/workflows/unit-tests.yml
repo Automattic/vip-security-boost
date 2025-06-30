@@ -41,6 +41,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-pr-
 
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
       - uses: php-actions/composer@v6
         with:
           php_version: "${{ matrix.config.php }}"
