@@ -19,4 +19,6 @@ if [ ! -d "mu-plugins" ]; then
 
 	# Cleanup: Remove the temporary zip file
 	rm mu-plugins.zip
+else
+	echo "mu-plugins directory already exists. Skipping download."
 fi
