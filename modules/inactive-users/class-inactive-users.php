@@ -524,7 +524,14 @@ class Inactive_Users {
 
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
-			throw new \Exception( sprintf( 'User #%d found', esc_html( $user_id ) ) );
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'User not found',
+				array(
+					'user_id' => $user_id,
+				)
+			);
+			return false;
 		}
 
 		if ( $user->user_registered && strtotime( $user->user_registered ) > self::get_inactivity_timestamp() ) {
