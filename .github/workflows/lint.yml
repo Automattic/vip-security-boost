@@ -24,7 +24,7 @@ jobs:
         with:
           coverage: none
         env:
-          fail-fast: 'true'
+          fail-fast: "true"
 
       - name: Install PHP dependencies
         uses: ramsey/composer-install@57532f8be5bda426838819c5ee9afb8af389d51a # 3.0.0
@@ -34,3 +34,6 @@ jobs:
 
       - name: Run style check
         run: composer lint
+
+      - name: PHPStan
+        run: composer analyze
