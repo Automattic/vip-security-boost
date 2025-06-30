@@ -20,8 +20,7 @@
 	},
 	"autoload-dev": {
 		"classmap": [
-			"./modules/",
-			"./email/"
+			"./modules/"
 		]
 	},
 	"config": {
