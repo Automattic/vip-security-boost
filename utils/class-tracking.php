@@ -180,7 +180,7 @@ class Tracking {
 			$stat_code = self::PREFIX . '_' . $env_prefix;
 		}
 		// We're tracking the stats in production only
-		if ( 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 			Logger::info( 'vip-security-boost', 'Bumping stats for /s/' . $stat_code . '/' . $stat_name, [
 				'stat_name' => $stat_name,
 			] );
