@@ -11,6 +11,11 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 	protected function tearDown(): void {
 		parent::tearDown();
 		delete_option( 'admin_email' );
+		
+		// Reset VIP Support User mock if it exists
+		if ( class_exists( '\Automattic\VIP\Support_User\User' ) && method_exists( '\Automattic\VIP\Support_User\User', 'reset_mock' ) ) {
+			\Automattic\VIP\Support_User\User::reset_mock();
+		}
 	}
 
 	/**
@@ -210,5 +215,84 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
 		$this->assertEquals( $expected_subject, Email::$last_call_args_for_test['subject'] );
 		$this->assertEquals( 'privileged-super-admin-granted', Email::$last_call_args_for_test['template_id'] );
 		$this->assertEquals( $expected_template_data, Email::$last_call_args_for_test['template_data'] );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_admin_user_creation_skips_vip_support_user() {
+		// Mock the Support_User class
+		$this->mock_vip_support_user_class();
+
+		$user_id = self::factory()->user->create( [
+			'role'       => 'administrator',
+			'user_login' => 'vip_testuser',
+			'user_email' => 'vip-support@automattic.com',
+		] );
+		update_option( 'admin_email', 'admin@example.com' );
+
+		// Set this user as a VIP Support user
+		\Automattic\VIP\Support_User\User::$mock_vip_support_users = [ $user_id ];
+
+		Notify_Privileged_Activity::notify_admin_user_creation( $user_id );
+		$this->assertNull( Email::$last_call_args_for_test, 'Email::send was called unexpectedly for VIP Support user.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_promoted_to_admin_skips_vip_support_user() {
+		// Mock the Support_User class
+		$this->mock_vip_support_user_class();
+
+		$user_id = self::factory()->user->create( [
+			'role'       => 'editor',
+			'user_login' => 'vip_testuser',
+			'user_email' => 'vip_testuser@example.com',
+		] );
+		update_option( 'admin_email', 'admin@example.com' );
+
+		// Set this user as a VIP Support user
+		\Automattic\VIP\Support_User\User::$mock_vip_support_users = [ $user_id ];
+
+		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'editor' ] );
+		$this->assertNull( Email::$last_call_args_for_test, 'Email::send was called unexpectedly for VIP Support user promotion.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_notify_user_granted_super_admin_skips_vip_support_user() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite is required for this test.' );
+		}
+
+		// Mock the Support_User class
+		$this->mock_vip_support_user_class();
+		
+		$user_id = self::factory()->user->create( [
+			'role'       => 'administrator',
+			'user_login' => 'vip_superadmin',
+			'user_email' => 'vip_superadmin@example.com',
+		] );
+		update_option( 'admin_email', 'admin@example.com' );
+
+		// Set this user as a VIP Support user
+		\Automattic\VIP\Support_User\User::$mock_vip_support_users = [ $user_id ];
+
+		Notify_Privileged_Activity::notify_user_granted_super_admin( $user_id );
+		$this->assertNull( Email::$last_call_args_for_test, 'Email::send was called unexpectedly for VIP Support user super admin grant.' );
+	}
+
+	/**
+	 * Mock the VIP Support User class for testing
+	 */
+	private function mock_vip_support_user_class() {
+		if ( ! class_exists( '\Automattic\VIP\Support_User\User' ) ) {
+			require_once __DIR__ . '/mocks/class-support-user-mock.php';
+		}
 	}
 }
