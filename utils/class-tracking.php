@@ -44,7 +44,7 @@ class Tracking {
 	 * @param string $event_name Event name.
 	 * @param array  $event_data Event data.
 	 */
-	private static function record_event( $event_name, $event_data ) {
+	private static function record_event( $event_name, $event_data = [] ) {
 		$telemetry = self::get_telemetry();
 		if ( $telemetry ) {
 			$telemetry->record_event( $event_name, $event_data );
