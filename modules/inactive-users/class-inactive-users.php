@@ -43,7 +43,11 @@ class Inactive_Users {
 		add_filter( 'determine_current_user', [ __CLASS__, 'record_activity' ], 30, 1 );
 
 		add_action( 'admin_init', [ __CLASS__, 'register_release_date' ] );
-		add_action( 'set_user_role', [ __CLASS__, 'user_promoted' ] );
+
+		if ( is_multisite() ) {
+			add_action( 'add_user_to_blog', [ __CLASS__, 'maybe_skip_inactivity_check_for_new_user' ] );
+		}
+		add_action( 'user_register', [ __CLASS__, 'maybe_skip_inactivity_check_for_new_user' ] );
 		add_action( 'vip_support_user_added', function ( $user_id ) {
 			$ignore_inactivity_check_until = strtotime( '+2 hours' );
 
@@ -475,11 +479,23 @@ class Inactive_Users {
 		return update_user_meta( $user_id, self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, $until_timestamp );
 	}
 
-	public static function user_promoted( $user_id ) {
+	/**
+	 * When the inactive user plugin is first enabled, we want to skip the inactivity check for new users because they might end up
+	 * being blocked because of LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY
+	 */
+	public static function maybe_skip_inactivity_check_for_new_user( $user_id ) {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			throw new \Exception( 'User not found' );
+			// we shouldn't ever get here, but in case we do we're going to log the error
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'User not found',
+				array(
+					'user_id' => $user_id,
+				)
+			);
+			return;
 		}
 
 		if ( ! self::user_with_elevated_roles( $user ) ) {
