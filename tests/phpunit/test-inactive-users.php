@@ -1,6 +1,7 @@
 <?php
 
 use Automattic\VIP\Security\InactiveUsers\Inactive_Users;
+use Automattic\VIP\Security\InactiveUsers\Inactive_Users_Test;
 
 class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;
@@ -370,5 +371,26 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Restore environment.
 		update_option( 'date_format', $old_date_format );
 		update_option( 'time_format', $old_time_format );
+	}
+	/**
+	 * Test that a user is considered inactive if the fallback date is in the past
+	 */
+	public function test_is_considered_inactive_fallback_past_date() {
+		if ( ! class_exists( '\Automattic\VIP\Security\InactiveUsers\Inactive_Users_Test' ) ) {
+			require_once __DIR__ . '/mocks/class-inactive-users-test.php';
+		}
+		Inactive_Users_Test::init();
+		// Create a new user with an old registration date
+		$new_user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '2025-01-01 00:00:00' ) ),
+		]);
+
+		delete_option( Inactive_Users_Test::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
+		delete_user_meta( $new_user_id, Inactive_Users_Test::LAST_SEEN_META_KEY );
+		delete_user_meta( $new_user_id, Inactive_Users_Test::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		$this->assertTrue( Inactive_Users_Test::is_considered_inactive( $new_user_id ) );
+		wp_delete_user( $new_user_id );
 	}
 }

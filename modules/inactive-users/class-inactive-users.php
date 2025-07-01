@@ -2,7 +2,6 @@
 namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
-use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 
@@ -21,6 +20,7 @@ class Inactive_Users {
 	const BLOCKED_USERS_CACHE_KEY                          = 'wpvip_blocked_users_';
 	const BLOCKED_USERS_CACHE_TTL                          = MINUTE_IN_SECONDS * 5;
 	const LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY      = 'wpvip_last_seen_release_date_timestamp';
+	const LAST_SEEN_FALLBACK_RELEASE_DATE                  = '2025-07-01 00:00:00';
 
 	/**
 	 * May store inactive account authentication error for application passwords to be used later in rest_authentication_errors
@@ -254,7 +254,6 @@ class Inactive_Users {
 		return $vars;
 	}
 
-
 	public static function last_seen_blocked_users_filter_query_args( $vars ) {
 		// Only filter when the “blocked” last_seen_filter is set and valid
 		if (
@@ -475,6 +474,14 @@ class Inactive_Users {
 		if ( ! $until_timestamp ) {
 			$until_timestamp = strtotime( '+2 days' );
 		}
+		Logger::info(
+			self::LOG_FEATURE_NAME,
+			'User ignored inactivity check',
+			array(
+				'user_id'         => $user_id,
+				'until_timestamp' => $until_timestamp,
+			)
+		);
 
 		return update_user_meta( $user_id, self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, $until_timestamp );
 	}
@@ -505,12 +512,22 @@ class Inactive_Users {
 		self::ignore_inactivity_check_for_user( $user_id );
 	}
 
+
+	// this is helpful to test the edge case since that LAST_SEEN_FALLBACK_RELEASE_DATE is a const.
+	public static function get_fallback_release_date_timestamp() {
+		return strtotime( self::LAST_SEEN_FALLBACK_RELEASE_DATE );
+	}
+
 	public static function register_release_date() {
 		if ( ! wp_doing_ajax() && ! get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY ) ) {
 			// Right after the first admin_init, set the release date timestamp
 			// to be used as a fallback for users that never logged in before.
 			add_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time(), '', 'no' );
 		}
+		Logger::info(
+			self::LOG_FEATURE_NAME,
+			'Last seen release date registered'
+		);
 	}
 
 	public static function is_considered_inactive( $user_id ) {
@@ -523,17 +540,22 @@ class Inactive_Users {
 			return false;
 		}
 
-		$last_seen_timestamp = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
+		$inactivity_timestamp = self::get_inactivity_timestamp();
+		$last_seen_timestamp  = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
 		if ( $last_seen_timestamp ) {
-			return $last_seen_timestamp < self::get_inactivity_timestamp();
+			return $last_seen_timestamp < $inactivity_timestamp;
 		}
 
 		$release_date_timestamp = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		if ( $release_date_timestamp ) {
-			return $release_date_timestamp < self::get_inactivity_timestamp();
+			return $release_date_timestamp < $inactivity_timestamp;
 		}
 
-		// Release date is not defined yet, so we can't consider the user inactive.
+		// hardcoded fallback option, in case the release date option gets deleted, we need to use static:: to ensure the test class can override the function
+		if ( static::get_fallback_release_date_timestamp() < $inactivity_timestamp ) {
+			return true;
+		}
+
 		return false;
 	}
 
