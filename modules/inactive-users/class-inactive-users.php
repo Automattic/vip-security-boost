@@ -71,9 +71,9 @@ class Inactive_Users {
 		}
 
 		if ( self::is_block_action_enabled() ) {
-			add_filter( 'authenticate', [ __CLASS__, 'authenticate' ], 20, 1 );
-			add_filter( 'wp_is_application_passwords_available_for_user', [ __CLASS__, 'application_password_authentication' ], PHP_INT_MAX, 2 );
-			add_filter( 'rest_authentication_errors', [ __CLASS__, 'rest_authentication_errors' ], PHP_INT_MAX, 1 );
+			add_filter( 'authenticate', [ __CLASS__, 'maybe_block_inactive_user_on_authenticate' ], 20, 1 );
+			add_filter( 'wp_is_application_passwords_available_for_user', [ __CLASS__, 'maybe_block_inactive_user_on_app_password_auth' ], PHP_INT_MAX, 2 );
+			add_filter( 'rest_authentication_errors', [ __CLASS__, 'maybe_return_error_on_rest_auth' ], PHP_INT_MAX, 1 );
 
 			add_filter( 'views_users', [ __CLASS__, 'add_blocked_users_filter' ] );
 			add_filter( 'views_users-network', [ __CLASS__, 'add_blocked_users_filter' ] );
@@ -111,7 +111,12 @@ class Inactive_Users {
 		return $user_id;
 	}
 
-	public static function authenticate( $user ) {
+	/**
+	 * Block inactive users on authenticate, active only when BLOCK mode is enabled
+	 *
+	 * @param \WP_User $user The user to check.
+	 */
+	public static function maybe_block_inactive_user_on_authenticate( $user ) {
 		if ( is_wp_error( $user ) ) {
 			return $user;
 		}
@@ -133,7 +138,12 @@ class Inactive_Users {
 		return $user;
 	}
 
-	public static function rest_authentication_errors( $status ) {
+	/**
+	 * Return error on REST authentication, active only when BLOCK mode is enabled
+	 *
+	 * @param \WP_Error $status The authentication status.
+	 */
+	public static function maybe_return_error_on_rest_auth( $status ) {
 		if ( is_wp_error( self::$application_password_authentication_error ) ) {
 			return self::$application_password_authentication_error;
 		}
@@ -142,11 +152,11 @@ class Inactive_Users {
 	}
 
 	/**
-	 * @param bool $available True if application password is available, false otherwise.
+	 * @param bool $available True if application password is available, false otherwise. Active only when BLOCK mode is enabled
 	 * @param \WP_User $user The user to check.
 	 * @return bool
 	 */
-	public static function application_password_authentication( $available, $user ) {
+	public static function maybe_block_inactive_user_on_app_password_auth( $available, $user ) {
 		if ( ! $available || ( $user && ! $user->exists() ) ) {
 			return false;
 		}
@@ -254,6 +264,9 @@ class Inactive_Users {
 		return $vars;
 	}
 
+	/**
+	 * Filter users list table to show only blocked users, active only when BLOCK mode is enabled
+	 */
 	public static function last_seen_blocked_users_filter_query_args( $vars ) {
 		// Only filter when the “blocked” last_seen_filter is set and valid
 		if (
@@ -353,6 +366,13 @@ class Inactive_Users {
 		return self::BLOCKED_USERS_CACHE_KEY . ( is_network_admin() ? null : get_current_blog_id() );
 	}
 
+	/**
+	 * Add blocked users filter to users list table, active only when BLOCK mode is enabled
+	 *
+	 * @param array $views The views array.
+	 *
+	 * @return array The modified views array.
+	 */
 	public static function add_blocked_users_filter( $views ) {
 		$blog_id = is_network_admin() ? null : get_current_blog_id();
 
@@ -402,6 +422,9 @@ class Inactive_Users {
 		return $views;
 	}
 
+	/**
+	 * Unblock user action in the WP Admin user list, active only when BLOCK mode is enabled
+	 */
 	public static function last_seen_unblock_action() {
 		$admin_notices_hook_name = is_network_admin() ? 'network_admin_notices' : 'admin_notices';
 
