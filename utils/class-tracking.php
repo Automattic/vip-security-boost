@@ -65,10 +65,10 @@ class Tracking {
 	 */
 	private static function maybe_get_non_production_prefix( $trailing_underscore = true ): string {
 		$trailing_underscore = $trailing_underscore ? '_' : '';
-		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		if ( is_local_env() ) {
 			return 'local' . $trailing_underscore;
 		}
-		if ( 'production' !== constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		if ( ! is_production_env() ) {
 			return 'nonprod' . $trailing_underscore;
 		}
 		return '';
@@ -180,7 +180,7 @@ class Tracking {
 			$stat_code = self::PREFIX . '_' . $env_prefix;
 		}
 		// We're tracking the stats in production only
-		if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' ) ) {
+		if ( is_local_env() ) {
 			Logger::info( 'vip-security-boost', 'Bumping stats for /s/' . $stat_code . '/' . $stat_name, [
 				'stat_name' => $stat_name,
 			] );
