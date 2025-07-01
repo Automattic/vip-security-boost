@@ -7,6 +7,7 @@ parameters:
     - modules
     - utils
     - tests
+    - email
     - class-loader.php
     - vip-security-boost.php
   scanDirectories:
