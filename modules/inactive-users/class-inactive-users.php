@@ -44,10 +44,12 @@ class Inactive_Users {
 
 		add_action( 'admin_init', [ __CLASS__, 'register_release_date' ] );
 
+		// skipping inactivity checks for new users
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'maybe_skip_inactivity_check_for_new_user' ] );
 		}
 		add_action( 'user_register', [ __CLASS__, 'maybe_skip_inactivity_check_for_new_user' ] );
+
 		add_action( 'vip_support_user_added', function ( $user_id ) {
 			$ignore_inactivity_check_until = strtotime( '+2 hours' );
 
