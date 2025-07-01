@@ -116,7 +116,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
 
 		$user   = new WP_User( $this->user_id );
-		$result = Inactive_Users::authenticate( $user );
+		$result = Inactive_Users::maybe_block_inactive_user_on_authenticate( $user );
 
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'inactive_account', $result->get_error_code() );
@@ -143,7 +143,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			$new_user->add_role( $role_key );
 		}
 
-		$result = Inactive_Users::authenticate( $new_user );
+		$result = Inactive_Users::maybe_block_inactive_user_on_authenticate( $new_user );
 
 		$this->assertNotInstanceOf( 'WP_Error', $result );
 
