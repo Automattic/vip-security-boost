@@ -15,8 +15,10 @@ class Forced_MFA_Users {
 
 	public static function init() {
 		$forced_mfa_configs = Configs::get_module_configs( 'forced-mfa-users' );
-
-		self::$roles = $forced_mfa_configs['roles'] ?? [];
+		if ( empty( $forced_mfa_configs ) || empty( $forced_mfa_configs['roles'] ) ) {
+			return;
+		}
+		self::$roles = $forced_mfa_configs['roles'];
 		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
 	}
 

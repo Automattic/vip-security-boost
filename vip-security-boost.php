@@ -24,7 +24,6 @@ require_once __DIR__ . '/utils/class-configs.php';
 require_once __DIR__ . '/email/class-email.php';
 require_once __DIR__ . '/utils/class-constants.php';
 require_once __DIR__ . '/utils/class-logger.php';
-require_once __DIR__ . '/utils/class-collector.php';
 require_once __DIR__ . '/utils/class-tracking.php';
 
 use function Automattic\VIP\Security\Utils\load_integration_configs_from_headers;
@@ -52,8 +51,12 @@ if ( $is_local_env ) {
 	}
 }
 
-// Load the modules
-require_once __DIR__ . '/class-loader.php';
-
+if ( class_exists( 'Automattic\\VIP\\Prometheus\\Plugin' ) ) {
+	require __DIR__ . '/utils/metrics.php';
+}
 // Initialize tracking hooks
 \Automattic\VIP\Security\Utils\Tracking::setup_action_hooks();
+
+
+// Load the modules
+require_once __DIR__ . '/class-loader.php';
