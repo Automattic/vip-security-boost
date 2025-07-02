@@ -1,8 +1,6 @@
 <?xml version="1.0"?>
-<ruleset
-		name="VIP Sites"
-		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		xsi:noNamespaceSchemaLocation="vendor/squizlabs/php_codesniffer/phpcs.xsd">
+<ruleset name="VIP Sites"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/squizlabs/php_codesniffer/phpcs.xsd">
 	<description>Custom ruleset for VIP sites.</description>
 
 	<!-- Note: this file is only used for local PHPCS checks; the vip-go-ci bot does not read it.
@@ -71,5 +69,9 @@
 
 	<rule ref="WordPress.Files.FileName">
 		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<!-- Ignore the testing mock -->
+	<rule ref="Generic.Classes.DuplicateClassName">
+		<exclude-pattern>tests/mock-logger.php</exclude-pattern>
 	</rule>
 </ruleset>
