@@ -115,8 +115,6 @@ class Inactive_Users {
 
 	/**
 	 * Block inactive users on authenticate, active only when BLOCK mode is enabled
-	 *
-	 * @param \WP_User $user The user to check.
 	 */
 	public static function maybe_block_inactive_user_on_authenticate( $user ) {
 		if ( is_wp_error( $user ) ) {
