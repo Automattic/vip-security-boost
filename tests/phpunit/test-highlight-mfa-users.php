@@ -1,12 +1,4 @@
 <?php
-
-// Helper function for bot login in tests
-if ( ! function_exists( 'vip_security_boost_get_bot_login' ) ) {
-	function vip_security_boost_get_bot_login(): string {
-		return 'wpcomvip';
-	}
-}
-
 if ( ! class_exists( 'Two_Factor_Core' ) ) {
 	class Two_Factor_Core {
 		/** @var array<int> Stores user IDs that the mock should treat as MFA enabled */

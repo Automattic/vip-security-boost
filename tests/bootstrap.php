@@ -98,3 +98,10 @@ if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 
 
 \Automattic\VIP\Security\Utils\Testable_Logger::set_track_logs( true );
+
+// Helper function for bot login in tests
+if ( ! function_exists( 'vip_security_boost_get_bot_login' ) ) {
+	function vip_security_boost_get_bot_login(): string {
+		return 'wpcomvip';
+	}
+}
