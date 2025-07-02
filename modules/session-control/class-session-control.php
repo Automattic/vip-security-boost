@@ -17,12 +17,6 @@ use Automattic\VIP\Security\Utils\Configs;
 class Session_Control {
 	const LOG_FEATURE_NAME     = 'sb_session_control';
 	public const DEFAULT_VALUE = 'default';
-	/**
-	 * Session expiration time in days
-	 *
-	 * @var string|int
-	 */
-	private static $expiration_days = self::DEFAULT_VALUE;
 
 	/**
 	 * Initialize the module
