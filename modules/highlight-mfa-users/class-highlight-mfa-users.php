@@ -82,7 +82,7 @@ class Highlight_MFA_Users {
 		}
 
 		// Exclude the wpcomvip user from the list
-		$wpcomvip = get_user_by( 'login', WPCOM_VIP_LOGIN );
+		$wpcomvip = get_user_by( 'login', vip_security_boost_get_bot_login() );
 		if ( false !== $wpcomvip ) {
 			$skipped_user_ids[] = $wpcomvip->ID;
 		}
@@ -253,7 +253,7 @@ class Highlight_MFA_Users {
 			}
 
 			// Exclude the wpcomvip user from the list
-			$wpcomvip = get_user_by( 'login', WPCOM_VIP_LOGIN );
+			$wpcomvip = get_user_by( 'login', vip_security_boost_get_bot_login() );
 			if ( false !== $wpcomvip ) {
 				$skipped_user_ids[] = $wpcomvip->ID;
 			}

@@ -41,7 +41,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->admin_wpcomvip_ignored_id = $this->factory()->user->create([
 			'role'       => 'administrator',
-			'user_login' => WPCOM_VIP_LOGIN,
+			'user_login' => vip_security_boost_get_bot_login(),
 		]);
 
 		$this->admin_user_mfa_disabled_id = $this->factory()->user->create([

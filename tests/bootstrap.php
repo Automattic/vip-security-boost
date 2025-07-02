@@ -96,9 +96,5 @@ if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 	define( 'VIP_GO_APP_ENVIRONMENT', 'test' );
 }
 
-// Define wpcomvip user login constant for tests
-if ( ! defined( 'WPCOM_VIP_LOGIN' ) ) {
-	define( 'WPCOM_VIP_LOGIN', 'wpcomvip' );
-}
 
 \Automattic\VIP\Security\Utils\Testable_Logger::set_track_logs( true );
