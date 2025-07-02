@@ -619,7 +619,7 @@ class Inactive_Users {
 		if ( ! $user ) {
 			Logger::error(
 				self::LOG_FEATURE_NAME,
-				'User not found',
+				'User not found in ' . __METHOD__,
 				array(
 					'user_id' => $user_id,
 				)
