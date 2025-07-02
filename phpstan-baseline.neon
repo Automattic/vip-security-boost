@@ -73,43 +73,7 @@ parameters:
 			path: utils/class-configs.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between ''production'' and ''test'' will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: utils/class-tracking.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between ''production'' and ''test'' will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: email/class-email.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between ''local'' and ''test'' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 2
-			path: utils/class-tracking.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: utils/class-tracking.php
-
-		-
 			message: '#^Unreachable statement \- code above always terminates\.$#'
 			identifier: deadCode.unreachable
 			count: 1
 			path: utils/dev-env.php
-
-		-
-			message: '#^Negated boolean expression is always false\.$#'
-			identifier: booleanNot.alwaysFalse
-			count: 1
-			path: vip-security-boost.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between ''local'' and ''test'' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: vip-security-boost.php
