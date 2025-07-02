@@ -15,6 +15,10 @@
 
 declare(strict_types = 1);
 
+if ( ! defined( 'WPCOM_VIP_LOGIN' ) ) {
+	define( 'WPCOM_VIP_LOGIN', 'wpcomvip' );
+}
+
 require_once __DIR__ . '/utils/configs.php';
 require_once __DIR__ . '/utils/class-configs.php';
 require_once __DIR__ . '/email/class-email.php';
