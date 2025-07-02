@@ -498,7 +498,7 @@ class Inactive_Users {
 		}
 		Logger::info(
 			self::LOG_FEATURE_NAME,
-			'User ignored inactivity check',
+			'Ignored inactivity check for user',
 			array(
 				'user_id'         => $user_id,
 				'until_timestamp' => $until_timestamp,
