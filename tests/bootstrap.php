@@ -53,6 +53,9 @@ function _manually_load_plugin() {
 	require_once __DIR__ . '/../mu-plugins/logstash/logstash.php';
 
 	require_once __DIR__ . '/../mu-plugins/z-client-mu-plugins.php';
+	
+	// Load our main plugin to get the helper function
+	require_once __DIR__ . '/../vip-security-boost.php';
 }
 
 /**
