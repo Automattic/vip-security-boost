@@ -450,13 +450,24 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
 
 		// Test that cache clearing actions are hooked
-		$this->assertNotFalse( has_action( 'two_factor_user_settings_action', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
 		$this->assertNotFalse( has_action( 'updated_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
+		$this->assertNotFalse( has_action( 'added_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
+		$this->assertNotFalse( has_action( 'deleted_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
 		$this->assertNotFalse( has_action( 'user_register', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
 		$this->assertNotFalse( has_action( 'delete_user', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
-		$this->assertNotFalse( has_action( 'set_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
-		$this->assertNotFalse( has_action( 'add_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
-		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'set_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
+		$this->assertNotFalse( has_action( 'add_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
+		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
+	}
+
+	/**
+	 * Test that multisite-specific methods exist for cache clearing.
+	 */
+	public function test_multisite_cache_methods_exist() {
+		// Test that the multisite-specific cache clearing methods exist
+		$this->assertTrue( method_exists( Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_sites' ) );
+		$this->assertTrue( method_exists( Highlight_MFA_Users::class, 'clear_mfa_count_cache' ) );
+		$this->assertTrue( method_exists( Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ) );
 	}
 
 	/**

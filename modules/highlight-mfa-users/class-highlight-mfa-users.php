@@ -8,7 +8,7 @@ class Highlight_MFA_Users {
 	const ROLE_COLUMN_KEY                 = 'role';
 	const DEFAULT_ADMIN_EDITOR_ROLE_SLUGS = [ 'administrator', 'editor' ];
 	const MFA_COUNT_CACHE_GROUP           = 'vip_security_mfa_count';
-	const MFA_COUNT_CACHE_KEY             = 'mfa_disabled_count';
+	const MFA_COUNT_CACHE_KEY_PREFIX      = 'mfa_disabled_count';
 	const MFA_COUNT_CACHE_TTL             = HOUR_IN_SECONDS; // Cache for 1 hour
 
 	/**
@@ -46,9 +46,6 @@ class Highlight_MFA_Users {
 			self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
 		}
 
-		// Use a global cache group since users are shared among network sites.
-		wp_cache_add_global_groups( array( self::MFA_COUNT_CACHE_GROUP ) );
-
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
 		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_tracking_scripts' ] );
@@ -68,14 +65,36 @@ class Highlight_MFA_Users {
 		// Handle sorting
 		add_filter( 'users_list_table_query_args', [ __CLASS__, 'sort_columns' ] );
 
-		// Clear cache when users or MFA settings change
-		add_action( 'two_factor_user_settings_action', [ __CLASS__, 'clear_mfa_count_cache' ] );
-		add_action( 'updated_user_meta', [ __CLASS__, 'clear_mfa_count_cache_on_meta_update' ], 10, 3 );
+		// Clear cache when users are created or deleted
 		add_action( 'user_register', [ __CLASS__, 'clear_mfa_count_cache' ] );
 		add_action( 'delete_user', [ __CLASS__, 'clear_mfa_count_cache' ] );
-		add_action( 'set_user_role', [ __CLASS__, 'clear_mfa_count_cache' ] );
-		add_action( 'add_user_role', [ __CLASS__, 'clear_mfa_count_cache' ] );
-		add_action( 'remove_user_role', [ __CLASS__, 'clear_mfa_count_cache' ] );
+
+		// Multisite-specific hooks for user deletion/removal
+		if ( is_multisite() ) {
+			add_action( 'wpmu_delete_user', [ __CLASS__, 'clear_mfa_count_cache_for_user_sites' ] );
+			add_action( 'remove_user_from_blog', [ __CLASS__, 'clear_mfa_count_cache' ] );
+			add_action( 'add_user_to_blog', [ __CLASS__, 'clear_mfa_count_cache' ] );
+		}
+
+		// Clear cache when users or MFA settings change
+		add_action( 'updated_user_meta', [ __CLASS__, 'clear_mfa_count_cache_on_meta_update' ], 10, 3 );
+		add_action( 'added_user_meta', [ __CLASS__, 'clear_mfa_count_cache_on_meta_update' ], 10, 3 );
+		add_action( 'deleted_user_meta', [ __CLASS__, 'clear_mfa_count_cache_on_meta_update' ], 10, 3 );
+
+		// Clear cache when user roles change
+		add_action( 'set_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
+		add_action( 'add_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
+		add_action( 'remove_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
+	}
+
+	/**
+	 * Get the site-specific cache key for MFA count.
+	 *
+	 * @return string The cache key for the current site.
+	 */
+	private static function get_mfa_count_cache_key() {
+		$blog_id = get_current_blog_id();
+		return self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog_id;
 	}
 
 	/**
@@ -85,7 +104,7 @@ class Highlight_MFA_Users {
 	 */
 	private static function get_mfa_disabled_count() {
 		// Try to get from cache first
-		$cached_count = wp_cache_get( self::MFA_COUNT_CACHE_KEY, self::MFA_COUNT_CACHE_GROUP );
+		$cached_count = wp_cache_get( self::get_mfa_count_cache_key(), self::MFA_COUNT_CACHE_GROUP );
 		if ( false !== $cached_count ) {
 			return (int) $cached_count;
 		}
@@ -123,7 +142,7 @@ class Highlight_MFA_Users {
 
 		// Cache the result
 		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
-		wp_cache_set( self::MFA_COUNT_CACHE_KEY, $mfa_disabled_count, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
+		wp_cache_set( self::get_mfa_count_cache_key(), $mfa_disabled_count, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
 
 		return $mfa_disabled_count;
 	}
@@ -133,7 +152,34 @@ class Highlight_MFA_Users {
 	 * Called when user MFA settings or roles change.
 	 */
 	public static function clear_mfa_count_cache() {
-		wp_cache_delete( self::MFA_COUNT_CACHE_KEY, self::MFA_COUNT_CACHE_GROUP );
+		wp_cache_delete( self::get_mfa_count_cache_key(), self::MFA_COUNT_CACHE_GROUP );
+	}
+
+	/**
+	 * Clear the MFA count cache for all sites where a user has roles.
+	 * This is used when user meta is updated to ensure cache consistency across the network.
+	 *
+	 * @param int $user_id The user ID whose sites should have cache cleared.
+	 */
+	public static function clear_mfa_count_cache_for_user_sites( $user_id ) {
+		if ( ! is_multisite() ) {
+			// Single site - just clear the current cache
+			self::clear_mfa_count_cache();
+			return;
+		}
+
+		// Get all sites where this user has roles
+		$user_blogs = get_blogs_of_user( $user_id );
+
+		if ( empty( $user_blogs ) ) {
+			return;
+		}
+
+		// Clear cache for each site where the user has roles
+		foreach ( $user_blogs as $blog ) {
+			$cache_key = self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog->userblog_id;
+			wp_cache_delete( $cache_key, self::MFA_COUNT_CACHE_GROUP );
+		}
 	}
 
 	/**
@@ -145,8 +191,18 @@ class Highlight_MFA_Users {
 	 */
 	public static function clear_mfa_count_cache_on_meta_update( $meta_id, $user_id, $meta_key ) {
 		if ( \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY === $meta_key ) {
-			self::clear_mfa_count_cache();
+			self::clear_mfa_count_cache_for_user_sites( $user_id );
 		}
+	}
+
+	/**
+	 * Clear the MFA count cache when user roles change.
+	 * This handles set_user_role, add_user_role, and remove_user_role hooks.
+	 *
+	 * @param int    $user_id The user ID whose roles changed.
+	 */
+	public static function clear_mfa_count_cache_for_user_role_change( $user_id ) {
+		self::clear_mfa_count_cache_for_user_sites( $user_id );
 	}
 
 	/**
