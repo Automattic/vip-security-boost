@@ -20,7 +20,6 @@ class Inactive_Users {
 	const BLOCKED_USERS_CACHE_KEY                          = 'wpvip_blocked_users_';
 	const BLOCKED_USERS_CACHE_TTL                          = MINUTE_IN_SECONDS * 5;
 	const LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY      = 'wpvip_last_seen_release_date_timestamp';
-	const LAST_SEEN_FALLBACK_RELEASE_DATE                  = '2025-07-01 00:00:00';
 
 	/**
 	 * May store inactive account authentication error for application passwords to be used later in rest_authentication_errors
@@ -536,9 +535,22 @@ class Inactive_Users {
 	}
 
 
-	// this is helpful to test the edge case since that LAST_SEEN_FALLBACK_RELEASE_DATE is a const.
-	public static function get_fallback_release_date_timestamp() {
-		return strtotime( self::LAST_SEEN_FALLBACK_RELEASE_DATE );
+	/**
+	 * Provide a dynamic fallback release date.
+	 *
+	 * Instead of relying on a constant,
+	 * return a timestamp that is ( considered_inactive_after_days + 1 ) days in
+	 * the past relative to the current time. This ensures the fallback date is
+	 * always older than the inactivity window while remaining environment-
+	 * agnostic.
+	 *
+	 */
+	public static function get_fallback_release_date_timestamp(): int|false {
+		// If the module has not been initialised (e.g. during unit tests) fall
+		// back to 90 days which is the default configured value in ::init().
+		$days = (int) ( self::$considered_inactive_after_days ?? 90 ) + 1;
+
+		return strtotime( sprintf( '-%d days', $days ) );
 	}
 
 	public static function register_release_date() {
