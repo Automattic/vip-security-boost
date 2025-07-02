@@ -20,7 +20,7 @@ declare(strict_types = 1);
  * In production, WPCOM_VIP_MACHINE_USER_LOGIN is overridden via secrets.
  * In local/test, we want to use 'wpcomvip'.
  */
-function vip_security_boost_get_bot_login() {
+function vip_security_boost_get_bot_login(): string {
 	$is_local_env = ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' );
 	$is_test_env  = defined( 'VIP_GO_APP_ENVIRONMENT' ) && 'test' === constant( 'VIP_GO_APP_ENVIRONMENT' );
 	
