@@ -458,16 +458,13 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertNotFalse( has_action( 'set_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
 		$this->assertNotFalse( has_action( 'add_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
 		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
-	}
 
-	/**
-	 * Test that multisite-specific methods exist for cache clearing.
-	 */
-	public function test_multisite_cache_methods_exist() {
-		// Test that the multisite-specific cache clearing methods exist
-		$this->assertTrue( method_exists( Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_sites' ) );
-		$this->assertTrue( method_exists( Highlight_MFA_Users::class, 'clear_mfa_count_cache' ) );
-		$this->assertTrue( method_exists( Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ) );
+		// Test that the multisite-specific cache clearing actions are hooked
+		if ( is_multisite() ) {
+			$this->assertNotFalse( has_action( 'wpmu_delete_user', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_sites' ] ) );
+			$this->assertNotFalse( has_action( 'remove_user_from_blog', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+			$this->assertNotFalse( has_action( 'add_user_to_blog', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		}
 	}
 
 	/**
