@@ -12,11 +12,20 @@ jobs:
       fail-fast: false
       matrix:
         config:
+          # PHP 8.1
+          - { wp: 6.5, ms: "0", php: "8.1" }
+          - { wp: 6.5, ms: "1", php: "8.1" }
+          - { wp: 6.6, ms: "0", php: "8.1" }
+          - { wp: 6.6, ms: "1", php: "8.1" }
+          - { wp: 6.7, ms: "0", php: "8.1" }
+          - { wp: 6.7, ms: "1", php: "8.1" }
+          - { wp: 6.8, ms: "0", php: "8.1" }
+          - { wp: 6.8, ms: "1", php: "8.1" }
+          - { wp: latest, ms: "0", php: "8.1" }
+          - { wp: latest, ms: "1", php: "8.1" }
+          - { wp: nightly, ms: "0", php: "8.1" }
+          - { wp: nightly, ms: "1", php: "8.1" }
           # PHP 8.2
-          - { wp: 6.6, ms: "0", php: "8.2" }
-          - { wp: 6.6, ms: "1", php: "8.2" }
-          - { wp: 6.7, ms: "0", php: "8.2" }
-          - { wp: 6.7, ms: "1", php: "8.2" }
           - { wp: 6.8, ms: "0", php: "8.2" }
           - { wp: 6.8, ms: "1", php: "8.2" }
           - { wp: latest, ms: "0", php: "8.2" }
