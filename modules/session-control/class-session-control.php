@@ -2,7 +2,6 @@
 
 namespace Automattic\VIP\Security\SessionControl;
 
-use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 
@@ -22,9 +21,6 @@ class Session_Control {
 	 * Initialize the module
 	 */
 	public static function init() {
-		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
-			return;
-		}
 		$expiration_days_value = self::get_expiration_days_from_config();
 
 		// Only apply if a valid expiration time is set

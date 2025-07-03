@@ -4,8 +4,6 @@ namespace Automattic\VIP\Security\MFAUsers;
 use Automattic\VIP\Security\Utils\Configs;
 
 class Forced_MFA_Users {
-	const MFA_SKIP_USER_IDS_OPTION_KEY = 'vip_security_mfa_skip_user_ids';
-
 	/**
 	 * The roles that should have MFA enforced.
 	 *
