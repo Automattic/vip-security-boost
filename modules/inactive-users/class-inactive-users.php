@@ -527,7 +527,7 @@ class Inactive_Users {
 		}
 
 		// Exclude wpcomvip user from inactivity checks
-		if ( vip_security_boost_get_bot_login() === $user->user_login ) {
+		if ( Configs::get_bot_login() === $user->user_login ) {
 			return false;
 		}
 

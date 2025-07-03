@@ -13,6 +13,7 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 }
 
 use Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users;
+use Automattic\VIP\Security\Utils\Configs;
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {
@@ -48,7 +49,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->admin_wpcomvip_ignored_id = $this->factory()->user->create([
 			'role'       => 'administrator',
-			'user_login' => vip_security_boost_get_bot_login(),
+			'user_login' => Configs::get_bot_login(),
 		]);
 
 		$this->admin_user_mfa_disabled_id = $this->factory()->user->create([
