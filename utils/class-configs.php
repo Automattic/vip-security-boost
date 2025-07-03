@@ -45,10 +45,10 @@ class Configs {
 		}
 	}
 	/**
- * Get the bot user login based on environment.
- * In production, WPCOM_VIP_MACHINE_USER_LOGIN is overridden via secrets.
- * In local/test, we want to use 'wpcomvip'.
- */
+	 * Get the bot user login based on environment.
+	 * In production, WPCOM_VIP_MACHINE_USER_LOGIN is overridden via secrets.
+	 * In local/test, we want to use 'wpcomvip'.
+	 */
 	public static function get_bot_login(): string {
 		$is_local_env = ! defined( 'VIP_GO_APP_ENVIRONMENT' ) || 'local' === constant( 'VIP_GO_APP_ENVIRONMENT' );
 		$is_test_env  = defined( 'VIP_GO_APP_ENVIRONMENT' ) && 'test' === constant( 'VIP_GO_APP_ENVIRONMENT' );
