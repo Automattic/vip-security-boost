@@ -2,7 +2,6 @@
 namespace Automattic\VIP\Security\InactiveUsers;
 
 use Automattic\VIP\Utils\Context;
-use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 
@@ -82,6 +81,11 @@ class Inactive_Users {
 			return $user_id;
 		}
 
+		if ( wp_cache_get( $user_id, self::LAST_SEEN_CACHE_GROUP ) ) {
+			// Last seen meta was checked recently
+			return $user_id;
+		}
+
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			return $user_id;
@@ -89,11 +93,6 @@ class Inactive_Users {
 
 		if ( self::is_considered_inactive( $user_id ) ) {
 			// User needs to be unblocked first
-			return $user_id;
-		}
-
-		if ( wp_cache_get( $user_id, self::LAST_SEEN_CACHE_GROUP ) ) {
-			// Last seen meta was checked recently
 			return $user_id;
 		}
 
@@ -473,7 +472,7 @@ class Inactive_Users {
 		if ( ! wp_doing_ajax() && ! get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY ) ) {
 			// Right after the first admin_init, set the release date timestamp
 			// to be used as a fallback for users that never logged in before.
-			add_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time(), '', 'no' );
+			add_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time(), '', false );
 		}
 	}
 
