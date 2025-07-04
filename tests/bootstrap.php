@@ -96,4 +96,5 @@ if ( ! defined( 'VIP_GO_APP_ENVIRONMENT' ) ) {
 	define( 'VIP_GO_APP_ENVIRONMENT', 'test' );
 }
 
+
 \Automattic\VIP\Security\Utils\Testable_Logger::set_track_logs( true );

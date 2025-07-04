@@ -526,6 +526,11 @@ class Inactive_Users {
 			throw new \Exception( sprintf( 'User #%d found', esc_html( $user_id ) ) );
 		}
 
+		// Exclude wpcomvip user from inactivity checks
+		if ( Configs::get_bot_login() === $user->user_login ) {
+			return false;
+		}
+
 		if ( $user->user_registered && strtotime( $user->user_registered ) > self::get_inactivity_timestamp() ) {
 			return false;
 		}
