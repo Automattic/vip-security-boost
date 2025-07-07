@@ -89,6 +89,11 @@ class Inactive_Users {
 			return $user_id;
 		}
 
+		if ( wp_cache_get( $user_id, self::LAST_SEEN_CACHE_GROUP ) ) {
+			// Last seen meta was checked recently
+			return $user_id;
+		}
+
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			return $user_id;
@@ -629,6 +634,16 @@ class Inactive_Users {
 					'user_id' => $user_id,
 				)
 			);
+			return false;
+		}
+
+		// Exclude wpcomvip user from inactivity checks
+		if ( Configs::get_bot_login() === $user->user_login ) {
+			return false;
+		}
+
+		// Exclude wpcomvip user from inactivity checks
+		if ( Configs::get_bot_login() === $user->user_login ) {
 			return false;
 		}
 

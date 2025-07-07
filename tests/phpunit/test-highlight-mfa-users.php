@@ -4,6 +4,8 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 		/** @var array<int> Stores user IDs that the mock should treat as MFA enabled */
 		public static $mock_enabled_user_ids = [];
 
+		const ENABLED_PROVIDERS_USER_META_KEY = '_two_factor_enabled_providers';
+
 		public static function is_user_using_two_factor( $user_id ) {
 			return in_array( (int) $user_id, self::$mock_enabled_user_ids, true );
 		}
@@ -11,6 +13,7 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 }
 
 use Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users;
+use Automattic\VIP\Security\Utils\Configs;
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {
@@ -25,6 +28,11 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 	public function setUp(): void {
 		parent::setUp();
+
+		// Define the config constant if not already defined
+		if ( ! defined( 'VIP_SECURITY_BOOST_CONFIGS' ) ) {
+			define( 'VIP_SECURITY_BOOST_CONFIGS', [] );
+		}
 
 		Two_Factor_Core::$mock_enabled_user_ids = [];
 
@@ -41,7 +49,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->admin_wpcomvip_ignored_id = $this->factory()->user->create([
 			'role'       => 'administrator',
-			'user_login' => 'wpcomvip',
+			'user_login' => Configs::get_bot_login(),
 		]);
 
 		$this->admin_user_mfa_disabled_id = $this->factory()->user->create([
@@ -77,6 +85,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Clean up options
 		delete_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
+
+		// Clear MFA count cache to ensure clean state for next test
+		Highlight_MFA_Users::clear_mfa_count_cache();
 
 		// No need to restore config state manually as setUp handles it or tests run isolated.
 
@@ -438,6 +449,23 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->assertNotFalse( has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
 		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
+
+		// Test that cache clearing actions are hooked
+		$this->assertNotFalse( has_action( 'updated_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
+		$this->assertNotFalse( has_action( 'added_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
+		$this->assertNotFalse( has_action( 'deleted_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
+		$this->assertNotFalse( has_action( 'user_register', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'delete_user', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		$this->assertNotFalse( has_action( 'set_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
+		$this->assertNotFalse( has_action( 'add_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
+		$this->assertNotFalse( has_action( 'remove_user_role', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_role_change' ] ) );
+
+		// Test that the multisite-specific cache clearing actions are hooked
+		if ( is_multisite() ) {
+			$this->assertNotFalse( has_action( 'wpmu_delete_user', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_for_user_sites' ] ) );
+			$this->assertNotFalse( has_action( 'remove_user_from_blog', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+			$this->assertNotFalse( has_action( 'add_user_to_blog', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache' ] ) );
+		}
 	}
 
 	/**
