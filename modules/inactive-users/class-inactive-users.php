@@ -99,11 +99,6 @@ class Inactive_Users {
 			return $user_id;
 		}
 
-		if ( wp_cache_get( $user_id, self::LAST_SEEN_CACHE_GROUP ) ) {
-			// Last seen meta was checked recently
-			return $user_id;
-		}
-
 		if ( self::is_considered_inactive( $user_id ) ) {
 			// User needs to be unblocked first
 			return $user_id;
