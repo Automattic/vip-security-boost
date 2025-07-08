@@ -597,7 +597,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Verify the cache key contains the expected components
 		$blog_id = get_current_blog_id();
 		$this->assertStringContainsString( Highlight_MFA_Users::MFA_COUNT_CACHE_KEY_PREFIX, $initial_cache_key );
-		$this->assertStringContainsString( (string) '_' . $blog_id . '_', $initial_cache_key );
+		$this->assertStringContainsString( '_' . $blog_id . '_', $initial_cache_key );
 
 		// Change the roles configuration
 		$roles_property = $reflection_class->getProperty( 'roles' );
@@ -614,7 +614,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Verify both keys still contain the expected base components
 		$this->assertStringContainsString( Highlight_MFA_Users::MFA_COUNT_CACHE_KEY_PREFIX, $new_cache_key );
-		$this->assertStringContainsString( (string) '_' . $blog_id . '_', $new_cache_key );
+		$this->assertStringContainsString( '_' . $blog_id . '_', $new_cache_key );
 
 		// Restore original roles
 		$roles_property->setValue( null, $original_roles );
