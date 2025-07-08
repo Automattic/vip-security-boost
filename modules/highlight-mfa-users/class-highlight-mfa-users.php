@@ -44,29 +44,9 @@ class Highlight_MFA_Users {
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
 		
-		// Check if Capability_Utils is available
-		if ( ! class_exists( '\\Automattic\\VIP\\Security\\Utils\\Capability_Utils' ) ) {
-			// Fallback to old role-based configuration
-			self::$roles = $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
-
-			if ( ! is_array( self::$roles ) ) {
-				self::$roles = [ self::$roles ];
-			}
-			self::$roles = array_filter( self::$roles );
-			if ( empty( self::$roles ) ) {
-				self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
-			}
-			self::$capabilities = [];
-		} else {
-			// Normalize capabilities and roles configuration
-			self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
-			self::$roles        = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
-			
-			// If no capabilities and no roles configured, default to administrator and editor
-			if ( ! Capability_Utils::are_capabilities_configured( self::$capabilities ) && empty( self::$roles ) ) {
-				self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
-			}
-		}
+		// Normalize capabilities and roles configuration
+		self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
+		self::$roles        = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
 		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
