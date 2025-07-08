@@ -129,11 +129,12 @@ class Highlight_MFA_Users {
 
 		// Cache miss - calculate the count
 		$args       = [
-			'role__in' => self::$roles,
-			'fields'   => 'ID',
+			'role__in'    => self::$roles,
+			'fields'      => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
-			'exclude'  => $skipped_user_ids,
-			'number'   => -1, // Get all relevant users
+			'exclude'     => $skipped_user_ids,
+			'number'      => -1, // Get all relevant users
+			'count_total' => false, // Disable the count query to avoid FOUND_ROWS() error
 		];
 		$user_query = new \WP_User_Query( $args );
 		$user_ids   = $user_query->get_results();
@@ -377,6 +378,10 @@ class Highlight_MFA_Users {
 
 			$query->set( 'role__in', self::$roles ); // Set the configured roles
 			$query->set( 'meta_query', $meta_query );
+			
+			// Prevent FOUND_ROWS() error when filtering users
+			// Always disable count when we're filtering to avoid compatibility issues
+			$query->set( 'count_total', false );
 
 			// Exclude skipped users AND always exclude User wpcomvip
 			$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
@@ -480,6 +485,8 @@ class Highlight_MFA_Users {
 				$args['meta_key'] = $wpdb->prefix . 'capabilities';
 				$args['orderby']  = 'meta_value';
 				// $args['order'] (ASC/DESC) is already set by WP_Users_List_Table
+				// Prevent FOUND_ROWS() error when sorting by role
+				$args['count_total'] = false;
 				break;
 		}
 

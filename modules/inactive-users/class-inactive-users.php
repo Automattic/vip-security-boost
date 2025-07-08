@@ -258,6 +258,8 @@ class Inactive_Users {
 		if ( isset( $vars['orderby'] ) && 'last_seen' === $vars['orderby'] ) {
 			$vars['meta_key'] = self::LAST_SEEN_META_KEY;
 			$vars['orderby']  = 'meta_value_num';
+			// Prevent FOUND_ROWS() error when sorting by last seen
+			$vars['count_total'] = false;
 		}
 
 		return $vars;
@@ -289,6 +291,10 @@ class Inactive_Users {
 					'compare' => '<',
 				],
 			];
+			
+			// Prevent FOUND_ROWS() error when filtering users
+			// Always disable count when we're filtering to avoid compatibility issues
+			$vars['count_total'] = false;
 		}
 
 		return $vars;
