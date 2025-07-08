@@ -26,6 +26,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				],
 			]);
 		}
+		// Let's assume the module has been activated today
+		add_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time() );
 
 		Inactive_Users::init();
 	}
@@ -57,6 +59,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_record_activity() {
 		$result = Inactive_Users::record_activity( $this->user_id );
+
 
 		$last_seen = get_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, true );
 
@@ -115,7 +118,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
 
 		$user   = new WP_User( $this->user_id );
-		$result = Inactive_Users::authenticate( $user );
+		$result = Inactive_Users::maybe_block_inactive_user_on_authenticate( $user );
 
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'inactive_account', $result->get_error_code() );
@@ -142,7 +145,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			$new_user->add_role( $role_key );
 		}
 
-		$result = Inactive_Users::authenticate( $new_user );
+		$result = Inactive_Users::maybe_block_inactive_user_on_authenticate( $new_user );
 
 		$this->assertNotInstanceOf( 'WP_Error', $result );
 
@@ -370,5 +373,22 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Restore environment.
 		update_option( 'date_format', $old_date_format );
 		update_option( 'time_format', $old_time_format );
+	}
+	/**
+	 * Test that a user is considered inactive if the fallback date is in the past
+	 */
+	public function test_is_considered_inactive_fallback_past_date() {
+		// Create a new user with an old registration date
+		$new_user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '2025-01-01 00:00:00' ) ),
+		]);
+
+		delete_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
+		delete_user_meta( $new_user_id, Inactive_Users::LAST_SEEN_META_KEY );
+		delete_user_meta( $new_user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $new_user_id ) );
+		wp_delete_user( $new_user_id );
 	}
 }
