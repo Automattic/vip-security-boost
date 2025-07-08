@@ -4,11 +4,13 @@ namespace Automattic\VIP\Security\InactiveUsers;
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
+use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Inactive_Users {
-	private static $considered_inactive_after_days;
-	private static $elevated_roles;
-	private static $mode;
+	protected static $considered_inactive_after_days;
+	protected static $elevated_roles;
+	protected static $elevated_capabilities;
+	protected static $mode;
 	public static $release_date;
 
 	const LOG_FEATURE_NAME = 'sb_inactive_users';
@@ -33,6 +35,7 @@ class Inactive_Users {
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
 		self::$considered_inactive_after_days = $inactive_user_configs['considered_inactive_after_days'] ?? 90;
 		self::$elevated_roles                 = $inactive_user_configs['roles'] ?? [ 'administrator' ];
+		self::$elevated_capabilities          = $inactive_user_configs['capabilities'] ?? [];
 
 		// Use a global cache group since users are shared among network sites.
 		wp_cache_add_global_groups( array( self::LAST_SEEN_CACHE_GROUP ) );
@@ -259,6 +262,9 @@ class Inactive_Users {
 			// Track blocked users view
 			do_action( 'vip_security_blocked_users_view' );
 
+			// Note: This filter only works with roles, not capabilities, due to WP_User_Query limitations
+			// Users with elevated capabilities but not elevated roles won't appear in this filtered view
+			// However, they are still tracked and blocked correctly
 			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
 
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -357,6 +363,8 @@ class Inactive_Users {
 				'meta_compare' => '<',
 				'count_total'  => false,
 				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
+				// Note: role__in only filters by roles, not capabilities
+				// Users with elevated capabilities but not elevated roles won't be counted here
 				'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
 			),
 		);
@@ -461,7 +469,7 @@ class Inactive_Users {
 			throw new \Exception( 'User not found' );
 		}
 
-		if ( ! self::user_with_elevated_roles( $user ) ) {
+		if ( ! self::user_has_elevated_permissions( $user ) ) {
 			return;
 		}
 
@@ -535,10 +543,17 @@ class Inactive_Users {
 			return false;
 		}
 
-		return self::user_with_elevated_roles( $user );
+		return self::user_has_elevated_permissions( $user );
 	}
 
-	private static function user_with_elevated_roles( $user ) {
+	protected static function user_has_elevated_permissions( $user ) {
+		/**
+		 * Filters the last seen elevated capabilities that are used to determine if the last seen should be checked.
+		 *
+		 * @param array $elevated_capabilities The elevated capabilities.
+		 */
+		$elevated_capabilities = apply_filters( 'vip_security_boost_inactive_users_elevated_capabilities', self::$elevated_capabilities );
+		
 		/**
 		 * Filters the last seen elevated roles that are used to determine if the last seen should be checked.
 		 *
@@ -546,17 +561,18 @@ class Inactive_Users {
 		 */
 		$elevated_roles = apply_filters( 'vip_security_boost_inactive_users_elevated_roles', self::$elevated_roles );
 
-		// Prevent infinite loops inside user_can() due to other security logic.
-		if ( is_automattician( $user->ID ) ) {
-			return true;
-		}
-
-		// Ensure $user->roles is defined and is an array before using it.
-		if ( isset( $user->roles ) && is_array( $user->roles ) && array_intersect( $elevated_roles, $user->roles ) ) {
-			return true;
-		}
-
-		return false;
+		return Capability_Utils::user_has_elevated_permissions( $user, $elevated_capabilities, $elevated_roles );
+	}
+	
+	/**
+	 * Check if user has elevated roles (deprecated, use user_has_elevated_permissions instead)
+	 * 
+	 * @deprecated Use user_has_elevated_permissions() instead
+	 * @param \WP_User $user The user to check.
+	 * @return bool True if user has elevated roles, false otherwise.
+	 */
+	private static function user_with_elevated_roles( $user ) {
+		return self::user_has_elevated_permissions( $user );
 	}
 }
 
