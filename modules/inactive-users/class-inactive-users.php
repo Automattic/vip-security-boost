@@ -4,6 +4,7 @@ namespace Automattic\VIP\Security\InactiveUsers;
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
+use Automattic\VIP\Security\Constants;
 
 class Inactive_Users {
 	private static $considered_inactive_after_days;
@@ -82,6 +83,32 @@ class Inactive_Users {
 
 			add_action( 'admin_init', [ __CLASS__, 'last_seen_unblock_action' ] );
 		}
+
+		// Add SDS hook
+		add_filter( 'vip_site_details_index_data', [ __CLASS__, 'get_site_details_index_data' ] );
+	}
+
+	public static function get_site_details_index_data( $data ) {
+		if ( ! isset( $data[ Constants::SDS_DATA_KEY ] ) ) {
+			$data[ Constants::SDS_DATA_KEY ] = array();
+		}
+
+		// Start timer to measure query time
+		$timer = microtime( true );
+
+		// Get number of inactive users
+		$inactive_users_count = self::get_inactive_users_count();
+
+		// Stop timer
+		$timer = microtime( true ) - $timer;
+
+		// Register query time metric
+		do_action( 'vip_security_inactive_users_query_time', $timer );
+
+		// Add inactive users count to SDS data
+		$data[ Constants::SDS_DATA_KEY ]['inactive_users_count'] = $inactive_users_count;
+
+		return $data;
 	}
 
 	public static function record_activity( $user_id ) {
@@ -263,6 +290,46 @@ class Inactive_Users {
 		return $vars;
 	}
 
+	public static function get_inactive_users_count() {
+		$args = array_merge( [
+			'count_total' => true,
+		], self::get_inactive_users_query_args() );
+
+		$users_query = new \WP_User_Query( $args );
+
+		return $users_query->get_total();
+	}
+
+	public static function get_inactive_users_query_args() {
+		$vars = array(
+			// Only consider users that registered before the inactivity threshold
+			'date_query' => array(
+				array(
+					'before' => gmdate( 'Y-m-d H:i:s', self::get_inactivity_timestamp() ),
+				),
+			),
+
+			// Only consider users with roles we want to target
+			'role__in'   => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
+
+			// Only consider users that have not been active since the inactivity threshold
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				[
+					'relation' => 'AND',
+					[
+						'key'     => self::LAST_SEEN_META_KEY,
+						'value'   => self::get_inactivity_timestamp(),
+						'type'    => 'NUMERIC',
+						'compare' => '<',
+					],
+				],
+			),
+		);
+
+		return $vars;
+	}
+
 	/**
 	 * Filter users list table to show only blocked users, active only when BLOCK mode is enabled
 	 */
@@ -277,18 +344,7 @@ class Inactive_Users {
 			// Track blocked users view
 			do_action( 'vip_security_blocked_users_view' );
 
-			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
-
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			$vars['meta_query'] = [
-				'relation' => 'AND',
-				[
-					'key'     => self::LAST_SEEN_META_KEY,
-					'value'   => self::get_inactivity_timestamp(),
-					'type'    => 'NUMERIC',
-					'compare' => '<',
-				],
-			];
+			return array_merge( $vars, self::get_inactive_users_query_args() );
 		}
 
 		return $vars;
@@ -629,11 +685,6 @@ class Inactive_Users {
 					'user_id' => $user_id,
 				)
 			);
-			return false;
-		}
-
-		// Exclude wpcomvip user from inactivity checks
-		if ( Configs::get_bot_login() === $user->user_login ) {
 			return false;
 		}
 
