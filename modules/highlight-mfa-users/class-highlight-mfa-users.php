@@ -399,7 +399,12 @@ class Highlight_MFA_Users {
 				],
 			];
 
-			$query->set( 'role__in', self::$roles ); // Set the configured roles
+			// Use capability__in if capabilities are configured, otherwise use role__in
+			if ( Capability_Utils::are_capabilities_configured( self::$capabilities ) ) {
+				$query->set( 'capability__in', self::$capabilities );
+			} else {
+				$query->set( 'role__in', self::$roles );
+			}
 			$query->set( 'meta_query', $meta_query );
 
 			// Exclude skipped users AND always exclude User wpcomvip

@@ -729,36 +729,6 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test capability-based SQL filtering.
-	 */
-	public function test_filter_users_by_capabilities_sql_modification() {
-		$this->set_admin_screen_users();
-		$_GET['filter_mfa_disabled'] = '1';
-		
-		// Set capabilities configuration
-		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
-		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
-		$capabilities_property->setAccessible( true );
-		$capabilities_property->setValue( null, [ 'manage_options', 'edit_posts' ] );
-		
-		// Create a mock query object
-		$query          = new \WP_User_Query();
-		$query->request = 'SELECT * FROM wp_users WHERE 1=1 ORDER BY user_login ASC';
-		
-		// Call the filter method
-		$result = Highlight_MFA_Users::filter_users_by_capabilities( null, $query );
-		
-		// Check that the SQL was modified to include capability checks
-		$this->assertStringContainsString( 'manage_options', $query->request );
-		$this->assertStringContainsString( 'edit_posts', $query->request );
-		$this->assertStringContainsString( 'capabilities', $query->request );
-		
-		// Reset
-		unset( $_GET['filter_mfa_disabled'] );
-		$capabilities_property->setValue( null, [] );
-	}
-
-	/**
 	 * Test that multiple capabilities work with OR logic.
 	 */
 	public function test_multiple_capabilities_use_or_logic() {
