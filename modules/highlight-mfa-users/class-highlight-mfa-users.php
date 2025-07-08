@@ -230,7 +230,7 @@ class Highlight_MFA_Users {
 		}
 
 		// Check if capabilities are configured or using default roles
-		$has_capabilities = Capability_Utils::are_capabilities_configured( self::$capabilities );
+		$has_capabilities  = Capability_Utils::are_capabilities_configured( self::$capabilities );
 		$is_default_config = ! $has_capabilities && 
 								empty( array_diff( self::$roles, self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS ) );
 
