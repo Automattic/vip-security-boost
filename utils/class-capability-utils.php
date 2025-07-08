@@ -74,11 +74,7 @@ class Capability_Utils {
 			return false;
 		}
 		
-		if ( ! is_array( $user->roles ) ) {
-			return false;
-		}
-		
-		return ! empty( array_intersect( $roles, $user->roles ) );
+		return ! empty( array_intersect( $roles, $user->roles ?? [] ) );
 	}
 	
 	/**
