@@ -16,13 +16,13 @@ class Capability_Utils {
 	/**
 	 * Check if a user has elevated permissions based on capabilities or roles.
 	 * 
-	 * @param \WP_User $user The user to check.
+	 * @param \WP_User|false|null $user The user to check.
 	 * @param array $capabilities Array of capabilities to check (OR logic).
 	 * @param array $roles Array of roles to check if no capabilities configured.
 	 * @return bool True if user has elevated permissions, false otherwise.
 	 */
 	public static function user_has_elevated_permissions( $user, $capabilities = [], $roles = [] ): bool {
-		if ( ! $user || ! $user->exists() ) {
+		if ( ! ( $user instanceof \WP_User ) || ! $user->exists() ) {
 			return false;
 		}
 		
@@ -43,12 +43,12 @@ class Capability_Utils {
 	/**
 	 * Check if a user has any of the specified capabilities (OR logic).
 	 * 
-	 * @param \WP_User $user The user to check.
+	 * @param \WP_User|false|null $user The user to check.
 	 * @param array $capabilities Array of capabilities to check.
 	 * @return bool True if user has any of the capabilities, false otherwise.
 	 */
 	public static function user_has_any_capability( $user, $capabilities ): bool {
-		if ( ! $user || ! $user->exists() || empty( $capabilities ) ) {
+		if ( ! ( $user instanceof \WP_User ) || ! $user->exists() || empty( $capabilities ) ) {
 			return false;
 		}
 		
@@ -65,16 +65,16 @@ class Capability_Utils {
 	/**
 	 * Check if a user has any of the specified roles (OR logic).
 	 * 
-	 * @param \WP_User $user The user to check.
+	 * @param \WP_User|false|null $user The user to check.
 	 * @param array $roles Array of roles to check.
 	 * @return bool True if user has any of the roles, false otherwise.
 	 */
 	public static function user_has_any_role( $user, $roles ): bool {
-		if ( ! $user || ! $user->exists() || empty( $roles ) ) {
+		if ( ! ( $user instanceof \WP_User ) || ! $user->exists() || empty( $roles ) ) {
 			return false;
 		}
 		
-		if ( ! isset( $user->roles ) || ! is_array( $user->roles ) ) {
+		if ( ! is_array( $user->roles ) ) {
 			return false;
 		}
 		
