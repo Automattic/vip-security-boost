@@ -582,6 +582,49 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that cache key includes roles hash and changes when roles configuration changes.
+	 */
+	public function test_cache_key_includes_roles_hash_and_changes_with_roles() {
+		$this->set_admin_screen_users();
+
+		// Get the cache key with default roles
+		$reflection_class = new \ReflectionClass( Highlight_MFA_Users::class );
+		$cache_key_method = $reflection_class->getMethod( 'get_mfa_count_cache_key' );
+		$cache_key_method->setAccessible( true );
+
+		$initial_cache_key = $cache_key_method->invoke( null );
+
+		// Verify the cache key contains the expected components
+		$blog_id = get_current_blog_id();
+		$this->assertStringContainsString( Highlight_MFA_Users::MFA_COUNT_CACHE_KEY_PREFIX, $initial_cache_key );
+		$this->assertStringContainsString( (string) '_' . $blog_id . '_', $initial_cache_key );
+
+		// Change the roles configuration
+		$roles_property = $reflection_class->getProperty( 'roles' );
+		$roles_property->setAccessible( true );
+		$original_roles = $roles_property->getValue( null );
+		$new_roles      = [ 'author', 'contributor' ];
+		$roles_property->setValue( null, $new_roles );
+
+		// Get the cache key with new roles
+		$new_cache_key = $cache_key_method->invoke( null );
+
+		// Verify the cache key has changed
+		$this->assertNotEquals( $initial_cache_key, $new_cache_key, 'Cache key should change when roles configuration changes' );
+
+		// Verify both keys still contain the expected base components
+		$this->assertStringContainsString( Highlight_MFA_Users::MFA_COUNT_CACHE_KEY_PREFIX, $new_cache_key );
+		$this->assertStringContainsString( (string) '_' . $blog_id . '_', $new_cache_key );
+
+		// Restore original roles
+		$roles_property->setValue( null, $original_roles );
+
+		// Verify cache key returns to original value
+		$restored_cache_key = $cache_key_method->invoke( null );
+		$this->assertEquals( $initial_cache_key, $restored_cache_key, 'Cache key should return to original value when roles are restored' );
+	}
+
+	/**
 	 * Test that sorting logic does nothing if orderby is not set.
 	 */
 	public function test_sort_columns_does_nothing_if_orderby_not_set() {
