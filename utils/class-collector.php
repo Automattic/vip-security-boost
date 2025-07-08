@@ -19,7 +19,7 @@ class Collector implements \Automattic\VIP\Prometheus\CollectorInterface {
 	private Counter $blocked_users_view_counter;
 	private Counter $user_unblock_counter;
 	private Counter $privileged_email_sent_counter;
-	private Gauge $inactive_users_query_time_ms;
+	private Gauge $inactive_users_query_time;
 
 	public function initialize( RegistryInterface $registry ): void {
 		$this->mfa_display_counter = $registry->getOrRegisterCounter(
@@ -64,9 +64,9 @@ class Collector implements \Automattic\VIP\Prometheus\CollectorInterface {
 			[ 'email_type', 'recipient_role' ]
 		);
 
-		$this->inactive_users_query_time_ms = $registry->getOrRegisterGauge(
+		$this->inactive_users_query_time = $registry->getOrRegisterGauge(
 			'vip_security_boost',
-			'inactive_users_query_time_ms',
+			'inactive_users_query_time',
 			'Query time for inactive users count in milliseconds',
 			[]
 		);
@@ -78,7 +78,7 @@ class Collector implements \Automattic\VIP\Prometheus\CollectorInterface {
 		add_action( 'vip_security_blocked_users_view', [ $this, 'blocked_users_view' ] );
 		add_action( 'vip_security_user_unblock', [ $this, 'user_unblock' ], 10, 2 );
 		add_action( 'vip_security_privileged_email_sent', [ $this, 'privileged_email_sent' ], 10, 2 );
-		add_action( 'vip_security_inactive_users_query_time', [ $this, 'inactive_users_query_time' ], 10, 1 );
+		add_action( 'vip_security_inactive_users_query_time', [ $this, 'set_inactive_users_query_time' ], 10, 1 );
 	}
 
 	public function mfa_display( bool $filter_enabled ): void {
@@ -105,8 +105,8 @@ class Collector implements \Automattic\VIP\Prometheus\CollectorInterface {
 		$this->privileged_email_sent_counter->inc( [ $email_type, $recipient_role ] );
 	}
 
-	public function inactive_users_query_time( float $query_time_ms ): void {
-		$this->inactive_users_query_time_ms->set( $query_time_ms );
+	public function set_inactive_users_query_time( float $query_time_ms ): void {
+		$this->inactive_users_query_time->set( $query_time_ms );
 	}
 
 	public function collect_metrics(): void {
