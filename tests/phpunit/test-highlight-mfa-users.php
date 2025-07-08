@@ -677,8 +677,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 			sprintf(
 				/* translators: %d: Number of users. */
 				_n(
-					'There is %d user with Administrator or Editor roles with Two-Factor Authentication disabled.',
-					'There are %d users with Administrator or Editor roles with Two-Factor Authentication disabled.',
+					'There is %d user with high-privileges with Two-Factor Authentication disabled.',
+					'There are %d users with high-privileges with Two-Factor Authentication disabled.',
 					$expected_count,
 					'wpvip'
 				),

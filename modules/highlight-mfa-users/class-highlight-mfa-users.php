@@ -229,13 +229,10 @@ class Highlight_MFA_Users {
 			return;
 		}
 
-		// Determine notice text based on role configuration
-		// self::$roles is already an array and populated from init().
-		$configured_roles_for_comparison = self::$roles;
-		\sort( $configured_roles_for_comparison ); // Use global sort
-
-		// unordered array check with ==
-		$is_default_config = ( self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS === $configured_roles_for_comparison || empty( $configured_roles_for_comparison ) );
+		// Check if capabilities are configured or using default roles
+		$has_capabilities = Capability_Utils::are_capabilities_configured( self::$capabilities );
+		$is_default_config = ! $has_capabilities && 
+								empty( array_diff( self::$roles, self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS ) );
 
 		// Get the cached MFA disabled count
 		$mfa_disabled_count = self::get_mfa_disabled_count();
