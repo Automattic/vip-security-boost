@@ -407,7 +407,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
 		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data['vip_security_boost'] );
 		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count'] );
-		
+
 		// Verify the network-wide count is added only in multisite
 		if ( is_multisite() ) {
 			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data['vip_security_boost'] );
@@ -427,10 +427,13 @@ class InactiveUsersTest extends WP_UnitTestCase {
 			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
+		delete_user_meta( $inactive_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
 		$inactive_user_2 = $this->factory->user->create([
 			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
+		delete_user_meta( $inactive_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
 
 		// Make them inactive by setting old last seen timestamps
 		update_user_meta( $inactive_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
