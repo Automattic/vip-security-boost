@@ -26,7 +26,7 @@ class Capability_Utils {
 			return false;
 		}
 		
-		if ( is_automattician( $user->ID ) ) {
+		if ( function_exists( 'is_automattician' ) && is_automattician( $user->ID ) ) {
 			return true;
 		}
 		

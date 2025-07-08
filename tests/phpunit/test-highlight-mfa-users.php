@@ -670,15 +670,15 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Clear cache to ensure fresh count
 		Highlight_MFA_Users::clear_mfa_count_cache();
 		
-		$expected_count  = 3; // Users with manage_options capability
+		$expected_count  = 2; // Users with manage_options capability (admin_user_mfa_disabled_id + default admin ID 1)
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
 			sprintf(
 				/* translators: %d: Number of users. */
 				_n(
-					'There is %d user with high-privileges capabilities with Two-Factor Authentication disabled.',
-					'There are %d users with high-privileges capabilities with Two-Factor Authentication disabled.',
+					'There is %d user with Administrator or Editor roles with Two-Factor Authentication disabled.',
+					'There are %d users with Administrator or Editor roles with Two-Factor Authentication disabled.',
 					$expected_count,
 					'wpvip'
 				),

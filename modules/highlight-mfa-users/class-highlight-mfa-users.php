@@ -2,6 +2,7 @@
 namespace Automattic\VIP\Security\MFAUsers;
 
 use Automattic\VIP\Security\Utils\Configs;
+use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Highlight_MFA_Users {
 	const MFA_SKIP_USER_IDS_OPTION_KEY    = 'vip_security_mfa_skip_user_ids';
@@ -17,6 +18,13 @@ class Highlight_MFA_Users {
 	 * @var array An array of role slugs.
 	 */
 	private static $roles;
+
+	/**
+	 * The capabilities used to highlight users without MFA.
+	 *
+	 * @var array An array of capability slugs.
+	 */
+	private static $capabilities;
 
 	public static function init() {
 		// If plugins_loaded has already fired (e.g., in tests), register hooks immediately
@@ -35,15 +43,29 @@ class Highlight_MFA_Users {
 
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
-		self::$roles           = $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS; // Default to administrator and editor if not configured
+		
+		// Check if Capability_Utils is available
+		if ( ! class_exists( '\\Automattic\\VIP\\Security\\Utils\\Capability_Utils' ) ) {
+			// Fallback to old role-based configuration
+			self::$roles = $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
 
-		if ( ! is_array( self::$roles ) ) {
-			self::$roles = [ self::$roles ];
-		}
-		self::$roles = array_filter( self::$roles );
-		// If after filtering, the array is empty, default back to administrator and editor
-		if ( empty( self::$roles ) ) {
-			self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
+			if ( ! is_array( self::$roles ) ) {
+				self::$roles = [ self::$roles ];
+			}
+			self::$roles = array_filter( self::$roles );
+			if ( empty( self::$roles ) ) {
+				self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
+			}
+			self::$capabilities = [];
+		} else {
+			// Normalize capabilities and roles configuration
+			self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
+			self::$roles        = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
+			
+			// If no capabilities and no roles configured, default to administrator and editor
+			if ( ! Capability_Utils::are_capabilities_configured( self::$capabilities ) && empty( self::$roles ) ) {
+				self::$roles = self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS;
+			}
 		}
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
@@ -122,14 +144,21 @@ class Highlight_MFA_Users {
 		}
 		$skipped_user_ids = array_unique( array_filter( array_map( 'intval', $skipped_user_ids ) ) );
 
-		// Cache miss - calculate the count
-		$args       = [
-			'role__in' => self::$roles,
-			'fields'   => 'ID',
+		// Build query args - use capabilities if configured, otherwise fall back to roles
+		$args = [
+			'fields'  => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
-			'exclude'  => $skipped_user_ids,
-			'number'   => -1, // Get all relevant users
+			'exclude' => $skipped_user_ids,
+			'number'  => -1, // Get all relevant users
 		];
+		
+		// Use native capability filtering if capabilities are configured
+		if ( Capability_Utils::are_capabilities_configured( self::$capabilities ) ) {
+			$args['capability__in'] = self::$capabilities;
+		} else {
+			$args['role__in'] = self::$roles;
+		}
+		
 		$user_query = new \WP_User_Query( $args );
 		$user_ids   = $user_query->get_results();
 
