@@ -592,4 +592,206 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$sorted_args   = Highlight_MFA_Users::sort_columns( $args );
 		$this->assertEquals( $original_args, $sorted_args );
 	}
+
+	/**
+	 * Test that capabilities are used when configured instead of roles.
+	 */
+	public function test_capabilities_override_roles_when_configured() {
+		// Create users with different capabilities
+		$manage_options_user_id = $this->factory()->user->create( [ 'role' => 'administrator' ] );
+		$edit_posts_user_id     = $this->factory()->user->create( [ 'role' => 'editor' ] );
+		$author_user_id         = $this->factory()->user->create( [ 'role' => 'author' ] );
+		
+		// Set capabilities configuration using reflection
+		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
+		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
+		$capabilities_property->setAccessible( true );
+		$capabilities_property->setValue( null, [ 'manage_options' ] );
+		
+		// Clear the cache to force recalculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		
+		// Use reflection to access the private method
+		$method = $reflection_class->getMethod( 'get_mfa_disabled_count' );
+		$method->setAccessible( true );
+		$count = $method->invoke( null );
+		
+		// Only the users with manage_options capability should be counted
+		// This includes the admin user created above and the default admin (ID 1)
+		// Plus the admin_user_mfa_disabled_id from setUp
+		$expected_count = 3;
+		$this->assertEquals( $expected_count, $count );
+		
+		// Clean up
+		wp_delete_user( $manage_options_user_id );
+		wp_delete_user( $edit_posts_user_id );
+		wp_delete_user( $author_user_id );
+		
+		// Reset capabilities
+		$capabilities_property->setValue( null, [] );
+	}
+
+	/**
+	 * Test that roles are used as fallback when no capabilities are configured.
+	 */
+	public function test_roles_used_as_fallback_when_no_capabilities() {
+		// Ensure capabilities are empty
+		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
+		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
+		$capabilities_property->setAccessible( true );
+		$capabilities_property->setValue( null, [] );
+		
+		// Clear the cache to force recalculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		
+		// Use reflection to access the private method
+		$method = $reflection_class->getMethod( 'get_mfa_disabled_count' );
+		$method->setAccessible( true );
+		$count = $method->invoke( null );
+		
+		// Should count users with administrator and editor roles (default)
+		// admin_user_mfa_disabled_id, editor_user_id from setUp, plus default admin (ID 1)
+		$expected_count = 3;
+		$this->assertEquals( $expected_count, $count );
+	}
+
+	/**
+	 * Test admin notice displays correctly when using capabilities.
+	 */
+	public function test_display_mfa_disabled_notice_with_capabilities() {
+		$this->set_admin_screen_users();
+		
+		// Set capabilities configuration
+		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
+		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
+		$capabilities_property->setAccessible( true );
+		$capabilities_property->setValue( null, [ 'manage_options' ] );
+		
+		// Clear cache to ensure fresh count
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		
+		$expected_count  = 3; // Users with manage_options capability
+		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
+		$expected_output = sprintf(
+			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
+			sprintf(
+				/* translators: %d: Number of users. */
+				_n(
+					'There is %d user with high-privileges capabilities with Two-Factor Authentication disabled.',
+					'There are %d users with high-privileges capabilities with Two-Factor Authentication disabled.',
+					$expected_count,
+					'wpvip'
+				),
+				number_format_i18n( $expected_count )
+			),
+			esc_url( $filter_url ),
+			esc_html__( 'Filter list to show these users.', 'wpvip' )
+		);
+		
+		ob_start();
+		Highlight_MFA_Users::display_mfa_disabled_notice();
+		$output = ob_get_clean();
+		
+		$this->assertEquals( $expected_output, $output );
+		
+		// Reset capabilities
+		$capabilities_property->setValue( null, [] );
+	}
+
+	/**
+	 * Test filtering users by capabilities in the admin list.
+	 */
+	public function test_filter_users_by_capabilities_pre_query() {
+		$this->set_admin_screen_users();
+		$_GET['filter_mfa_disabled'] = '1';
+		
+		// Set capabilities configuration
+		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
+		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
+		$capabilities_property->setAccessible( true );
+		$capabilities_property->setValue( null, [ 'edit_posts' ] );
+		
+		$query = new \WP_User_Query();
+		
+		// Simulate the pre_get_users action
+		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
+		
+		// The query should have meta_query set but NOT role__in
+		$meta_query = $query->get( 'meta_query' );
+		$role_in    = $query->get( 'role__in' );
+		
+		$this->assertIsArray( $meta_query );
+		$this->assertEmpty( $role_in ); // Should be empty when using capabilities
+		
+		// Reset
+		unset( $_GET['filter_mfa_disabled'] );
+		$capabilities_property->setValue( null, [] );
+	}
+
+	/**
+	 * Test capability-based SQL filtering.
+	 */
+	public function test_filter_users_by_capabilities_sql_modification() {
+		$this->set_admin_screen_users();
+		$_GET['filter_mfa_disabled'] = '1';
+		
+		// Set capabilities configuration
+		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
+		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
+		$capabilities_property->setAccessible( true );
+		$capabilities_property->setValue( null, [ 'manage_options', 'edit_posts' ] );
+		
+		// Create a mock query object
+		$query          = new \WP_User_Query();
+		$query->request = 'SELECT * FROM wp_users WHERE 1=1 ORDER BY user_login ASC';
+		
+		// Call the filter method
+		$result = Highlight_MFA_Users::filter_users_by_capabilities( null, $query );
+		
+		// Check that the SQL was modified to include capability checks
+		$this->assertStringContainsString( 'manage_options', $query->request );
+		$this->assertStringContainsString( 'edit_posts', $query->request );
+		$this->assertStringContainsString( 'capabilities', $query->request );
+		
+		// Reset
+		unset( $_GET['filter_mfa_disabled'] );
+		$capabilities_property->setValue( null, [] );
+	}
+
+	/**
+	 * Test that multiple capabilities work with OR logic.
+	 */
+	public function test_multiple_capabilities_use_or_logic() {
+		// Create users with different capabilities
+		$admin_user      = $this->factory()->user->create( [ 'role' => 'administrator' ] ); // has manage_options
+		$editor_user     = $this->factory()->user->create( [ 'role' => 'editor' ] ); // has edit_posts but not manage_options
+		$author_user     = $this->factory()->user->create( [ 'role' => 'author' ] ); // has edit_posts but not manage_options
+		$subscriber_user = $this->factory()->user->create( [ 'role' => 'subscriber' ] ); // has neither
+		
+		// Set multiple capabilities
+		$reflection_class      = new \ReflectionClass( Highlight_MFA_Users::class );
+		$capabilities_property = $reflection_class->getProperty( 'capabilities' );
+		$capabilities_property->setAccessible( true );
+		$capabilities_property->setValue( null, [ 'manage_options', 'edit_posts' ] );
+		
+		// Clear cache
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		
+		// Get count
+		$method = $reflection_class->getMethod( 'get_mfa_disabled_count' );
+		$method->setAccessible( true );
+		$count = $method->invoke( null );
+		
+		// Should include users with either manage_options OR edit_posts
+		// This includes: admin_user, editor_user, author_user, plus existing admin users
+		// But NOT subscriber_user
+		$this->assertGreaterThan( 3, $count ); // At least the new users plus existing admins
+		
+		// Clean up
+		wp_delete_user( $admin_user );
+		wp_delete_user( $editor_user );
+		wp_delete_user( $author_user );
+		wp_delete_user( $subscriber_user );
+		$capabilities_property->setValue( null, [] );
+	}
 }
