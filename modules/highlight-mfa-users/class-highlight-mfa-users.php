@@ -374,8 +374,8 @@ class Highlight_MFA_Users {
 				],
 			];
 
+			$args['role__in'] = self::$roles;
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			$args['role__in']   = self::$roles;
 			$args['meta_query'] = $meta_query;
 
 			$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
@@ -388,8 +388,8 @@ class Highlight_MFA_Users {
 					$skipped_user_ids[] = $wpcomvip->ID;
 			}
 
+			$exclude_ids = $args['exclude'] ?? [];
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
-			$exclude_ids     = $args['exclude'] ?? [];
 			$args['exclude'] = array_unique( array_merge( $exclude_ids, $skipped_user_ids ) );
 		}
 		return $args;
