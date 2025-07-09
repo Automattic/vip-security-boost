@@ -283,7 +283,7 @@ class Inactive_Users {
 			// Note: This filter only works with roles, not capabilities, due to WP_User_Query limitations
 			// Users with elevated capabilities but not elevated roles won't appear in this filtered view
 			// However, they are still tracked and blocked correctly
-			$vars['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
+			$vars['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
 
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$vars['meta_query'] = [
