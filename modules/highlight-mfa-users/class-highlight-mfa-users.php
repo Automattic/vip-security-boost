@@ -100,8 +100,9 @@ class Highlight_MFA_Users {
 
 		// Include a hash of the roles configuration to invalidate cache when roles change
 		$roles_hash = md5( wp_json_encode( self::$roles ) );
+		$capabilities_hash = md5( wp_json_encode( self::$capabilities ) );
 
-		return self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog_id . '_' . $roles_hash;
+		return self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog_id . '_' . $roles_hash . '_' . $capabilities_hash;
 	}
 
 	/**
