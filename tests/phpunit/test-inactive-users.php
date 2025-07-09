@@ -391,4 +391,52 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( Inactive_Users::is_considered_inactive( $new_user_id ) );
 		wp_delete_user( $new_user_id );
 	}
+
+	/**
+	 * Test that the vip_site_details_index_data filter is added and works correctly
+	 */
+	public function test_vip_site_details_index_data_filter_is_added() {
+		// Verify the filter is added during init
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'get_site_details_index_data' ] ) );
+
+		// Test that the filter works by applying it
+		$initial_data  = [ 'some_key' => 'some_value' ];
+		$filtered_data = apply_filters( 'vip_site_details_index_data', $initial_data );
+
+		// Verify the filter was applied and our data was added
+		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
+		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data['vip_security_boost'] );
+		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count'] );
+
+		// Verify original data is preserved
+		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
+	}
+
+	/**
+	 * Test that get_site_details_index_data returns correct count for inactive users
+	 */
+	public function test_get_site_details_index_data_returns_correct_count() {
+		// Create additional inactive users
+		$inactive_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$inactive_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Make them inactive by setting old last seen timestamps
+		update_user_meta( $inactive_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $inactive_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		$result = Inactive_Users::get_site_details_index_data( [] );
+
+		// Should have 3 inactive users (the ones we created)
+		$this->assertEquals( 2, $result['vip_security_boost']['inactive_users_count'] );
+
+		// Clean up
+		wp_delete_user( $inactive_user_1 );
+		wp_delete_user( $inactive_user_2 );
+	}
 }
