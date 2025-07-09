@@ -674,17 +674,6 @@ class Inactive_Users {
 
 		return Capability_Utils::user_has_elevated_permissions( $user, $elevated_capabilities, $elevated_roles );
 	}
-	
-	/**
-	 * Check if user has elevated roles (deprecated, use user_has_elevated_permissions instead)
-	 * 
-	 * @deprecated Use user_has_elevated_permissions() instead
-	 * @param \WP_User $user The user to check.
-	 * @return bool True if user has elevated roles, false otherwise.
-	 */
-	private static function user_with_elevated_roles( $user ) {
-		return self::user_has_elevated_permissions( $user );
-	}
 }
 
 Inactive_Users::init();

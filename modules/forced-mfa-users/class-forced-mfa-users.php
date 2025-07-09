@@ -8,7 +8,7 @@ class Forced_MFA_Users {
 	/**
 	 * The roles that should have MFA enforced.
 	 *
-	 * @var string|array The role slug or an array of role slugs.
+	 * @var array An array of role slugs.
 	 */
 	private static $roles;
 
@@ -50,7 +50,7 @@ class Forced_MFA_Users {
 		}
 
 		$user = wp_get_current_user();
-		if ( ! $user ) {
+		if ( ! $user->exists() ) {
 			return;
 		}
 
