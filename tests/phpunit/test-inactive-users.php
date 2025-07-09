@@ -4,7 +4,8 @@ use Automattic\VIP\Security\InactiveUsers\Inactive_Users;
 
 class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;
-	private $elevated_roles = [ 'administrator' ];
+	private $elevated_roles                 = [ 'administrator' ];
+	private $considered_inactive_after_days = 90;
 
 	public function setUp(): void {
 		parent::setUp();
@@ -374,6 +375,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		update_option( 'date_format', $old_date_format );
 		update_option( 'time_format', $old_time_format );
 	}
+
 	/**
 	 * Test that a user is considered inactive if the fallback date is in the past
 	 */
@@ -534,5 +536,72 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		wp_delete_user( $site_2_user_1 );
 		wp_delete_user( $site_2_user_2 );
 		wp_delete_user( $site_2_user_3 );
+	}
+
+	/**
+	 * Test that only inactive are returned for the blocked filter
+	 */
+	public function test_only_inactive_and_release_users_are_returned_blocked_filter(): void {
+		// Simulate a "blocked" user filter request with nonce
+		$_GET['last_seen_filter']       = 'blocked';
+		$_GET['last_seen_filter_nonce'] = wp_create_nonce( 'last_seen_filter' );
+
+		$cutoff = strtotime( '-' . $this->considered_inactive_after_days . ' days' );
+
+		// User #1: Inactive — last seen before cutoff, no ignore meta
+		$u1 = $this->factory()->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', $cutoff - WEEK_IN_SECONDS ),
+			'role'            => 'administrator',
+		]);
+		update_user_meta( $u1, Inactive_Users::LAST_SEEN_META_KEY, $cutoff - DAY_IN_SECONDS );
+		delete_user_meta( $u1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $u1 ) );
+
+		// User #2: Active — last seen after cutoff
+		$u2 = $this->factory()->user->create([
+			'role' => 'administrator',
+		]);
+		update_user_meta( $u2, Inactive_Users::LAST_SEEN_META_KEY, $cutoff + DAY_IN_SECONDS );
+		delete_user_meta( $u2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $u2 ) );
+
+		// User #3: Ignored — last seen before cutoff, but ignore-until is in the future
+		$u3 = $this->factory()->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', $cutoff - DAY_IN_SECONDS ),
+			'role'            => 'administrator',
+		]);
+		update_user_meta( $u3, Inactive_Users::LAST_SEEN_META_KEY, $cutoff - DAY_IN_SECONDS );
+		update_user_meta( $u3, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, time() + DAY_IN_SECONDS );
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $u3 ) );
+
+		// User #4: Inactive — no last seen, registered before cutoff, release timestamp forced into past
+		update_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, 0 );
+		$u4 = $this->factory()->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', $cutoff - DAY_IN_SECONDS ),
+			'role'            => 'administrator',
+		]);
+		delete_user_meta( $u4, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $u4 ) );
+
+		// Run user query using blocked filter args
+		$vars  = Inactive_Users::last_seen_blocked_users_filter_query_args( [] );
+		$q     = new WP_User_Query( $vars );
+		$found = wp_list_pluck( $q->get_results(), 'ID' );
+		sort( $found );
+
+		// Clean up GET globals
+		unset( $_GET['last_seen_filter'], $_GET['last_seen_filter_nonce'] );
+
+		// Assert: only u1 and u4 should be returned
+		$this->assertContains( $u1, $found );
+		$this->assertContains( $u4, $found );
+		$this->assertNotContains( $u2, $found );
+		$this->assertNotContains( $u3, $found );
+
+		// Cleanup created users
+		wp_delete_user( $u1 );
+		wp_delete_user( $u2 );
+		wp_delete_user( $u3 );
+		wp_delete_user( $u4 );
 	}
 }
