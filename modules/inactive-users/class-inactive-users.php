@@ -345,7 +345,7 @@ class Inactive_Users {
 		);
 
 		$release_ts = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
-		if ( ! $release_ts ) {
+		if ( $release_ts === false) {
 			$release_ts = static::get_fallback_release_date_timestamp();
 		}
 
