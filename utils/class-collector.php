@@ -105,8 +105,8 @@ class Collector implements \Automattic\VIP\Prometheus\CollectorInterface {
 		$this->privileged_email_sent_counter->inc( [ $email_type, $recipient_role ] );
 	}
 
-	public function set_inactive_users_query_time( float $query_time_ms ): void {
-		$this->inactive_users_query_time->set( $query_time_ms );
+	public function set_inactive_users_query_time( float $query_time ): void {
+		$this->inactive_users_query_time->set( $query_time );
 	}
 
 	public function collect_metrics(): void {
