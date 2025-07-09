@@ -439,4 +439,84 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		wp_delete_user( $inactive_user_1 );
 		wp_delete_user( $inactive_user_2 );
 	}
+
+	/**
+	 * Test that get_site_details_index_data returns correct counts for multisite networks
+	 * Each site should have its own count of inactive users
+	 */
+	public function test_get_site_details_index_data_multisite_counts() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create two additional sites
+		$site_1_id = $this->factory->blog->create();
+		$site_2_id = $this->factory->blog->create();
+
+		// Create users for site 1
+		$site_1_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$site_1_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Create users for site 2
+		$site_2_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$site_2_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$site_2_user_3 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Switch to site 1 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_1_id );
+		add_user_to_blog( $site_1_id, $site_1_user_1, 'administrator' );
+		add_user_to_blog( $site_1_id, $site_1_user_2, 'administrator' );
+
+		// Make site 1 users inactive
+		update_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_1_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test site 1 count - role__in in WP_User_Query filters by current site roles,
+		// so only users with administrator role on site 1 are counted
+		$site_1_result = Inactive_Users::get_site_details_index_data( [] );
+		$this->assertEquals( 2, $site_1_result['vip_security_boost']['inactive_users_count'], 'Site 1 should count 2 inactive users with roles on this site' );
+
+		restore_current_blog();
+
+		// Switch to site 2 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_2_id );
+		add_user_to_blog( $site_2_id, $site_2_user_1, 'administrator' );
+		add_user_to_blog( $site_2_id, $site_2_user_2, 'administrator' );
+		add_user_to_blog( $site_2_id, $site_2_user_3, 'administrator' );
+
+		// Make site 2 users inactive
+		update_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_2_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_2_user_3, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test site 2 count - only users with administrator role on site 2 are counted
+		$site_2_result = Inactive_Users::get_site_details_index_data( [] );
+		$this->assertEquals( 3, $site_2_result['vip_security_boost']['inactive_users_count'], 'Site 2 should count 3 inactive users with roles on this site' );
+
+		restore_current_blog();
+
+		// Clean up users
+		wp_delete_user( $site_1_user_1 );
+		wp_delete_user( $site_1_user_2 );
+		wp_delete_user( $site_2_user_1 );
+		wp_delete_user( $site_2_user_2 );
+		wp_delete_user( $site_2_user_3 );
+	}
 }
