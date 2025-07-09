@@ -280,10 +280,12 @@ class Inactive_Users {
 			// Track blocked users view
 			do_action( 'vip_security_blocked_users_view' );
 
-			// Note: This filter only works with roles, not capabilities, due to WP_User_Query limitations
-			// Users with elevated capabilities but not elevated roles won't appear in this filtered view
-			// However, they are still tracked and blocked correctly
-			$vars['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
+			// Use capability__in if capabilities are configured, otherwise use role__in
+			if ( ! empty( self::$elevated_capabilities ) ) {
+				$vars['capability__in'] = self::$elevated_capabilities;
+			} else {
+				$vars['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
+			}
 
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$vars['meta_query'] = [
@@ -385,22 +387,26 @@ class Inactive_Users {
 		$has_blocked_users = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
 
 		if ( false === $has_blocked_users ) {
-			$users_query = new \WP_User_Query(
-				array(
-					'blog_id'      => $blog_id,
-					'fields'       => 'ID',
-					'meta_key'     => self::LAST_SEEN_META_KEY,
-					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-					'meta_value'   => self::get_inactivity_timestamp(),
-					'meta_type'    => 'NUMERIC',
-					'meta_compare' => '<',
-					'count_total'  => false,
-					'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
-					// Note: role__in only filters by roles, not capabilities
-				// Users with elevated capabilities but not elevated roles won't be counted here
-					'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
-				),
+			$query_args = array(
+				'blog_id'      => $blog_id,
+				'fields'       => 'ID',
+				'meta_key'     => self::LAST_SEEN_META_KEY,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value'   => self::get_inactivity_timestamp(),
+				'meta_type'    => 'NUMERIC',
+				'meta_compare' => '<',
+				'count_total'  => false,
+				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
 			);
+			
+			// Use capability__in if capabilities are configured, otherwise use role__in
+			if ( ! empty( self::$elevated_capabilities ) ) {
+				$query_args['capability__in'] = self::$elevated_capabilities;
+			} else {
+				$query_args['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
+			}
+			
+			$users_query = new \WP_User_Query( $query_args );
 
 			$has_blocked_users = ! empty( $users_query->get_results() ) ? 1 : 0;
 
