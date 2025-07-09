@@ -406,9 +406,13 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Verify the filter was applied and our data was added
 		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
 		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data['vip_security_boost'] );
-		$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data['vip_security_boost'] );
 		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count'] );
-		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count_all_blogs'] );
+		
+		// Verify the network-wide count is added only in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data['vip_security_boost'] );
+			$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count_all_blogs'] );
+		}
 
 		// Verify original data is preserved
 		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
