@@ -398,7 +398,7 @@ class Inactive_Users {
 					'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
 					// Note: role__in only filters by roles, not capabilities
 				// Users with elevated capabilities but not elevated roles won't be counted here
-				'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
+					'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
 				),
 			);
 
