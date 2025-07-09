@@ -19,6 +19,8 @@ class Inactive_Users {
 	const LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY = 'wpvip_last_seen_ignore_inactivity_check_until';
 	const LAST_SEEN_CACHE_GROUP                            = 'wpvip_last_seen';
 	const LAST_SEEN_UPDATE_USER_META_CACHE_TTL             = MINUTE_IN_SECONDS * 5; // Store last seen once every five minute to avoid too many write DB operations
+	const BLOCKED_USERS_CACHE_KEY                          = 'wpvip_blocked_users_';
+	const BLOCKED_USERS_CACHE_TTL                          = MINUTE_IN_SECONDS * 5;
 	const LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY      = 'wpvip_last_seen_release_date_timestamp';
 
 	/**
@@ -43,7 +45,13 @@ class Inactive_Users {
 		add_filter( 'determine_current_user', [ __CLASS__, 'record_activity' ], 30, 1 );
 
 		add_action( 'admin_init', [ __CLASS__, 'register_release_date' ] );
-		add_action( 'set_user_role', [ __CLASS__, 'user_promoted' ] );
+
+		// skipping inactivity checks for new users
+		if ( is_multisite() ) {
+			add_action( 'add_user_to_blog', [ __CLASS__, 'maybe_skip_inactivity_check_for_new_user' ] );
+		}
+		add_action( 'user_register', [ __CLASS__, 'maybe_skip_inactivity_check_for_new_user' ] );
+
 		add_action( 'vip_support_user_added', function ( $user_id ) {
 			$ignore_inactivity_check_until = strtotime( '+2 hours' );
 
@@ -67,9 +75,9 @@ class Inactive_Users {
 		}
 
 		if ( self::is_block_action_enabled() ) {
-			add_filter( 'authenticate', [ __CLASS__, 'authenticate' ], 20, 1 );
-			add_filter( 'wp_is_application_passwords_available_for_user', [ __CLASS__, 'application_password_authentication' ], PHP_INT_MAX, 2 );
-			add_filter( 'rest_authentication_errors', [ __CLASS__, 'rest_authentication_errors' ], PHP_INT_MAX, 1 );
+			add_filter( 'authenticate', [ __CLASS__, 'maybe_block_inactive_user_on_authenticate' ], 20, 1 );
+			add_filter( 'wp_is_application_passwords_available_for_user', [ __CLASS__, 'maybe_block_inactive_user_on_app_password_auth' ], PHP_INT_MAX, 2 );
+			add_filter( 'rest_authentication_errors', [ __CLASS__, 'maybe_return_error_on_rest_auth' ], PHP_INT_MAX, 1 );
 
 			add_filter( 'views_users', [ __CLASS__, 'add_blocked_users_filter' ] );
 			add_filter( 'views_users-network', [ __CLASS__, 'add_blocked_users_filter' ] );
@@ -107,7 +115,10 @@ class Inactive_Users {
 		return $user_id;
 	}
 
-	public static function authenticate( $user ) {
+	/**
+	 * Block inactive users on authenticate, active only when BLOCK mode is enabled
+	 */
+	public static function maybe_block_inactive_user_on_authenticate( $user ) {
 		if ( is_wp_error( $user ) ) {
 			return $user;
 		}
@@ -129,7 +140,12 @@ class Inactive_Users {
 		return $user;
 	}
 
-	public static function rest_authentication_errors( $status ) {
+	/**
+	 * Return error on REST authentication, active only when BLOCK mode is enabled
+	 *
+	 * @param \WP_Error $status The authentication status.
+	 */
+	public static function maybe_return_error_on_rest_auth( $status ) {
 		if ( is_wp_error( self::$application_password_authentication_error ) ) {
 			return self::$application_password_authentication_error;
 		}
@@ -138,11 +154,11 @@ class Inactive_Users {
 	}
 
 	/**
-	 * @param bool $available True if application password is available, false otherwise.
+	 * @param bool $available True if application password is available, false otherwise. Active only when BLOCK mode is enabled
 	 * @param \WP_User $user The user to check.
 	 * @return bool
 	 */
-	public static function application_password_authentication( $available, $user ) {
+	public static function maybe_block_inactive_user_on_app_password_auth( $available, $user ) {
 		if ( ! $available || ( $user && ! $user->exists() ) ) {
 			return false;
 		}
@@ -250,7 +266,9 @@ class Inactive_Users {
 		return $vars;
 	}
 
-
+	/**
+	 * Filter users list table to show only blocked users, active only when BLOCK mode is enabled
+	 */
 	public static function last_seen_blocked_users_filter_query_args( $vars ) {
 		// Only filter when the “blocked” last_seen_filter is set and valid
 		if (
@@ -349,29 +367,50 @@ class Inactive_Users {
 		);
 	}
 
+	public static function get_blocked_users_cache_key() {
+		return self::BLOCKED_USERS_CACHE_KEY . ( is_network_admin() ? null : get_current_blog_id() );
+	}
+
+	/**
+	 * Add blocked users filter to users list table, active only when BLOCK mode is enabled
+	 *
+	 * @param array $views The views array.
+	 *
+	 * @return array The modified views array.
+	 */
 	public static function add_blocked_users_filter( $views ) {
 		$blog_id = is_network_admin() ? null : get_current_blog_id();
 
-		$users_query = new \WP_User_Query(
-			array(
-				'blog_id'      => $blog_id,
-				'fields'       => 'ID',
-				'meta_key'     => self::LAST_SEEN_META_KEY,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'meta_value'   => self::get_inactivity_timestamp(),
-				'meta_type'    => 'NUMERIC',
-				'meta_compare' => '<',
-				'count_total'  => false,
-				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
-				// Note: role__in only filters by roles, not capabilities
+		$cache_key         = self::get_blocked_users_cache_key();
+		$has_blocked_users = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+
+		if ( false === $has_blocked_users ) {
+			$users_query = new \WP_User_Query(
+				array(
+					'blog_id'      => $blog_id,
+					'fields'       => 'ID',
+					'meta_key'     => self::LAST_SEEN_META_KEY,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+					'meta_value'   => self::get_inactivity_timestamp(),
+					'meta_type'    => 'NUMERIC',
+					'meta_compare' => '<',
+					'count_total'  => false,
+					'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
+					// Note: role__in only filters by roles, not capabilities
 				// Users with elevated capabilities but not elevated roles won't be counted here
 				'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
-			),
-		);
+				),
+			);
+
+			$has_blocked_users = ! empty( $users_query->get_results() ) ? 1 : 0;
+
+			// we're using the same granularity for the cache as for the last seen meta
+			wp_cache_set( $cache_key, $has_blocked_users, self::LAST_SEEN_CACHE_GROUP, self::BLOCKED_USERS_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+		}
 
 		$views['blocked_users'] = __( 'Blocked Users', 'wpvip' );
 
-		if ( ! $users_query->get_results() ) {
+		if ( ! $has_blocked_users ) {
 			return $views;
 		}
 
@@ -390,6 +429,9 @@ class Inactive_Users {
 		return $views;
 	}
 
+	/**
+	 * Unblock user action in the WP Admin user list, active only when BLOCK mode is enabled
+	 */
 	public static function last_seen_unblock_action() {
 		$admin_notices_hook_name = is_network_admin() ? 'network_admin_notices' : 'admin_notices';
 
@@ -429,6 +471,10 @@ class Inactive_Users {
 			$user      = get_userdata( $user_id );
 			$user_role = $user && ! empty( $user->roles ) ? $user->roles[0] : '';
 			do_action( 'vip_security_user_unblock', $user_id, $user_role );
+
+			$cache_key = self::get_blocked_users_cache_key();
+			// clearing the cache
+			wp_cache_delete( $cache_key, self::LAST_SEEN_CACHE_GROUP );
 		}
 
 		if ( $error ) {
@@ -458,15 +504,35 @@ class Inactive_Users {
 		if ( ! $until_timestamp ) {
 			$until_timestamp = strtotime( '+2 days' );
 		}
+		Logger::info(
+			self::LOG_FEATURE_NAME,
+			'Ignored inactivity check for user',
+			array(
+				'user_id'         => $user_id,
+				'until_timestamp' => $until_timestamp,
+			)
+		);
 
 		return update_user_meta( $user_id, self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, $until_timestamp );
 	}
 
-	public static function user_promoted( $user_id ) {
+	/**
+	 * When the inactive user plugin is first enabled, we want to skip the inactivity check for new users because they might end up
+	 * being blocked because of LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY
+	 */
+	public static function maybe_skip_inactivity_check_for_new_user( $user_id ) {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			throw new \Exception( 'User not found' );
+			// we shouldn't ever get here, but in case we do we're going to log the error
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'User not found in ' . __METHOD__,
+				array(
+					'user_id' => $user_id,
+				)
+			);
+			return;
 		}
 
 		if ( ! self::user_has_elevated_permissions( $user ) ) {
@@ -476,11 +542,39 @@ class Inactive_Users {
 		self::ignore_inactivity_check_for_user( $user_id );
 	}
 
+
+	/**
+	 * Provide a dynamic fallback release date.
+	 *
+	 * Instead of relying on a constant,
+	 * return a timestamp that is ( considered_inactive_after_days + 1 ) days in
+	 * the past relative to the current time. This ensures the fallback date is
+	 * always older than the inactivity window while remaining environment-
+	 * agnostic.
+	 *
+	 */
+	public static function get_fallback_release_date_timestamp(): int|false {
+		// If the module has not been initialised (e.g. during unit tests) fall
+		// back to 90 days which is the default configured value in ::init().
+		$days = (int) ( self::$considered_inactive_after_days ?? 90 ) + 1;
+
+		return strtotime( sprintf( '-%d days', $days ) );
+	}
+
 	public static function register_release_date() {
 		if ( ! wp_doing_ajax() && ! get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY ) ) {
+			$time = time();
 			// Right after the first admin_init, set the release date timestamp
 			// to be used as a fallback for users that never logged in before.
-			add_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time(), '', false );
+			add_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, $time, '', false );
+
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'Last seen release date registered',
+				[
+					'timestamp' => $time,
+				]
+			);
 		}
 	}
 
@@ -494,17 +588,22 @@ class Inactive_Users {
 			return false;
 		}
 
-		$last_seen_timestamp = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
+		$inactivity_timestamp = self::get_inactivity_timestamp();
+		$last_seen_timestamp  = get_user_meta( $user_id, self::LAST_SEEN_META_KEY, true );
 		if ( $last_seen_timestamp ) {
-			return $last_seen_timestamp < self::get_inactivity_timestamp();
+			return $last_seen_timestamp < $inactivity_timestamp;
 		}
 
 		$release_date_timestamp = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		if ( $release_date_timestamp ) {
-			return $release_date_timestamp < self::get_inactivity_timestamp();
+			return $release_date_timestamp < $inactivity_timestamp;
 		}
 
-		// Release date is not defined yet, so we can't consider the user inactive.
+		// hardcoded fallback option, in case the release date option gets deleted, we need to use static:: to ensure the test class can override the function
+		if ( static::get_fallback_release_date_timestamp() < $inactivity_timestamp ) {
+			return true;
+		}
+
 		return false;
 	}
 
@@ -531,7 +630,19 @@ class Inactive_Users {
 
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
-			throw new \Exception( sprintf( 'User #%d found', esc_html( $user_id ) ) );
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'User not found in ' . __METHOD__,
+				array(
+					'user_id' => $user_id,
+				)
+			);
+			return false;
+		}
+
+		// Exclude wpcomvip user from inactivity checks
+		if ( Configs::get_bot_login() === $user->user_login ) {
+			return false;
 		}
 
 		// Exclude wpcomvip user from inactivity checks

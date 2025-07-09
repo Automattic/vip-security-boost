@@ -91,12 +91,17 @@ class Highlight_MFA_Users {
 
 	/**
 	 * Get the site-specific cache key for MFA count.
+	 * Includes a hash of the configured roles to ensure cache invalidation when roles change.
 	 *
 	 * @return string The cache key for the current site.
 	 */
-	private static function get_mfa_count_cache_key() {
-		$blog_id = get_current_blog_id();
-		return self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog_id;
+	private static function get_mfa_count_cache_key( $blog_id = null ) {
+		$blog_id = $blog_id ?? get_current_blog_id();
+
+		// Include a hash of the roles configuration to invalidate cache when roles change
+		$roles_hash = md5( wp_json_encode( self::$roles ) );
+
+		return self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog_id . '_' . $roles_hash;
 	}
 
 	/**
@@ -186,7 +191,7 @@ class Highlight_MFA_Users {
 
 		// Clear cache for each site where the user has roles
 		foreach ( $user_blogs as $blog ) {
-			$cache_key = self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog->userblog_id;
+			$cache_key = self::get_mfa_count_cache_key( $blog->userblog_id );
 			wp_cache_delete( $cache_key, self::MFA_COUNT_CACHE_GROUP );
 		}
 	}
