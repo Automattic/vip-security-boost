@@ -597,7 +597,6 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$vars  = Inactive_Users::last_seen_blocked_users_filter_query_args( [] );
 		$q     = new WP_User_Query( $vars );
 		$found = wp_list_pluck( $q->get_results(), 'ID' );
-		sort( $found );
 
 		// Clean up GET globals
 		unset( $_GET['last_seen_filter'], $_GET['last_seen_filter_nonce'] );
