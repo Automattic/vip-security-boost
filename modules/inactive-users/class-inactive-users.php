@@ -334,12 +334,6 @@ class Inactive_Users {
 	}
 
 	public static function get_inactive_users_query_args() {
-		// Use capability__in if capabilities are configured, otherwise use role__in
-		// if ( ! empty( self::$elevated_capabilities ) ) {
-		// 	$vars['capability__in'] = self::$elevated_capabilities;
-		// } else {
-		// 	$vars['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
-		// }
 		$vars = array(
 			// Only consider users that registered before the inactivity threshold
 			'date_query' => array(
@@ -347,9 +341,6 @@ class Inactive_Users {
 					'before' => gmdate( 'Y-m-d H:i:s', self::get_inactivity_timestamp() ),
 				),
 			),
-
-			// Only consider users with roles we want to target
-			'role__in'   => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
 
 			// Only consider users that have not been active since the inactivity threshold
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -365,7 +356,12 @@ class Inactive_Users {
 				],
 			),
 		);
-
+		// Use capability__in if capabilities are configured, otherwise use role__in
+		if ( ! empty( self::$elevated_capabilities ) ) {
+			$vars['capability__in'] = self::$elevated_capabilities;
+		} else {
+			$vars['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
+		}
 		return $vars;
 	}
 
