@@ -5,11 +5,13 @@ use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Inactive_Users {
-	private static $considered_inactive_after_days;
-	private static $elevated_roles;
-	private static $mode;
+	protected static $considered_inactive_after_days;
+	protected static $elevated_roles;
+	protected static $elevated_capabilities;
+	protected static $mode;
 	public static $release_date;
 
 	const LOG_FEATURE_NAME = 'sb_inactive_users';
@@ -38,6 +40,7 @@ class Inactive_Users {
 		self::$mode                           = $inactive_user_configs['mode'] ?? 'REPORT';
 		self::$considered_inactive_after_days = $inactive_user_configs['considered_inactive_after_days'] ?? 90;
 		self::$elevated_roles                 = $inactive_user_configs['roles'] ?? [ 'administrator' ];
+		self::$elevated_capabilities          = $inactive_user_configs['capabilities'] ?? [];
 
 		// Use a global cache group since users are shared among network sites.
 		wp_cache_add_global_groups( array( self::LAST_SEEN_CACHE_GROUP ) );
@@ -333,6 +336,47 @@ class Inactive_Users {
 	}
 
 	public static function get_inactive_users_query_args() {
+		$inact_ts = self::get_inactivity_timestamp();
+
+		// Users whose last_seen < inactivity cutoff
+		$or_clauses = array(
+			'relation' => 'OR',
+			array(
+				'key'     => self::LAST_SEEN_META_KEY,
+				'value'   => $inact_ts,
+				'type'    => 'NUMERIC',
+				'compare' => '<',
+			),
+		);
+
+		$release_ts = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
+		if ( false === $release_ts ) {
+			$release_ts = static::get_fallback_release_date_timestamp();
+		}
+
+		// If release date older than the cutoff, include “NOT EXISTS”
+		if ( $release_ts < $inact_ts ) {
+			$or_clauses[] = array(
+				'key'     => self::LAST_SEEN_META_KEY,
+				'compare' => 'NOT EXISTS',
+			);
+		}
+
+		// Users whose “ignore until” has expired (or was never set)
+		$ignore_clause = array(
+			'relation' => 'OR',
+			array(
+				'key'     => self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY,
+				'value'   => time(),
+				'type'    => 'NUMERIC',
+				'compare' => '<',
+			),
+			array(
+				'key'     => self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY,
+				'compare' => 'NOT EXISTS',
+			),
+		);
+
 		$vars = array(
 			// Only consider users that registered before the inactivity threshold
 			'date_query' => array(
@@ -341,27 +385,24 @@ class Inactive_Users {
 				),
 			),
 
-			// Only consider users with roles we want to target
-			'role__in'   => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
-
 			// Only consider users that have not been active since the inactivity threshold
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				[
 					'relation' => 'AND',
-					[
-						'key'     => self::LAST_SEEN_META_KEY,
-						'value'   => self::get_inactivity_timestamp(),
-						'type'    => 'NUMERIC',
-						'compare' => '<',
-					],
+					$or_clauses,
+					$ignore_clause,
 				],
 			),
 		);
-
+		// Use capability__in if capabilities are configured, otherwise use role__in
+		if ( ! empty( self::$elevated_capabilities ) ) {
+			$vars['capability__in'] = self::$elevated_capabilities;
+		} else {
+			$vars['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
+		}
 		return $vars;
 	}
-
 	/**
 	 * Filter users list table to show only blocked users, active only when BLOCK mode is enabled
 	 */
@@ -485,20 +526,26 @@ class Inactive_Users {
 		$has_blocked_users = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
 
 		if ( false === $has_blocked_users ) {
-			$users_query = new \WP_User_Query(
-				array(
-					'blog_id'      => $blog_id,
-					'fields'       => 'ID',
-					'meta_key'     => self::LAST_SEEN_META_KEY,
-					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-					'meta_value'   => self::get_inactivity_timestamp(),
-					'meta_type'    => 'NUMERIC',
-					'meta_compare' => '<',
-					'count_total'  => false,
-					'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
-					'role__in'     => ! empty( self::$elevated_roles ) ? self::$elevated_roles : array(),
-				),
+			$query_args = array(
+				'blog_id'      => $blog_id,
+				'fields'       => 'ID',
+				'meta_key'     => self::LAST_SEEN_META_KEY,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value'   => self::get_inactivity_timestamp(),
+				'meta_type'    => 'NUMERIC',
+				'meta_compare' => '<',
+				'count_total'  => false,
+				'number'       => 1, // To minimize the query time, we only need to know if there are any blocked users to show the link
 			);
+			
+			// Use capability__in if capabilities are configured, otherwise use role__in
+			if ( ! empty( self::$elevated_capabilities ) ) {
+				$query_args['capability__in'] = self::$elevated_capabilities;
+			} else {
+				$query_args['role__in'] = ! empty( self::$elevated_roles ) ? self::$elevated_roles : array();
+			}
+			
+			$users_query = new \WP_User_Query( $query_args );
 
 			$has_blocked_users = ! empty( $users_query->get_results() ) ? 1 : 0;
 
@@ -631,7 +678,7 @@ class Inactive_Users {
 			return;
 		}
 
-		if ( ! self::user_with_elevated_roles( $user ) ) {
+		if ( ! self::user_has_elevated_permissions( $user ) ) {
 			return;
 		}
 
@@ -745,10 +792,17 @@ class Inactive_Users {
 			return false;
 		}
 
-		return self::user_with_elevated_roles( $user );
+		return self::user_has_elevated_permissions( $user );
 	}
 
-	private static function user_with_elevated_roles( $user ) {
+	protected static function user_has_elevated_permissions( $user ) {
+		/**
+		 * Filters the last seen elevated capabilities that are used to determine if the last seen should be checked.
+		 *
+		 * @param array $elevated_capabilities The elevated capabilities.
+		 */
+		$elevated_capabilities = apply_filters( 'vip_security_boost_inactive_users_elevated_capabilities', self::$elevated_capabilities );
+		
 		/**
 		 * Filters the last seen elevated roles that are used to determine if the last seen should be checked.
 		 *
@@ -756,17 +810,7 @@ class Inactive_Users {
 		 */
 		$elevated_roles = apply_filters( 'vip_security_boost_inactive_users_elevated_roles', self::$elevated_roles );
 
-		// Prevent infinite loops inside user_can() due to other security logic.
-		if ( is_automattician( $user->ID ) ) {
-			return true;
-		}
-
-		// Ensure $user->roles is defined and is an array before using it.
-		if ( isset( $user->roles ) && is_array( $user->roles ) && array_intersect( $elevated_roles, $user->roles ) ) {
-			return true;
-		}
-
-		return false;
+		return Capability_Utils::user_has_elevated_permissions( $user, $elevated_capabilities, $elevated_roles );
 	}
 }
 
