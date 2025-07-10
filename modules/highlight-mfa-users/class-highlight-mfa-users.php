@@ -353,7 +353,7 @@ class Highlight_MFA_Users {
  */
 	public static function filter_users_by_mfa_status_args( $args ) {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
-		if ( isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
+		if ( is_admin() && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
 			$meta_query = $args['meta_query'] ?? [];
 
 			$meta_query[] = [
