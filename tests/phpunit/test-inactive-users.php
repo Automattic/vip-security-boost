@@ -528,4 +528,145 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertTrue( Inactive_Users::is_considered_inactive( $new_user_id ) );
 		wp_delete_user( $new_user_id );
 	}
+
+	/**
+	 * Test that the vip_site_details_index_data filter is added and works correctly
+	 */
+	public function test_vip_site_details_index_data_filter_is_added() {
+		// Verify the filter is added during init
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
+
+		// Test that the filter works by applying it
+		$initial_data  = [ 'some_key' => 'some_value' ];
+		$filtered_data = apply_filters( 'vip_site_details_index_data', $initial_data );
+
+		// Verify the filter was applied and our data was added
+		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
+		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data['vip_security_boost'] );
+		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count'] );
+		
+		// Verify the network-wide count is added only in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data['vip_security_boost'] );
+			$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count_all_blogs'] );
+		}
+
+		// Verify original data is preserved
+		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
+	}
+
+	/**
+	 * Test that add_inactive_users_count_to_sds_payload returns correct count for inactive users
+	 */
+	public function test_add_inactive_users_count_to_sds_payload_returns_correct_count() {
+		// Create additional inactive users
+		$inactive_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$inactive_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Make them inactive by setting old last seen timestamps
+		update_user_meta( $inactive_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $inactive_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		$result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+
+		// Should have 3 inactive users (the ones we created)
+		$this->assertEquals( 2, $result['vip_security_boost']['inactive_users_count'] );
+
+		// Clean up
+		wp_delete_user( $inactive_user_1 );
+		wp_delete_user( $inactive_user_2 );
+	}
+
+	/**
+	 * Test that add_inactive_users_count_to_sds_payload returns correct counts for multisite networks
+	 * Each site should have its own count of inactive users
+	 */
+	public function test_add_inactive_users_count_to_sds_payload_multisite_counts() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create two additional sites
+		$site_1_id = $this->factory->blog->create();
+		$site_2_id = $this->factory->blog->create();
+
+		// Create users for site 1
+		$site_1_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$site_1_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Create users for site 2
+		$site_2_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$site_2_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$site_2_user_3 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Switch to site 1 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_1_id );
+		add_user_to_blog( $site_1_id, $site_1_user_1, 'administrator' );
+		add_user_to_blog( $site_1_id, $site_1_user_2, 'administrator' );
+
+		// Make site 1 users inactive
+		update_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_1_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test site 1 count - role__in in WP_User_Query filters by current site roles,
+		// so only users with administrator role on site 1 are counted
+		$site_1_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+		$this->assertEquals( 2, $site_1_result['vip_security_boost']['inactive_users_count'], 'Site 1 should count 2 inactive users with roles on this site' );
+
+		restore_current_blog();
+
+		// Switch to site 2 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_2_id );
+		add_user_to_blog( $site_2_id, $site_2_user_1, 'administrator' );
+		add_user_to_blog( $site_2_id, $site_2_user_2, 'administrator' );
+		add_user_to_blog( $site_2_id, $site_2_user_3, 'administrator' );
+
+		// Make site 2 users inactive
+		update_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_2_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_2_user_3, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test site 2 count - only users with administrator role on site 2 are counted
+		$site_2_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+		$this->assertEquals( 3, $site_2_result['vip_security_boost']['inactive_users_count'], 'Site 2 should count 3 inactive users with roles on this site' );
+
+		restore_current_blog();
+
+		// Flush cache to ensure accurate counts
+		Inactive_Users::flush_cache();
+
+		// Test network-wide count - all users with administrator role are counted
+		$network_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+		$this->assertEquals( 5, $network_result['vip_security_boost']['inactive_users_count_all_blogs'], 'Network-wide should count 5 inactive users with roles on any site' );
+
+		// Clean up users
+		wp_delete_user( $site_1_user_1 );
+		wp_delete_user( $site_1_user_2 );
+		wp_delete_user( $site_2_user_1 );
+		wp_delete_user( $site_2_user_2 );
+		wp_delete_user( $site_2_user_3 );
+	}
 }
