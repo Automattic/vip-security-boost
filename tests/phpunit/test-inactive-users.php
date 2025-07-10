@@ -518,6 +518,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		restore_current_blog();
 
+		// Flush cache to ensure accurate counts
+		Inactive_Users::flush_cache();
+
 		// Test network-wide count - all users with administrator role are counted
 		$network_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
 		$this->assertEquals( 5, $network_result['vip_security_boost']['inactive_users_count_all_blogs'], 'Network-wide should count 5 inactive users with roles on any site' );

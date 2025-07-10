@@ -20,6 +20,8 @@ class Inactive_Users {
 	const LAST_SEEN_UPDATE_USER_META_CACHE_TTL             = MINUTE_IN_SECONDS * 5; // Store last seen once every five minute to avoid too many write DB operations
 	const BLOCKED_USERS_CACHE_KEY                          = 'wpvip_blocked_users_';
 	const BLOCKED_USERS_CACHE_TTL                          = MINUTE_IN_SECONDS * 5;
+	const INACTIVE_USERS_COUNT_CACHE_KEY                   = 'wpvip_inactive_users_count_';
+	const INACTIVE_USERS_COUNT_CACHE_TTL                   = MINUTE_IN_SECONDS * 5;
 	const LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY      = 'wpvip_last_seen_release_date_timestamp';
 
 	/**
@@ -301,14 +303,31 @@ class Inactive_Users {
 	public static function get_inactive_users_count( $blog_id = null ) {
 		$blog_id = $blog_id ?? get_current_blog_id();
 
+		// Use global cache for network-wide queries (blog_id = 0)
+		if ( 0 === $blog_id ) {
+			$cache_key    = self::get_inactive_users_count_cache_key( $blog_id );
+			$cached_count = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+
+			if ( false !== $cached_count ) {
+				return $cached_count;
+			}
+		}
+
 		$args = array_merge( [
 			'blog_id'     => $blog_id,
 			'count_total' => true,
 		], self::get_inactive_users_query_args() );
 
 		$users_query = new \WP_User_Query( $args );
+		$count       = $users_query->get_total();
 
-		return $users_query->get_total();
+		// Cache the result for global queries (blog_id = 0)
+		if ( 0 === $blog_id ) {
+			$cache_key = self::get_inactive_users_count_cache_key( $blog_id );
+			wp_cache_set( $cache_key, $count, self::LAST_SEEN_CACHE_GROUP, self::INACTIVE_USERS_COUNT_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+		}
+
+		return $count;
 	}
 
 	public static function get_inactive_users_query_args() {
@@ -432,6 +451,24 @@ class Inactive_Users {
 		return self::BLOCKED_USERS_CACHE_KEY . ( is_network_admin() ? null : get_current_blog_id() );
 	}
 
+	public static function get_inactive_users_count_cache_key( $blog_id ) {
+		return self::INACTIVE_USERS_COUNT_CACHE_KEY . $blog_id;
+	}
+
+	public static function flush_cache() {
+		// Clear blocked users cache
+		$cache_key = self::get_blocked_users_cache_key();
+		wp_cache_delete( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+
+		// Clear inactive users count cache for current blog
+		$inactive_users_cache_key = self::get_inactive_users_count_cache_key( get_current_blog_id() );
+		wp_cache_delete( $inactive_users_cache_key, self::LAST_SEEN_CACHE_GROUP );
+
+		// Clear inactive users count cache for global queries
+		$inactive_users_cache_key = self::get_inactive_users_count_cache_key( 0 );
+		wp_cache_delete( $inactive_users_cache_key, self::LAST_SEEN_CACHE_GROUP );
+	}
+
 	/**
 	 * Add blocked users filter to users list table, active only when BLOCK mode is enabled
 	 *
@@ -531,9 +568,7 @@ class Inactive_Users {
 			$user_role = $user && ! empty( $user->roles ) ? $user->roles[0] : '';
 			do_action( 'vip_security_user_unblock', $user_id, $user_role );
 
-			$cache_key = self::get_blocked_users_cache_key();
-			// clearing the cache
-			wp_cache_delete( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+			self::flush_cache();
 		}
 
 		if ( $error ) {
