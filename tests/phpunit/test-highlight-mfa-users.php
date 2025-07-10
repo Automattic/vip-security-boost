@@ -254,10 +254,9 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// - $this->subscriber_user_id (not administrator/editor role)
 		// - $this->admin_user_mfa_enabled_id (has MFA enabled in mock)
 		
-		// If default user exists and is an admin, count is 3, otherwise 2
-		// But the test is getting 4, so there must be another user
-		// Let's update to match what the actual system is returning
-		$expected_count  = 4;
+		// With the new implementation using is_user_using_two_factor(), 
+		// we're getting 3 users without MFA
+		$expected_count  = 3;
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-error"><p>%s <a href="%s">%s</a></p></div>',
@@ -292,8 +291,8 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 
-		// Same count as the previous test - we have 4 users without MFA
-		$expected_count  = 4;
+		// Same count as the previous test - we have 3 users without MFA
+		$expected_count  = 3;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>', // Notice class is notice-info when filtered
@@ -357,17 +356,15 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 			'fields' => 'all',
 		] );
 		
-		// Enable MFA for all users with administrator or editor roles by setting the user meta
-		$users_with_meta_updated = [];
+		// Enable MFA for all users with administrator or editor roles using the mock
 		foreach ( $all_users as $user ) {
 			if ( array_intersect( [ 'administrator', 'editor' ], $user->roles ) ) {
-				// Set a non-empty providers array to indicate MFA is enabled
-				update_user_meta( $user->ID, '_two_factor_enabled_providers', [ 'Two_Factor_Totp' ] );
-				$users_with_meta_updated[] = $user->ID;
+				// Add to the mock's enabled user IDs array
+				Two_Factor_Core::$mock_enabled_user_ids[] = $user->ID;
 			}
 		}
 		
-		// Clear cache again after updating user meta
+		// Clear cache again to ensure fresh calculation with updated mock data
 		Highlight_MFA_Users::clear_mfa_count_cache();
 		
 		// Expect no output
@@ -376,11 +373,6 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$output = ob_get_clean();
 		
 		$this->assertEmpty( $output );
-		
-		// Clean up: remove the user meta we added
-		foreach ( $users_with_meta_updated as $user_id ) {
-			delete_user_meta( $user_id, '_two_factor_enabled_providers' );
-		}
 	}
 
 	/**
