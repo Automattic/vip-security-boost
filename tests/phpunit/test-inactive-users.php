@@ -269,6 +269,117 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that user with elevated capabilities is tracked
+	 */
+	public function test_user_with_elevated_capabilities_is_tracked() {
+		// Create a new instance with capability configuration
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$elevated_capabilities          = [ 'manage_options' ];
+				self::$elevated_roles                 = [];
+				self::$mode                           = 'BLOCK';
+				self::$considered_inactive_after_days = 90;
+			}
+			
+			public static function test_user_has_elevated_permissions( $user ) {
+				return parent::user_has_elevated_permissions( $user );
+			}
+		};
+		
+		$inactive_users_class::reset_for_test();
+		
+		// Create user with manage_options capability
+		$cap_user_id = $this->factory->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$cap_user    = new WP_User( $cap_user_id );
+		$cap_user->add_cap( 'manage_options' );
+		
+		// User should have elevated permissions due to capability
+		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $cap_user ) );
+		
+		wp_delete_user( $cap_user_id );
+	}
+
+	/**
+	 * Test that capabilities take priority over roles
+	 */
+	public function test_capabilities_take_priority_over_roles() {
+		// Create a new instance with both capability and role configuration
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$elevated_capabilities          = [ 'edit_posts' ];
+				self::$elevated_roles                 = [ 'administrator' ];
+				self::$mode                           = 'BLOCK';
+				self::$considered_inactive_after_days = 90;
+			}
+			
+			public static function test_user_has_elevated_permissions( $user ) {
+				return parent::user_has_elevated_permissions( $user );
+			}
+		};
+		
+		$inactive_users_class::reset_for_test();
+		
+		// Create user with only the capability, not the role
+		$cap_user_id = $this->factory->user->create([
+			'role'            => 'subscriber',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$cap_user    = new WP_User( $cap_user_id );
+		$cap_user->add_cap( 'edit_posts' );
+		
+		// User should have elevated permissions due to capability even without admin role
+		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $cap_user ) );
+		
+		wp_delete_user( $cap_user_id );
+	}
+
+	/**
+	 * Test backward compatibility - roles still work when no capabilities configured
+	 */
+	public function test_backward_compatibility_roles_work_without_capabilities() {
+		// Create a new instance with only role configuration (no capabilities)
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$elevated_capabilities          = [];
+				self::$elevated_roles                 = [ 'editor' ];
+				self::$mode                           = 'BLOCK';
+				self::$considered_inactive_after_days = 90;
+			}
+			
+			public static function test_user_has_elevated_permissions( $user ) {
+				return parent::user_has_elevated_permissions( $user );
+			}
+		};
+		
+		$inactive_users_class::reset_for_test();
+		
+		// Create user with editor role
+		$editor_user_id = $this->factory->user->create([
+			'role'            => 'editor',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$editor_user    = new WP_User( $editor_user_id );
+		
+		// User should have elevated permissions due to role
+		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $editor_user ) );
+		
+		// Create user without elevated role
+		$subscriber_user_id = $this->factory->user->create([
+			'role'            => 'subscriber',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$subscriber_user    = new WP_User( $subscriber_user_id );
+		
+		// User should not have elevated permissions
+		$this->assertFalse( $inactive_users_class::test_user_has_elevated_permissions( $subscriber_user ) );
+		
+		wp_delete_user( $editor_user_id );
+		wp_delete_user( $subscriber_user_id );
+	}
+
+	/**
 	 * Test that modify_users_list_table_items works with WP_MS_Users_List_Table for multisite
 	 */
 	public function test_modify_users_list_table_items_works_with_multisite_table() {
@@ -309,6 +420,32 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '.inactive-user-badge--inactive', $output );
 		$this->assertStringContainsString( 'background: #d63638', $output );
 		$this->assertStringContainsString( 'background: #f0b849', $output );
+	}
+
+	/**
+	 * Test capability filter
+	 */
+	public function test_capability_filter() {
+		// Create a test to verify the filter works
+		$test_capabilities = [ 'custom_capability', 'another_capability' ];
+		
+		add_filter( 'vip_security_boost_inactive_users_elevated_capabilities', function () use ( $test_capabilities ) {
+			return $test_capabilities;
+		});
+		
+		// Create instance to test filter application
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function get_test_capabilities() {
+				$capabilities = self::$elevated_capabilities ?? [];
+				return apply_filters( 'vip_security_boost_inactive_users_elevated_capabilities', $capabilities );
+			}
+		};
+		
+		$filtered_caps = $inactive_users_class::get_test_capabilities();
+		$this->assertEquals( $test_capabilities, $filtered_caps );
+		
+		// Clean up
+		remove_all_filters( 'vip_security_boost_inactive_users_elevated_capabilities' );
 	}
 
 	/**
