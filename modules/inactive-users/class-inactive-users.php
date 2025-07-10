@@ -334,6 +334,47 @@ class Inactive_Users {
 	}
 
 	public static function get_inactive_users_query_args() {
+		$inact_ts = self::get_inactivity_timestamp();
+
+		// Users whose last_seen < inactivity cutoff
+		$or_clauses = array(
+			'relation' => 'OR',
+			array(
+				'key'     => self::LAST_SEEN_META_KEY,
+				'value'   => $inact_ts,
+				'type'    => 'NUMERIC',
+				'compare' => '<',
+			),
+		);
+
+		$release_ts = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
+		if ( false === $release_ts ) {
+			$release_ts = static::get_fallback_release_date_timestamp();
+		}
+
+		// If release date older than the cutoff, include “NOT EXISTS”
+		if ( $release_ts < $inact_ts ) {
+			$or_clauses[] = array(
+				'key'     => self::LAST_SEEN_META_KEY,
+				'compare' => 'NOT EXISTS',
+			);
+		}
+
+		// Users whose “ignore until” has expired (or was never set)
+		$ignore_clause = array(
+			'relation' => 'OR',
+			array(
+				'key'     => self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY,
+				'value'   => time(),
+				'type'    => 'NUMERIC',
+				'compare' => '<',
+			),
+			array(
+				'key'     => self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY,
+				'compare' => 'NOT EXISTS',
+			),
+		);
+
 		$vars = array(
 			// Only consider users that registered before the inactivity threshold
 			'date_query' => array(
@@ -347,12 +388,8 @@ class Inactive_Users {
 			'meta_query' => array(
 				[
 					'relation' => 'AND',
-					[
-						'key'     => self::LAST_SEEN_META_KEY,
-						'value'   => self::get_inactivity_timestamp(),
-						'type'    => 'NUMERIC',
-						'compare' => '<',
-					],
+					$or_clauses,
+					$ignore_clause,
 				],
 			),
 		);
@@ -364,7 +401,6 @@ class Inactive_Users {
 		}
 		return $vars;
 	}
-
 	/**
 	 * Filter users list table to show only blocked users, active only when BLOCK mode is enabled
 	 */
