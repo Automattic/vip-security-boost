@@ -497,7 +497,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
 		switch_to_blog( $site_1_id );
 		add_user_to_blog( $site_1_id, $site_1_user_1, 'administrator' );
+		delete_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
 		add_user_to_blog( $site_1_id, $site_1_user_2, 'administrator' );
+		delete_user_meta( $site_1_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
 
 		// Make site 1 users inactive
 		update_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
@@ -514,8 +516,11 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
 		switch_to_blog( $site_2_id );
 		add_user_to_blog( $site_2_id, $site_2_user_1, 'administrator' );
+		delete_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
 		add_user_to_blog( $site_2_id, $site_2_user_2, 'administrator' );
+		delete_user_meta( $site_2_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
 		add_user_to_blog( $site_2_id, $site_2_user_3, 'administrator' );
+		delete_user_meta( $site_2_user_3, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
 
 		// Make site 2 users inactive
 		update_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
