@@ -285,10 +285,10 @@ class Highlight_MFA_Users {
 		if ( $is_default_config ) {
 			// Default roles: Administrator, Editor
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of users with Administrator or Editor roles without 2FA enabled being shown. */
+				/* Translators: %s is the number of users with Administrator or Editor roles without 2FA enabled being shown. */
 				_n(
-					'Showing %d user with Administrator or Editor roles without Two-Factor Authentication enabled.',
-					'Showing %d users with Administrator or Editor roles without Two-Factor Authentication enabled.',
+					'Showing %s user with Administrator or Editor roles without Two-Factor Authentication enabled.',
+					'Showing %s users with Administrator or Editor roles without Two-Factor Authentication enabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -297,10 +297,10 @@ class Highlight_MFA_Users {
 		} else {
 			// Custom roles
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of users with high-privileges without 2FA enabled being shown. */
+				/* Translators: %s is the number of users with high-privileges without 2FA enabled being shown. */
 				_n(
-					'Showing %d user with high-privileges without Two-Factor Authentication enabled.',
-					'Showing %d users with high-privileges without Two-Factor Authentication enabled.',
+					'Showing %s user with high-privileges without Two-Factor Authentication enabled.',
+					'Showing %s users with high-privileges without Two-Factor Authentication enabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -322,10 +322,10 @@ class Highlight_MFA_Users {
 		$notice_message_text = '';
 		if ( $is_default_config ) {
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of users with Administrator or Editor roles and 2FA disabled. */
+				/* Translators: %s is the number of users with Administrator or Editor roles and 2FA disabled. */
 				_n(
-					'There is %d user with Administrator or Editor roles with Two-Factor Authentication disabled.',
-					'There are %d users with Administrator or Editor roles with Two-Factor Authentication disabled.',
+					'There is %s user with Administrator or Editor roles with Two-Factor Authentication disabled.',
+					'There are %s users with Administrator or Editor roles with Two-Factor Authentication disabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -333,10 +333,10 @@ class Highlight_MFA_Users {
 			);
 		} else {
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of high-privilege users with 2FA disabled. */
+				/* Translators: %s is the number of high-privilege users with 2FA disabled. */
 				_n(
-					'There is %d user with high-privileges with Two-Factor Authentication disabled.',
-					'There are %d users with high-privileges with Two-Factor Authentication disabled.',
+					'There is %s user with high-privileges with Two-Factor Authentication disabled.',
+					'There are %s users with high-privileges with Two-Factor Authentication disabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
