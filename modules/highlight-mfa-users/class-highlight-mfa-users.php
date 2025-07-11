@@ -49,7 +49,7 @@ class Highlight_MFA_Users {
 		self::$roles        = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
-		add_action( 'pre_get_users', [ __CLASS__, 'filter_users_by_mfa_status' ] );
+		add_filter( 'users_list_table_query_args', [ __CLASS__, 'filter_users_by_mfa_status_args' ] );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_tracking_scripts' ] );
 
 		// Add column for role
@@ -66,6 +66,9 @@ class Highlight_MFA_Users {
 
 		// Handle sorting
 		add_filter( 'users_list_table_query_args', [ __CLASS__, 'sort_columns' ] );
+
+		// Hook into found_users_query to fix the count query for pagination
+		add_filter( 'found_users_query', [ __CLASS__, 'fix_found_users_query' ], 10, 2 );
 
 		// Clear cache when users are created or deleted
 		add_action( 'user_register', [ __CLASS__, 'clear_mfa_count_cache' ] );
@@ -289,10 +292,10 @@ class Highlight_MFA_Users {
 		if ( $is_default_config ) {
 			// Default roles: Administrator, Editor
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of users with Administrator or Editor roles without 2FA enabled being shown. */
+				/* Translators: %s is the number of users with Administrator or Editor roles without 2FA enabled being shown. */
 				_n(
-					'Showing %d user with Administrator or Editor roles without Two-Factor Authentication enabled.',
-					'Showing %d users with Administrator or Editor roles without Two-Factor Authentication enabled.',
+					'Showing %s user with Administrator or Editor roles without Two-Factor Authentication enabled.',
+					'Showing %s users with Administrator or Editor roles without Two-Factor Authentication enabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -301,10 +304,10 @@ class Highlight_MFA_Users {
 		} else {
 			// Custom roles
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of users with high-privileges without 2FA enabled being shown. */
+				/* Translators: %s is the number of users with high-privileges without 2FA enabled being shown. */
 				_n(
-					'Showing %d user with high-privileges without Two-Factor Authentication enabled.',
-					'Showing %d users with high-privileges without Two-Factor Authentication enabled.',
+					'Showing %s user with high-privileges without Two-Factor Authentication enabled.',
+					'Showing %s users with high-privileges without Two-Factor Authentication enabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -326,10 +329,10 @@ class Highlight_MFA_Users {
 		$notice_message_text = '';
 		if ( $is_default_config ) {
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of users with Administrator or Editor roles and 2FA disabled. */
+				/* Translators: %s is the number of users with Administrator or Editor roles and 2FA disabled. */
 				_n(
-					'There is %d user with Administrator or Editor roles with Two-Factor Authentication disabled.',
-					'There are %d users with Administrator or Editor roles with Two-Factor Authentication disabled.',
+					'There is %s user with Administrator or Editor roles with Two-Factor Authentication disabled.',
+					'There are %s users with Administrator or Editor roles with Two-Factor Authentication disabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -337,10 +340,10 @@ class Highlight_MFA_Users {
 			);
 		} else {
 			$notice_message_text = sprintf(
-				/* Translators: %d is the number of high-privilege users with 2FA disabled. */
+				/* Translators: %s is the number of high-privilege users with 2FA disabled. */
 				_n(
-					'There is %d user with high-privileges with Two-Factor Authentication disabled.',
-					'There are %d users with high-privileges with Two-Factor Authentication disabled.',
+					'There is %s user with high-privileges with Two-Factor Authentication disabled.',
+					'There are %s users with high-privileges with Two-Factor Authentication disabled.',
 					$mfa_disabled_count,
 					'wpvip'
 				),
@@ -351,18 +354,14 @@ class Highlight_MFA_Users {
 	}
 
 	/**
-		* Modify the user query on the Users page to filter by MFA status if requested.
-		* @param \WP_User_Query $query The WP_User_Query instance (passed by reference).
-		*/
-	public static function filter_users_by_mfa_status( $query ) {
-		global $pagenow;
+ * Filter users by MFA status using the correct hook for the user list table.
+ * @param array $args The query arguments.
+ * @return array The modified query arguments.
+ */
+	public static function filter_users_by_mfa_status_args( $args ) {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is not required for this check
-		if ( is_admin() && 'users.php' === $pagenow && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
-			// Ensure we don't break other meta queries
-			$meta_query = $query->get( 'meta_query' );
-			if ( ! is_array( $meta_query ) ) {
-				$meta_query = [];
-			}
+		if ( is_admin() && isset( $_GET['filter_mfa_disabled'] ) && '1' === $_GET['filter_mfa_disabled'] ) {
+			$meta_query = $args['meta_query'] ?? [];
 
 			$meta_query[] = [
 				'relation' => 'OR',
@@ -384,35 +383,28 @@ class Highlight_MFA_Users {
 
 			// Use capability__in if capabilities are configured, otherwise use role__in
 			if ( Capability_Utils::are_capabilities_configured( self::$capabilities ) ) {
-				$query->set( 'capability__in', self::$capabilities );
+				$args['capability__in'] = self::$capabilities;
 			} else {
-				$query->set( 'role__in', self::$roles );
+				$args['role__in'] = self::$roles;
 			}
-			$query->set( 'meta_query', $meta_query );
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			$args['meta_query'] = $meta_query;
 
-			// Exclude skipped users AND always exclude User wpcomvip
 			$skipped_user_ids = \get_option( self::MFA_SKIP_USER_IDS_OPTION_KEY, [] );
 			if ( ! is_array( $skipped_user_ids ) ) {
-				$skipped_user_ids = [];
+					$skipped_user_ids = [];
 			}
 
-			// Exclude the wpcomvip user from the list
 			$wpcomvip = get_user_by( 'login', Configs::get_bot_login() );
 			if ( false !== $wpcomvip ) {
-				$skipped_user_ids[] = $wpcomvip->ID;
+					$skipped_user_ids[] = $wpcomvip->ID;
 			}
 
-			// Get any existing exclusions from the query
-			$exclude_ids = $query->get( 'exclude' );
-			if ( ! is_array( $exclude_ids ) ) {
-				$exclude_ids = [];
-			}
-			// Merge existing exclusions, skipped IDs from option
-			$final_exclude_ids = array_unique( array_merge( $exclude_ids, $skipped_user_ids ) );
-
-			// Set the final list of excluded IDs
-			$query->set( 'exclude', $final_exclude_ids );
+			$exclude_ids = $args['exclude'] ?? [];
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
+			$args['exclude'] = array_unique( array_merge( $exclude_ids, $skipped_user_ids ) );
 		}
+		return $args;
 	}
 
 	/**
@@ -422,10 +414,15 @@ class Highlight_MFA_Users {
 	 * @return array The modified columns.
 	 */
 	public static function add_columns( $columns ) {
+		// If role column already exists, just return the original columns
+		if ( isset( $columns[ self::ROLE_COLUMN_KEY ] ) ) {
+			return $columns;
+		}
+
 		$new_columns = [];
 
 		foreach ( $columns as $key => $title ) {
-			// Add role column if it doesn't exist
+			// Add role column after name column
 			if ( 'name' === $key ) {
 				$new_columns[ $key ]                  = $title;
 				$new_columns[ self::ROLE_COLUMN_KEY ] = __( 'Role', 'wpvip' );
@@ -496,6 +493,39 @@ class Highlight_MFA_Users {
 		}
 
 		return $args;
+	}
+
+	/**
+	 * This function replaces WordPress's potentially unreliable `SELECT FOUND_ROWS()`
+	 * with a direct `SELECT COUNT(DISTINCT ID)` query. It dynamically uses the
+	 * exact same `FROM` and `WHERE` clauses that the main `WP_User_Query` is using,
+	 * ensuring the total user count is always accurate for pagination.
+	 *
+	 * @param string         $sql   The original SQL query (usually 'SELECT FOUND_ROWS()').
+	 * @param \WP_User_Query $query The WP_User_Query instance.
+	 * @return string The corrected SQL query for counting users.
+	 */
+	public static function fix_found_users_query( $sql, $query ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! is_admin() || ! isset( $_GET['filter_mfa_disabled'] ) || '1' !== $_GET['filter_mfa_disabled'] ) {
+			return $sql;
+		}
+
+		// The WP_User_Query object ($query) has already prepared its SQL clauses for the main query.
+		// We can reuse them to build a reliable COUNT query.
+		// These properties are populated by the prepare_query() method.
+		if ( empty( $query->query_from ) || empty( $query->query_where ) ) {
+			// This is unexpected, but as a fallback, return the original SQL to avoid errors.
+			return $sql;
+		}
+
+		global $wpdb;
+
+		// Build the reliable count query using the same FROM and WHERE clauses as the main query.
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
+		$count_sql = "SELECT COUNT(DISTINCT {$wpdb->users}.ID) {$query->query_from} {$query->query_where}";
+
+		return $count_sql;
 	}
 
 	/**
