@@ -3,8 +3,11 @@ namespace Automattic\VIP\Security\MFAUsers;
 
 use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Utils\Capability_Utils;
+use Automattic\VIP\Security\Constants;
+use Automattic\VIP\Security\Utils\Logger;
 
 class Forced_MFA_Users {
+	const LOG_FEATURE_NAME = 'sb_forced_mfa_users';
 	/**
 	 * The roles that should have MFA enforced.
 	 *
@@ -21,23 +24,24 @@ class Forced_MFA_Users {
 
 	public static function init() {
 		$forced_mfa_configs = Configs::get_module_configs( 'forced-mfa-users' );
+
+		// Add SDS hook regardless of the config.
+		add_filter( 'vip_site_details_index_data', [ __CLASS__, 'add_two_factor_enforcement_status_to_sds_payload' ] );
+
 		if ( empty( $forced_mfa_configs ) ) {
 			return;
 		}
-		
+
 		// Normalize capabilities and roles configuration
 		self::$capabilities = Capability_Utils::normalize_capabilities_input( $forced_mfa_configs['capabilities'] ?? [] );
 		self::$roles        = Capability_Utils::normalize_roles_input( $forced_mfa_configs['roles'] ?? [] );
-		
+
 		// Ensure we have either capabilities or roles configured
 		if ( empty( self::$capabilities ) && empty( self::$roles ) ) {
 			return;
 		}
-		
-		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
 
-		// Add SDS hook
-		add_filter( 'vip_site_details_index_data', [ __CLASS__, 'add_two_factor_enforcement_status_to_sds_payload' ] );
+		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
 	}
 
 	/**
@@ -58,10 +62,10 @@ class Forced_MFA_Users {
 		}
 
 		// Check if user has elevated permissions based on capabilities or roles
-		$user_has_two_factor_enforced = Capability_Utils::user_has_elevated_permissions( 
-			$user, 
-			self::$capabilities, 
-			self::$roles 
+		$user_has_two_factor_enforced = Capability_Utils::user_has_elevated_permissions(
+			$user,
+			self::$capabilities,
+			self::$roles
 		);
 
 		if ( $user_has_two_factor_enforced ) {
@@ -79,11 +83,17 @@ class Forced_MFA_Users {
 	 * @return array The SDS payload with the two factor enforcement status added.
 	 */
 	public static function add_two_factor_enforcement_status_to_sds_payload( $data ) {
-		// TODO wait for PR #59 and use the SDS_DATA_KEY constant
-		if ( ! isset( $data['vip_security_boost'] ) ) {
-			$data['vip_security_boost'] = array();
+		if ( ! isset( $data[ Constants::SDS_DATA_KEY ] ) ) {
+			$data[ Constants::SDS_DATA_KEY ] = array();
 		}
-		$data['vip_security_boost']['two_factor_status_'] = self::get_two_factor_enforcement_status();
+		try {
+			$data[ Constants::SDS_DATA_KEY ]['two_factor_status'] = self::get_two_factor_enforcement_status();
+		} catch ( \Exception $e ) {
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'Error adding two factor enforcement status to SDS payload: ' . $e->getMessage()
+			);
+		}
 		return $data;
 	}
 
