@@ -1,6 +1,7 @@
 <?php
 
 namespace Automattic\VIP\Security\Utils;
+
 use Automattic\VIP\Security\Utils\Logger;
 
 function load_integration_configs_from_url() {
