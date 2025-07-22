@@ -22,6 +22,8 @@ class Forced_MFA_Users {
 	 */
 	private static $capabilities;
 
+	private static $had_two_factor_enforced_filter = false;
+
 	public static function init() {
 		$forced_mfa_configs = Configs::get_module_configs( 'forced-mfa-users' );
 
@@ -40,6 +42,7 @@ class Forced_MFA_Users {
 		if ( empty( self::$capabilities ) && empty( self::$roles ) ) {
 			return;
 		}
+		self::$had_two_factor_enforced_filter = has_filter( 'wpcom_vip_is_two_factor_forced' ) !== false; // TODO this might run too early?
 
 		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
 	}
@@ -118,7 +121,7 @@ class Forced_MFA_Users {
 			// return wpcom_vip_is_two_factor_forced status
 			'is_enforced_globally'         => \has_filter( 'wpcom_vip_is_two_factor_forced', '__return_true' ) !== false,
 			'is_not_enforced_globally'     => \has_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' ) !== false,
-			'has_two_factor_forced_filter' => \has_filter( 'wpcom_vip_is_two_factor_forced' ) !== false,
+			'has_two_factor_forced_filter' => self::$had_two_factor_enforced_filter,
 			// return wpcom_vip_enable_two_factor status
 			'is_entirely_disabled'         => \has_filter( 'wpcom_vip_enable_two_factor', '__return_false' ) !== false || apply_filters( 'wpcom_vip_enable_two_factor', true ) === false,
 			'has_enable_two_factor_filter' => \has_filter( 'wpcom_vip_enable_two_factor' ) !== false,
