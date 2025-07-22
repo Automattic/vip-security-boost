@@ -20,7 +20,7 @@ function load_integration_configs_from_url() {
 			] );
 		}
 		return;
-	}
+	} 
 
 	$endpoint  = sprintf( '%s/integration?slug=security-boost&level=site&site_id=%s&is_vip=true', $config_api_url, constant( 'VIP_GO_APP_ID' ) );
 	$api_error = new \WP_Error( 'config-api-error', 'There was an error while fetching the integration configuration from the API.' );
