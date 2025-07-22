@@ -4,7 +4,8 @@ use Automattic\VIP\Security\InactiveUsers\Inactive_Users;
 
 class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;
-	private $elevated_roles = [ 'administrator' ];
+	private $elevated_roles                 = [ 'administrator' ];
+	private $considered_inactive_after_days = 90;
 
 	public function setUp(): void {
 		parent::setUp();
@@ -269,6 +270,117 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that user with elevated capabilities is tracked
+	 */
+	public function test_user_with_elevated_capabilities_is_tracked() {
+		// Create a new instance with capability configuration
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$elevated_capabilities          = [ 'manage_options' ];
+				self::$elevated_roles                 = [];
+				self::$mode                           = 'BLOCK';
+				self::$considered_inactive_after_days = 90;
+			}
+			
+			public static function test_user_has_elevated_permissions( $user ) {
+				return parent::user_has_elevated_permissions( $user );
+			}
+		};
+		
+		$inactive_users_class::reset_for_test();
+		
+		// Create user with manage_options capability
+		$cap_user_id = $this->factory->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$cap_user    = new WP_User( $cap_user_id );
+		$cap_user->add_cap( 'manage_options' );
+		
+		// User should have elevated permissions due to capability
+		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $cap_user ) );
+		
+		wp_delete_user( $cap_user_id );
+	}
+
+	/**
+	 * Test that capabilities take priority over roles
+	 */
+	public function test_capabilities_take_priority_over_roles() {
+		// Create a new instance with both capability and role configuration
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$elevated_capabilities          = [ 'edit_posts' ];
+				self::$elevated_roles                 = [ 'administrator' ];
+				self::$mode                           = 'BLOCK';
+				self::$considered_inactive_after_days = 90;
+			}
+			
+			public static function test_user_has_elevated_permissions( $user ) {
+				return parent::user_has_elevated_permissions( $user );
+			}
+		};
+		
+		$inactive_users_class::reset_for_test();
+		
+		// Create user with only the capability, not the role
+		$cap_user_id = $this->factory->user->create([
+			'role'            => 'subscriber',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$cap_user    = new WP_User( $cap_user_id );
+		$cap_user->add_cap( 'edit_posts' );
+		
+		// User should have elevated permissions due to capability even without admin role
+		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $cap_user ) );
+		
+		wp_delete_user( $cap_user_id );
+	}
+
+	/**
+	 * Test backward compatibility - roles still work when no capabilities configured
+	 */
+	public function test_backward_compatibility_roles_work_without_capabilities() {
+		// Create a new instance with only role configuration (no capabilities)
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$elevated_capabilities          = [];
+				self::$elevated_roles                 = [ 'editor' ];
+				self::$mode                           = 'BLOCK';
+				self::$considered_inactive_after_days = 90;
+			}
+			
+			public static function test_user_has_elevated_permissions( $user ) {
+				return parent::user_has_elevated_permissions( $user );
+			}
+		};
+		
+		$inactive_users_class::reset_for_test();
+		
+		// Create user with editor role
+		$editor_user_id = $this->factory->user->create([
+			'role'            => 'editor',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$editor_user    = new WP_User( $editor_user_id );
+		
+		// User should have elevated permissions due to role
+		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $editor_user ) );
+		
+		// Create user without elevated role
+		$subscriber_user_id = $this->factory->user->create([
+			'role'            => 'subscriber',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		$subscriber_user    = new WP_User( $subscriber_user_id );
+		
+		// User should not have elevated permissions
+		$this->assertFalse( $inactive_users_class::test_user_has_elevated_permissions( $subscriber_user ) );
+		
+		wp_delete_user( $editor_user_id );
+		wp_delete_user( $subscriber_user_id );
+	}
+
+	/**
 	 * Test that modify_users_list_table_items works with WP_MS_Users_List_Table for multisite
 	 */
 	public function test_modify_users_list_table_items_works_with_multisite_table() {
@@ -309,6 +421,32 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '.inactive-user-badge--inactive', $output );
 		$this->assertStringContainsString( 'background: #d63638', $output );
 		$this->assertStringContainsString( 'background: #f0b849', $output );
+	}
+
+	/**
+	 * Test capability filter
+	 */
+	public function test_capability_filter() {
+		// Create a test to verify the filter works
+		$test_capabilities = [ 'custom_capability', 'another_capability' ];
+		
+		add_filter( 'vip_security_boost_inactive_users_elevated_capabilities', function () use ( $test_capabilities ) {
+			return $test_capabilities;
+		});
+		
+		// Create instance to test filter application
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function get_test_capabilities() {
+				$capabilities = self::$elevated_capabilities ?? [];
+				return apply_filters( 'vip_security_boost_inactive_users_elevated_capabilities', $capabilities );
+			}
+		};
+		
+		$filtered_caps = $inactive_users_class::get_test_capabilities();
+		$this->assertEquals( $test_capabilities, $filtered_caps );
+		
+		// Clean up
+		remove_all_filters( 'vip_security_boost_inactive_users_elevated_capabilities' );
 	}
 
 	/**
@@ -374,6 +512,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		update_option( 'date_format', $old_date_format );
 		update_option( 'time_format', $old_time_format );
 	}
+
 	/**
 	 * Test that a user is considered inactive if the fallback date is in the past
 	 */
@@ -390,5 +529,225 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		$this->assertTrue( Inactive_Users::is_considered_inactive( $new_user_id ) );
 		wp_delete_user( $new_user_id );
+	}
+
+	/**
+	 * Test that the vip_site_details_index_data filter is added and works correctly
+	 */
+	public function test_vip_site_details_index_data_filter_is_added() {
+		// Verify the filter is added during init
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
+
+		// Test that the filter works by applying it
+		$initial_data  = [ 'some_key' => 'some_value' ];
+		$filtered_data = apply_filters( 'vip_site_details_index_data', $initial_data );
+
+		// Verify the filter was applied and our data was added
+		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
+		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data['vip_security_boost'] );
+		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count'] );
+
+		// Verify the network-wide count is added only in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data['vip_security_boost'] );
+			$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count_all_blogs'] );
+		}
+
+		// Verify original data is preserved
+		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
+	}
+
+	/**
+	 * Test that add_inactive_users_count_to_sds_payload returns correct count for inactive users
+	 */
+	public function test_add_inactive_users_count_to_sds_payload_returns_correct_count() {
+		// Create additional inactive users
+		$inactive_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $inactive_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		$inactive_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $inactive_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Make them inactive by setting old last seen timestamps
+		update_user_meta( $inactive_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $inactive_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		$result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+
+		// Should have 3 inactive users (the ones we created)
+		$this->assertEquals( 2, $result['vip_security_boost']['inactive_users_count'] );
+
+		// Clean up
+		wp_delete_user( $inactive_user_1 );
+		wp_delete_user( $inactive_user_2 );
+	}
+
+	/**
+	 * Test that add_inactive_users_count_to_sds_payload returns correct counts for multisite networks
+	 * Each site should have its own count of inactive users
+	 */
+	public function test_add_inactive_users_count_to_sds_payload_multisite_counts() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create two additional sites
+		$site_1_id = $this->factory->blog->create();
+		$site_2_id = $this->factory->blog->create();
+
+		// Create users for site 1
+		$site_1_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$site_1_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $site_1_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Create users for site 2
+		$site_2_user_1 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$site_2_user_2 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $site_2_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$site_2_user_3 = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		delete_user_meta( $site_2_user_3, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Switch to site 1 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_1_id );
+		add_user_to_blog( $site_1_id, $site_1_user_1, 'administrator' );
+		delete_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		add_user_to_blog( $site_1_id, $site_1_user_2, 'administrator' );
+		delete_user_meta( $site_1_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Make site 1 users inactive
+		update_user_meta( $site_1_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_1_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test site 1 count - role__in in WP_User_Query filters by current site roles,
+		// so only users with administrator role on site 1 are counted
+		$site_1_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+		$this->assertEquals( 2, $site_1_result['vip_security_boost']['inactive_users_count'], 'Site 1 should count 2 inactive users with roles on this site' );
+
+		restore_current_blog();
+
+		// Switch to site 2 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_2_id );
+		add_user_to_blog( $site_2_id, $site_2_user_1, 'administrator' );
+		delete_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		add_user_to_blog( $site_2_id, $site_2_user_2, 'administrator' );
+		delete_user_meta( $site_2_user_2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		add_user_to_blog( $site_2_id, $site_2_user_3, 'administrator' );
+		delete_user_meta( $site_2_user_3, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Make site 2 users inactive
+		update_user_meta( $site_2_user_1, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_2_user_2, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $site_2_user_3, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Test site 2 count - only users with administrator role on site 2 are counted
+		$site_2_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+		$this->assertEquals( 3, $site_2_result['vip_security_boost']['inactive_users_count'], 'Site 2 should count 3 inactive users with roles on this site' );
+
+		restore_current_blog();
+
+		// Flush cache to ensure accurate counts
+		Inactive_Users::flush_cache();
+
+		// Test network-wide count - all users with administrator role are counted
+		$network_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
+		$this->assertEquals( 5, $network_result['vip_security_boost']['inactive_users_count_all_blogs'], 'Network-wide should count 5 inactive users with roles on any site' );
+
+		// Clean up users
+		wp_delete_user( $site_1_user_1 );
+		wp_delete_user( $site_1_user_2 );
+		wp_delete_user( $site_2_user_1 );
+		wp_delete_user( $site_2_user_2 );
+		wp_delete_user( $site_2_user_3 );
+	}
+
+	/**
+	 * Test that only inactive are returned for the blocked filter
+	 */
+	public function test_only_inactive_and_release_users_are_returned_blocked_filter(): void {
+		// Simulate a "blocked" user filter request with nonce
+		$_GET['last_seen_filter']       = 'blocked';
+		$_GET['last_seen_filter_nonce'] = wp_create_nonce( 'last_seen_filter' );
+
+		$cutoff = strtotime( '-' . $this->considered_inactive_after_days . ' days' );
+
+		// User #1: Inactive — last seen before cutoff, no ignore meta
+		$u1 = $this->factory()->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', $cutoff - WEEK_IN_SECONDS ),
+			'role'            => 'administrator',
+		]);
+		update_user_meta( $u1, Inactive_Users::LAST_SEEN_META_KEY, $cutoff - DAY_IN_SECONDS );
+		delete_user_meta( $u1, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $u1 ) );
+
+		// User #2: Active — last seen after cutoff
+		$u2 = $this->factory()->user->create([
+			'role' => 'administrator',
+		]);
+		update_user_meta( $u2, Inactive_Users::LAST_SEEN_META_KEY, $cutoff + DAY_IN_SECONDS );
+		delete_user_meta( $u2, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $u2 ) );
+
+		// User #3: Ignored — last seen before cutoff, but ignore-until is in the future
+		$u3 = $this->factory()->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', $cutoff - DAY_IN_SECONDS ),
+			'role'            => 'administrator',
+		]);
+		update_user_meta( $u3, Inactive_Users::LAST_SEEN_META_KEY, $cutoff - DAY_IN_SECONDS );
+		update_user_meta( $u3, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, time() + DAY_IN_SECONDS );
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $u3 ) );
+
+		// User #4: Inactive — no last seen, registered before cutoff, release timestamp forced into past
+		update_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, 0 );
+		$u4 = $this->factory()->user->create([
+			'user_registered' => gmdate( 'Y-m-d H:i:s', $cutoff - DAY_IN_SECONDS ),
+			'role'            => 'administrator',
+		]);
+		delete_user_meta( $u4, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $u4 ) );
+
+		// Run user query using blocked filter args
+		$vars  = Inactive_Users::last_seen_blocked_users_filter_query_args( [] );
+		$q     = new WP_User_Query( $vars );
+		$found = wp_list_pluck( $q->get_results(), 'ID' );
+
+		// Clean up GET globals
+		unset( $_GET['last_seen_filter'], $_GET['last_seen_filter_nonce'] );
+
+		// Assert: only u1 and u4 should be returned
+		$this->assertContains( $u1, $found );
+		$this->assertContains( $u4, $found );
+		$this->assertNotContains( $u2, $found );
+		$this->assertNotContains( $u3, $found );
+
+		// Cleanup created users
+		wp_delete_user( $u1 );
+		wp_delete_user( $u2 );
+		wp_delete_user( $u3 );
+		wp_delete_user( $u4 );
 	}
 }

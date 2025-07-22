@@ -106,6 +106,12 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Set the global $pagenow and $current_screen for the tested function
 		global $pagenow;
 		$pagenow = 'users.php';
+		
+		// Ensure WP_ADMIN is defined for is_admin() to return true
+		if ( ! defined( 'WP_ADMIN' ) ) {
+			define( 'WP_ADMIN', true );
+		}
+		
 		// Use set_current_screen if available, otherwise manually set the global
 		if ( function_exists( 'set_current_screen' ) ) {
 			set_current_screen( 'users' );
@@ -126,16 +132,12 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		$_GET['filter_mfa_disabled'] = '1';
 
-		$query = new \WP_User_Query();
-		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
+		$initial_args  = [];
+		$filtered_args = Highlight_MFA_Users::filter_users_by_mfa_status_args( $initial_args );
 
-		$meta_query     = $query->get( 'meta_query' );
-		$roles_in_query = $query->get( 'role__in' );
-		$exclude_query  = $query->get( 'exclude' );
-
-		$this->assertIsArray( $meta_query );
+		$this->assertIsArray( $filtered_args['meta_query'] );
 		$mfa_meta_clause_found = false;
-		foreach ( $meta_query as $clause ) {
+		foreach ( $filtered_args['meta_query'] as $clause ) {
 			if ( isset( $clause['relation'] ) && 'OR' === $clause['relation'] && count( $clause ) === 4 ) { // 3 conditions + relation key
 				$mfa_meta_clause_found = true;
 				break;
@@ -143,11 +145,11 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		}
 		$this->assertTrue( $mfa_meta_clause_found, 'MFA status meta query clause not found.' );
 
-		$this->assertEquals( [ 'administrator', 'editor' ], $roles_in_query );
+		$this->assertEquals( [ 'administrator', 'editor' ], $filtered_args['role__in'] );
 
-		$this->assertIsArray( $exclude_query );
-		$this->assertContains( $this->admin_user_mfa_skipped_id, $exclude_query );
-		$this->assertContains( $this->admin_wpcomvip_ignored_id, $exclude_query );
+		$this->assertIsArray( $filtered_args['exclude'] );
+		$this->assertContains( $this->admin_user_mfa_skipped_id, $filtered_args['exclude'] );
+		$this->assertContains( $this->admin_wpcomvip_ignored_id, $filtered_args['exclude'] );
 
 		unset( $_GET['filter_mfa_disabled'] );
 	}
@@ -159,52 +161,63 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		unset( $_GET['filter_mfa_disabled'] );
 
-		$query                        = new \WP_User_Query();
-		$original_meta_query          = $query->get( 'meta_query' );
-		$original_capability_in_query = $query->get( 'capability__in' );
-		$original_exclude_query       = $query->get( 'exclude' );
-
-		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
+		$initial_args = [
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => [],
+			'role__in'   => [],
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
+			'exclude'    => [],
+		];
+		$filtered_args = Highlight_MFA_Users::filter_users_by_mfa_status_args( $initial_args );
 
 		// Assert that the query parameters were not modified
-		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
-		$this->assertEquals( $original_capability_in_query, $query->get( 'capability__in' ) );
-		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
+		$this->assertEquals( $initial_args, $filtered_args );
 	}
 
 	/**
-	 * Test that the filter does nothing if not on the users.php page.
+	 * Test that the filter works when in admin context with the filter parameter set.
 	 */
-	public function test_filter_users_by_mfa_status_does_nothing_on_wrong_page() {
-		global $pagenow;
-		$pagenow = 'edit.php';
-		// Use set_current_screen if available, otherwise manually set the global
-		if ( function_exists( 'set_current_screen' ) ) {
-			set_current_screen( 'edit-post' );
-		} else {
-			// Mock the screen object if the function isn't available in this context
-			$screen                    = new \stdClass();
-			$screen->id                = 'edit-post';
-			$screen->base              = 'edit';
-			$GLOBALS['current_screen'] = $screen;
-		}
+	public function test_filter_users_by_mfa_status_works_with_param() {
+		$this->set_admin_screen_users(); // Need admin context for the filter to work
 		$_GET['filter_mfa_disabled'] = '1'; // Set the param
 
-		$query                        = new \WP_User_Query();
-		$original_meta_query          = $query->get( 'meta_query' );
-		$original_capability_in_query = $query->get( 'capability__in' );
-		$original_exclude_query       = $query->get( 'exclude' );
+		$initial_args  = [];
+		$filtered_args = Highlight_MFA_Users::filter_users_by_mfa_status_args( $initial_args );
 
-		Highlight_MFA_Users::filter_users_by_mfa_status( $query );
-
-		// Assert that the query parameters were not modified
-		$this->assertEquals( $original_meta_query, $query->get( 'meta_query' ) );
-		$this->assertEquals( $original_capability_in_query, $query->get( 'capability__in' ) );
-		$this->assertEquals( $original_exclude_query, $query->get( 'exclude' ) );
+		// Assert that the query parameters were modified when the filter param is set
+		$this->assertArrayHasKey( 'meta_query', $filtered_args );
+		$this->assertArrayHasKey( 'role__in', $filtered_args );
+		$this->assertArrayHasKey( 'exclude', $filtered_args );
 
 		unset( $_GET['filter_mfa_disabled'] );
 	}
 
+	/**
+	 * Test that the filter does not work outside of admin context.
+	 */
+	public function test_filter_users_by_mfa_status_does_nothing_outside_admin() {
+		// Ensure we're not in admin context
+		// @phpstan-ignore-next-line
+		if ( defined( 'WP_ADMIN' ) && WP_ADMIN ) {
+			$this->markTestSkipped( 'Cannot test non-admin context when WP_ADMIN is already defined as true.' );
+		}
+		
+		$_GET['filter_mfa_disabled'] = '1'; // Set the param
+
+		$initial_args = [
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => [],
+			'role__in'   => [],
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
+			'exclude'    => [],
+		];
+		$filtered_args = Highlight_MFA_Users::filter_users_by_mfa_status_args( $initial_args );
+
+		// Assert that the query parameters were NOT modified outside admin context
+		$this->assertEquals( $initial_args, $filtered_args );
+
+		unset( $_GET['filter_mfa_disabled'] );
+	}
 
 	/**
 	 * Test that the admin notice is not displayed when we're an editor
@@ -226,11 +239,23 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_display_mfa_disabled_notice_shows_when_needed() {
 		$this->set_admin_screen_users();
-		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id) and the default superadmin with ID 1
-		// The skipped admin ($this->admin_user_mfa_skipped_id) should be ignored by the notice logic.
-		// The subscriber ($this->subscriber_user_id) should not be included in the notice.
-		// The notice logic uses Two_Factor_Core::is_user_using_two_factor which we've mocked.
-		// Only admin_user_mfa_disabled_id should be counted (editor doesn't have administrator role)
+		
+		// Debug: Check if default user exists
+		$default_user     = get_user_by( 'ID', 1 );
+		$has_default_user = $default_user && in_array( 'administrator', $default_user->roles, true );
+		
+		// We have MFA-disabled users:
+		// - $this->admin_user_mfa_disabled_id (administrator)
+		// - $this->editor_user_id (editor)
+		// - User ID 1 (if exists and is administrator)
+		// The following should be excluded:
+		// - $this->admin_user_mfa_skipped_id (skipped via option)
+		// - $this->admin_wpcomvip_ignored_id (wpcomvip bot user)
+		// - $this->subscriber_user_id (not administrator/editor role)
+		// - $this->admin_user_mfa_enabled_id (has MFA enabled in mock)
+		
+		// With the new implementation using is_user_using_two_factor(), 
+		// we're getting 3 users without MFA
 		$expected_count  = 3;
 		$filter_url      = add_query_arg( 'filter_mfa_disabled', '1', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
@@ -266,7 +291,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->set_admin_screen_users();
 		$_GET['filter_mfa_disabled'] = '1'; // Activate the filter
 
-		// We have one MFA-disabled admin ($this->admin_user_mfa_disabled_id) and one editor ($this->editor_user_id), plus the default superadmin with ID 1
+		// Same count as the previous test - we have 3 users without MFA
 		$expected_count  = 3;
 		$show_all_url    = remove_query_arg( 'filter_mfa_disabled', admin_url( 'users.php' ) );
 		$expected_output = sprintf(
@@ -322,15 +347,31 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_display_mfa_disabled_notice_hides_when_no_disabled_users() {
 		$this->set_admin_screen_users();
-		// Temporarily tell the mock that the MFA-disabled user is enabled for this test
-		Two_Factor_Core::$mock_enabled_user_ids[] = $this->admin_user_mfa_disabled_id;
-		Two_Factor_Core::$mock_enabled_user_ids[] = $this->editor_user_id;
-		Two_Factor_Core::$mock_enabled_user_ids[] = 1; // Also ensure User ID 1 is treated as MFA enabled
-
+		
+		// Clear the cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		
+		// Get all users in the system
+		$all_users = get_users( [
+			'fields' => 'all',
+		] );
+		
+		// Enable MFA for all users with administrator or editor roles using the mock
+		foreach ( $all_users as $user ) {
+			if ( array_intersect( [ 'administrator', 'editor' ], $user->roles ) ) {
+				// Add to the mock's enabled user IDs array
+				Two_Factor_Core::$mock_enabled_user_ids[] = $user->ID;
+			}
+		}
+		
+		// Clear cache again to ensure fresh calculation with updated mock data
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		
 		// Expect no output
 		ob_start();
 		Highlight_MFA_Users::display_mfa_disabled_notice();
 		$output = ob_get_clean();
+		
 		$this->assertEmpty( $output );
 	}
 
@@ -440,15 +481,21 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 	 */
 	public function test_init_hooks_actions_correctly() {
 		remove_all_actions( 'admin_notices' );
-		remove_all_actions( 'pre_get_users' );
+		remove_all_filters( 'users_list_table_query_args' );
 
 		Highlight_MFA_Users::init();
 
 		$this->assertNotFalse( has_action( 'admin_notices', [ Highlight_MFA_Users::class, 'display_mfa_disabled_notice' ] ) );
 		$this->assertEquals( 10, has_action( 'admin_notices', [ Highlight_MFA_Users::class, 'display_mfa_disabled_notice' ] ) );
 
-		$this->assertNotFalse( has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
-		$this->assertEquals( 10, has_action( 'pre_get_users', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status' ] ) );
+		$this->assertNotFalse( has_filter( 'users_list_table_query_args', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status_args' ] ) );
+		$this->assertEquals( 10, has_filter( 'users_list_table_query_args', [ Highlight_MFA_Users::class, 'filter_users_by_mfa_status_args' ] ) );
+
+		$this->assertNotFalse( has_filter( 'users_list_table_query_args', [ Highlight_MFA_Users::class, 'sort_columns' ] ) );
+		$this->assertEquals( 10, has_filter( 'users_list_table_query_args', [ Highlight_MFA_Users::class, 'sort_columns' ] ) );
+
+		$this->assertNotFalse( has_filter( 'found_users_query', [ Highlight_MFA_Users::class, 'fix_found_users_query' ] ) );
+		$this->assertEquals( 10, has_filter( 'found_users_query', [ Highlight_MFA_Users::class, 'fix_found_users_query' ] ) );
 
 		// Test that cache clearing actions are hooked
 		$this->assertNotFalse( has_action( 'updated_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
@@ -634,5 +681,47 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$original_args = $args;
 		$sorted_args   = Highlight_MFA_Users::sort_columns( $args );
 		$this->assertEquals( $original_args, $sorted_args );
+	}
+
+	/**
+	 * Test that fix_found_users_query replaces SELECT FOUND_ROWS() with a proper COUNT query.
+	 */
+	public function test_fix_found_users_query_replaces_found_rows() {
+		$this->set_admin_screen_users();
+		$_GET['filter_mfa_disabled'] = '1';
+
+		// Create a mock WP_User_Query with the necessary properties
+		$query = $this->getMockBuilder( \WP_User_Query::class )
+			->disableOriginalConstructor()
+			->getMock();
+
+		// Set up the properties that the method needs
+		$query->query_from  = 'FROM wp_users';
+		$query->query_where = 'WHERE 1=1';
+
+		$original_sql = 'SELECT FOUND_ROWS()';
+		$fixed_sql    = Highlight_MFA_Users::fix_found_users_query( $original_sql, $query );
+
+		// The fixed SQL should be a COUNT query
+		$this->assertStringContainsString( 'SELECT COUNT(DISTINCT', $fixed_sql );
+		$this->assertStringContainsString( 'FROM wp_users', $fixed_sql );
+		$this->assertStringContainsString( 'WHERE 1=1', $fixed_sql );
+
+		unset( $_GET['filter_mfa_disabled'] );
+	}
+
+	/**
+	 * Test that fix_found_users_query does nothing when filter is not active.
+	 */
+	public function test_fix_found_users_query_does_nothing_without_filter() {
+		$this->set_admin_screen_users();
+		unset( $_GET['filter_mfa_disabled'] );
+
+		$query        = new \WP_User_Query();
+		$original_sql = 'SELECT FOUND_ROWS()';
+		$result_sql   = Highlight_MFA_Users::fix_found_users_query( $original_sql, $query );
+
+		// Should return the original SQL unchanged
+		$this->assertEquals( $original_sql, $result_sql );
 	}
 }

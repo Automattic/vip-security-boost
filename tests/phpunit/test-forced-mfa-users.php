@@ -15,7 +15,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		// Remove actions/filters added by the class
 		remove_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] );
 
-		// Reset the static capability property using reflection
+		// Reset the static properties using reflection
 		if ( class_exists( Forced_MFA_Users::class ) ) {
 			try {
 				$reflection = new ReflectionClass( Forced_MFA_Users::class );
@@ -23,6 +23,11 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 					$roles_prop = $reflection->getProperty( 'roles' );
 					$roles_prop->setAccessible( true );
 					$roles_prop->setValue( null, null ); // Reset to initial state
+				}
+				if ( $reflection->hasProperty( 'capabilities' ) ) {
+					$capabilities_prop = $reflection->getProperty( 'capabilities' );
+					$capabilities_prop->setAccessible( true );
+					$capabilities_prop->setValue( null, null ); // Reset to initial state
 				}
 				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
 			} catch ( ReflectionException $e ) {
@@ -239,5 +244,127 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 		$this->setup_user_and_filter( 'administrator' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true if wpcom_vip_should_force_two_factor returns false even if the user has the required capability.' );
+	}
+
+	/**
+	 * Test that capabilities take priority over roles
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_maybe_enforce_two_factor_capabilities_priority() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 
+					'capabilities' => 'manage_options',
+					'roles'        => 'subscriber', // This should be ignored
+				],
+			],
+		] );
+		Forced_MFA_Users::init();
+
+		// Create administrator user (has manage_options capability but not subscriber role)
+		$this->setup_user_and_filter( 'administrator' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has the required capability.' );
+	}
+
+	/**
+	 * Test single capability enforcement
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_maybe_enforce_two_factor_single_capability() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => 'edit_posts' ],
+			],
+		] );
+		Forced_MFA_Users::init();
+
+		// Administrator has edit_posts capability
+		$this->setup_user_and_filter( 'administrator' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has the single required capability.' );
+	}
+
+	/**
+	 * Test user without required capability
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_maybe_enforce_two_factor_user_lacks_capability() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => 'manage_options' ],
+			],
+		] );
+		Forced_MFA_Users::init();
+
+		// Subscriber doesn't have manage_options capability
+		$this->setup_user_and_filter( 'subscriber' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when user lacks the required capability.' );
+	}
+
+	/**
+	 * Test multiple capabilities - user has one
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_maybe_enforce_two_factor_array_capabilities_user_has_one() {
+		$capabilities = [ 'manage_options', 'edit_themes' ];
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => $capabilities ],
+			],
+		] );
+		Forced_MFA_Users::init();
+
+		// Editor has edit_posts but not manage_options or edit_themes
+		$user_id = self::factory()->user->create( [ 'role' => 'editor' ] );
+		$user    = get_user_by( 'id', $user_id );
+		// Grant manage_options capability to editor
+		$user->add_cap( 'manage_options' );
+		wp_set_current_user( $user_id );
+		
+		Forced_MFA_Users::maybe_enforce_two_factor();
+		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has one of the required capabilities.' );
+	}
+
+	/**
+	 * Test empty capabilities array falls back to roles
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_maybe_enforce_two_factor_empty_capabilities_uses_roles() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 
+					'capabilities' => [],
+					'roles'        => 'administrator',
+				],
+			],
+		] );
+		Forced_MFA_Users::init();
+
+		$this->setup_user_and_filter( 'administrator' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should use roles when capabilities array is empty.' );
+	}
+
+	/**
+	 * Test both capabilities and roles empty
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_init_does_not_add_action_when_both_capabilities_and_roles_empty() {
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 
+					'capabilities' => [],
+					'roles'        => [],
+				],
+			],
+		] );
+
+		Forced_MFA_Users::init();
+		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
 }
