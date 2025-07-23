@@ -59,9 +59,3 @@ parameters:
 			identifier: function.alreadyNarrowedType
 			count: 1
 			path: utils/class-configs.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: utils/dev-env.php
