@@ -5,12 +5,13 @@ use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Highlight_MFA_Users {
-	const MFA_SKIP_USER_IDS_OPTION_KEY    = 'vip_security_mfa_skip_user_ids';
-	const ROLE_COLUMN_KEY                 = 'role';
-	const DEFAULT_ADMIN_EDITOR_ROLE_SLUGS = [ 'administrator', 'editor' ];
-	const MFA_COUNT_CACHE_GROUP           = 'vip_security_mfa_count';
-	const MFA_COUNT_CACHE_KEY_PREFIX      = 'mfa_disabled_count';
-	const MFA_COUNT_CACHE_TTL             = HOUR_IN_SECONDS; // Cache for 1 hour
+	const MFA_SKIP_USER_IDS_OPTION_KEY      = 'vip_security_mfa_skip_user_ids';
+	const ROLE_COLUMN_KEY                   = 'role';
+	const DEFAULT_ADMIN_EDITOR_CAPABILITIES = [ 'manage_options', 'edit_others_posts' ];
+	const DEFAULT_ADMIN_EDITOR_ROLE_SLUGS   = [ 'administrator', 'editor' ];
+	const MFA_COUNT_CACHE_GROUP             = 'vip_security_mfa_count';
+	const MFA_COUNT_CACHE_KEY_PREFIX        = 'mfa_disabled_count';
+	const MFA_COUNT_CACHE_TTL               = HOUR_IN_SECONDS; // Cache for 1 hour
 
 	/**
 	 * The roles used to highlight users without MFA.
@@ -45,7 +46,7 @@ class Highlight_MFA_Users {
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
 		
 		// Normalize capabilities and roles configuration
-		self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
+		self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? self::DEFAULT_ADMIN_EDITOR_CAPABILITIES );
 		self::$roles        = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
@@ -240,7 +241,7 @@ class Highlight_MFA_Users {
 
 		// Check if capabilities are configured or using default roles
 		$has_capabilities  = Capability_Utils::are_capabilities_configured( self::$capabilities );
-		$is_default_config = ! $has_capabilities && 
+		$is_default_config = empty( array_diff( self::$capabilities, self::DEFAULT_ADMIN_EDITOR_CAPABILITIES ) ) ||
 								empty( array_diff( self::$roles, self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS ) );
 
 		// Get the cached MFA disabled count
