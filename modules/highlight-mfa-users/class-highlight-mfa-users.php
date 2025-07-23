@@ -224,6 +224,17 @@ class Highlight_MFA_Users {
 		self::clear_mfa_count_cache_for_user_sites( $user_id );
 	}
 
+	/* * Check if two arrays are equal.
+	 * This is a simple utility function to compare two arrays for equality.
+	 *
+	 * @param array $a First array.
+	 * @param array $b Second array.
+	 * @return bool True if arrays are equal, false otherwise.
+	 */
+	public static function arrays_are_equal( $a, $b ) {
+		return empty( array_diff( $a, $b ) ) && empty( array_diff( $b, $a ) );
+	}
+
 	/**
 	* Display an admin notice on the Users page showing the count of users with MFA disabled.
 	*/
@@ -241,8 +252,8 @@ class Highlight_MFA_Users {
 
 		// Check if capabilities are configured or using default roles
 		$has_capabilities  = Capability_Utils::are_capabilities_configured( self::$capabilities );
-		$is_default_config = empty( array_diff( self::$capabilities, self::DEFAULT_ADMIN_EDITOR_CAPABILITIES ) ) ||
-								empty( array_diff( self::$roles, self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS ) );
+		$is_default_config = self::arrays_are_equal( self::$capabilities, self::DEFAULT_ADMIN_EDITOR_CAPABILITIES ) ||
+												self::arrays_are_equal( self::$roles, self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		// Get the cached MFA disabled count
 		$mfa_disabled_count = self::get_mfa_disabled_count();
