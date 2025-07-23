@@ -130,7 +130,8 @@ class Forced_MFA_Users {
 	 * }
 	 */
 	public static function get_two_factor_enforcement_status(): array {
-		// Explicit global namespace references are required inside namespaced code.
+		// Please note that detecting a filter is no exact science.
+		// SDS data is retrieved during CRON so some of these filters might be added only for logged in users, still we try our best to detect them.
 		$filters = [
 			// return wpcom_vip_is_two_factor_forced status
 			'is_enforced_globally'         => \has_filter( 'wpcom_vip_is_two_factor_forced', '__return_true' ) !== false,
