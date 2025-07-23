@@ -77,11 +77,27 @@ class Forced_MFA_Users {
 	}
 
 	/**
-	 * Add the two factor enforcement status to the SDS payload.
+	 * Add the two-factor enforcement status details to the Site Details Service (SDS) payload.
 	 *
-	 * @param array $data The SDS payload.
+	 * The function augments the incoming `$data` array by injecting a new element under the
+	 * standard SDS data key (`Constants::SDS_DATA_KEY`). The resulting payload section has the
+	 * following structure:
 	 *
-	 * @return array The SDS payload with the two factor enforcement status added.
+	 * [ Constants::SDS_DATA_KEY ] => [
+	 *     'two_factor_status' => [
+	 *         'is_enforced_globally'         => bool, // `wpcom_vip_is_two_factor_forced` hooked to `__return_true`
+	 *         'is_not_enforced_globally'     => bool, // `wpcom_vip_is_two_factor_forced` hooked to `__return_false`
+	 *         'has_two_factor_forced_filter' => bool, // Any filter present on `wpcom_vip_is_two_factor_forced`
+	 *         'is_entirely_disabled'         => bool, // 2FA disabled via `wpcom_vip_enable_two_factor` returning false
+	 *         'has_enable_two_factor_filter' => bool, // Any filter present on `wpcom_vip_enable_two_factor`
+	 *     ],
+	 * ]
+	 *
+	 * This mirrors the array returned by {@see self::get_two_factor_enforcement_status()} so that
+	 * consumers of the SDS payload can introspect the enforcement configuration without needing to
+	 * call WordPress-level helpers during data processing.
+	 *
+	 * @return array Modified SDS payload including the `two_factor_status` information.
 	 */
 	public static function add_two_factor_enforcement_status_to_sds_payload( $data ) {
 		if ( ! isset( $data[ Constants::SDS_DATA_KEY ] ) ) {
