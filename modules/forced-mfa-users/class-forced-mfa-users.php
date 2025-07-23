@@ -69,6 +69,7 @@ class Forced_MFA_Users {
 		);
 
 		if ( $user_has_two_factor_enforced ) {
+			// TODO migrate to wpcom_vip_internal_is_two_factor_forced once PR https://github.com/Automattic/vip-go-mu-plugins/pull/6424 is released
 			add_filter( 'wpcom_vip_is_two_factor_forced', function () {
 				return true;
 			}, PHP_INT_MAX );
