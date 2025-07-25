@@ -2,11 +2,18 @@
 
 use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
 use Automattic\VIP\Security\Utils\Testable_Logger;
+use Automattic\VIP\Jetpack\Connection_Pilot\Attendant;
+use Automattic\VIP\Security\Constants;
 
 class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 		add_action( 'wpcom_vip_is_two_factor_local_testing', '__return_true' ); // Tell the two-factor plugin we're in local testing
+
+		// removing these for the SDS testing part
+		remove_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' );
+		remove_filter( 'wpcom_vip_is_two_factor_forced', [ Attendant::instance(), 'bypass_two_factor_auth' ], PHP_INT_MAX );
+
 		// Loads the Two_Factor_Core class (required for the wpcom_vip_should_force_two_factor to work)
 		require_once WPVIP_MU_PLUGIN_DIR . '/shared-plugins/two-factor/two-factor.php';
 	}
@@ -254,7 +261,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function test_maybe_enforce_two_factor_capabilities_priority() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 
+				'forced-mfa-users' => [
 					'capabilities' => 'manage_options',
 					'roles'        => 'subscriber', // This should be ignored
 				],
@@ -323,7 +330,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		// Grant manage_options capability to editor
 		$user->add_cap( 'manage_options' );
 		wp_set_current_user( $user_id );
-		
+
 		Forced_MFA_Users::maybe_enforce_two_factor();
 		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has one of the required capabilities.' );
 	}
@@ -336,7 +343,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 	public function test_maybe_enforce_two_factor_empty_capabilities_uses_roles() {
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 
+				'forced-mfa-users' => [
 					'capabilities' => [],
 					'roles'        => 'administrator',
 				],
@@ -357,7 +364,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 		define( 'VIP_SECURITY_BOOST_CONFIGS', [
 			'module_configs' => [
-				'forced-mfa-users' => [ 
+				'forced-mfa-users' => [
 					'capabilities' => [],
 					'roles'        => [],
 				],
@@ -366,5 +373,68 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 		Forced_MFA_Users::init();
 		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
+	}
+
+	/**
+	 * Test default status when no relevant filters are present.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_get_two_factor_enforcement_status_defaults() {
+		$expected = [
+			'is_enforced_globally'         => false,
+			'is_not_enforced_globally'     => false,
+			'has_two_factor_forced_filter' => false,
+			'is_entirely_disabled'         => false,
+			'has_enable_two_factor_filter' => false,
+		];
+
+		$this->assertSame( $expected, Forced_MFA_Users::get_two_factor_enforcement_status() );
+	}
+
+	/**
+	 * Test status when filters enforce two-factor globally.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_get_two_factor_enforcement_status_enforced_globally() {
+		add_filter( 'wpcom_vip_is_two_factor_forced', '__return_true' );
+
+		$status = Forced_MFA_Users::get_two_factor_enforcement_status();
+
+		$this->assertTrue( $status['is_enforced_globally'] );
+		$this->assertTrue( $status['has_two_factor_forced_filter'] );
+	}
+
+	/**
+	 * Test status when filters disable two-factor globally.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_get_two_factor_enforcement_status_disabled_globally() {
+		add_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' );
+
+		$status = Forced_MFA_Users::get_two_factor_enforcement_status();
+
+		$this->assertTrue( $status['is_not_enforced_globally'] );
+		$this->assertTrue( $status['has_two_factor_forced_filter'] );
+	}
+
+	/**
+	 * Test that two-factor status is added to SDS payload correctly.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_add_two_factor_enforcement_status_to_sds_payload() {
+		Forced_MFA_Users::init();
+		$this->assertEquals( 10, has_filter( 'vip_site_details_index_data', [ Forced_MFA_Users::class, 'add_two_factor_enforcement_status_to_sds_payload' ] ) );
+		$site_details = apply_filters( 'vip_site_details_index_data', [] );
+		$data         = Forced_MFA_Users::get_two_factor_enforcement_status();
+		$this->assertArrayHasKey( Constants::SDS_DATA_KEY, $site_details );
+		$this->assertSame( $data, $site_details[ Constants::SDS_DATA_KEY ]['two_factor_status'] );
 	}
 }
