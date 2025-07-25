@@ -103,6 +103,7 @@ class Test_Data_Sync extends WP_UnitTestCase {
 
 		$site_details = apply_filters( 'vip_site_details_index_data', [] );
 		$expected     = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
+		$expected = Data_Sync::add_jetpack_account_protection_status( $expected );
 
 		$this->assertArrayHasKey( Constants::SDS_DATA_KEY, $site_details );
 		$this->assertSame( $expected, $site_details[ Constants::SDS_DATA_KEY ] );
