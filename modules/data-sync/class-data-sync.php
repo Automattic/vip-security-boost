@@ -20,6 +20,9 @@ class Data_Sync {
 
 		// adds 2FA data to the security_boost SDS key
 		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_two_factor_enforcement_status_to_sds_payload' ] );
+
+		// adds Jetpack Account Protection status to the security_boost SDS key
+		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_jetpack_account_protection_status' ] );
 	}
 	/**
 	 * This is the aggregator to ensure every module can simply add its own data to the SDS payload via vip_site_details_index_security_boost_data
@@ -70,6 +73,61 @@ class Data_Sync {
 		];
 		return $data;
 	}
+
+	/**
+	 * Append Jetpack Account Protection status information.
+	 *
+	 * Possible values:
+	 *  - jetpack_missing_or_inactive  : Jetpack plugin not installed or inactive.
+	 *  - active                       : Feature active.
+	 *  - disabled_via_code            : Disabled through DISABLE_JETPACK_ACCOUNT_PROTECTION constant.
+	 *  - disabled_via_options         : Disabled via Jetpack options/settings.
+	 *
+	 * @param array $data Existing security boost data.
+	 * @return array Modified data including `jetpack_account_protection_status` key.
+	 */
+	public static function add_jetpack_account_protection_status( $data ) {
+		if ( ! class_exists( 'Jetpack' ) || ! \Jetpack::is_active() ) {
+			$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'jp_missing_or_inactive';
+			return $data;
+		}
+		// check if jp is in offline mode
+		if ( class_exists( '\Automattic\Jetpack\Status' ) ) {
+			$jp_status       = new \Automattic\Jetpack\Status();
+			$is_offline_mode = $jp_status->is_offline_mode();
+			if ( $is_offline_mode ) {
+				$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'jp_offline';
+				return $data;
+			}
+		}
+		// check if jp is not connected
+		if ( class_exists( '\Automattic\Jetpack\Connection\Manager' ) ) {
+			$connection = new \Automattic\Jetpack\Connection\Manager();
+			if ( ! $connection->is_connected() ) {
+				$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'jp_not_connected';
+			}
+		}
+
+		$jetpack_modules = \Jetpack::get_active_modules();
+		if ( class_exists( '\Automattic\Jetpack\Account_Protection' ) ) {
+			if ( in_array( 'account-protection', $jetpack_modules ) ) {
+				$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'active';
+			} else {
+				$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'not_enabled';
+			}
+
+			// If explicitly disabled via constant, set and short-circuit.
+			if ( defined( 'DISABLE_JETPACK_ACCOUNT_PROTECTION' ) && \DISABLE_JETPACK_ACCOUNT_PROTECTION ) {
+				$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'disabled_via_code';
+				return $data;
+			}
+		} else {
+			$data[ Constants::SDS_JETPACK_ACCOUNT_PROTECTION_STATUS_KEY ] = 'module_missing';
+		}
+
+		return $data;
+	}
 }
+
 
 Data_Sync::init();
