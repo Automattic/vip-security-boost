@@ -4,7 +4,6 @@ namespace Automattic\VIP\Security\InactiveUsers;
 use Automattic\VIP\Utils\Context;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
-use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Capability_Utils;
 use Automattic\VIP\Security\Utils\Users_Query_Utils;
 
@@ -92,7 +91,7 @@ class Inactive_Users {
 		}
 
 		// Add SDS hook
-		add_filter( 'vip_site_details_index_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
+		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
 	}
 
 	public static function maybe_fix_found_users_query() {
@@ -106,10 +105,6 @@ class Inactive_Users {
 	}
 
 	public static function add_inactive_users_count_to_sds_payload( $data ) {
-		if ( ! isset( $data[ Constants::SDS_DATA_KEY ] ) ) {
-			$data[ Constants::SDS_DATA_KEY ] = array();
-		}
-
 		// Add fix for unreliable FOUND_ROWS() query
 		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
 
@@ -120,14 +115,14 @@ class Inactive_Users {
 		$inactive_users_count = self::get_inactive_users_count();
 
 		// Add inactive users count for the current blog to the SDS payload
-		$data[ Constants::SDS_DATA_KEY ]['inactive_users_count'] = $inactive_users_count;
+		$data['inactive_users_count'] = $inactive_users_count;
 
 		if ( is_multisite() ) {
 			// Get number of inactive users for all blogs (network-wide with blog_id = 0)
 			$inactive_users_count_all_blogs = self::get_inactive_users_count( 0 );
 
 			// Add network-wide inactive users count to the SDS payload
-			$data[ Constants::SDS_DATA_KEY ]['inactive_users_count_all_blogs'] = $inactive_users_count_all_blogs;
+			$data['inactive_users_count_all_blogs'] = $inactive_users_count_all_blogs;
 		}
 
 		// Stop timer

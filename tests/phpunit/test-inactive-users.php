@@ -281,24 +281,24 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				self::$mode                           = 'BLOCK';
 				self::$considered_inactive_after_days = 90;
 			}
-			
+
 			public static function test_user_has_elevated_permissions( $user ) {
 				return parent::user_has_elevated_permissions( $user );
 			}
 		};
-		
+
 		$inactive_users_class::reset_for_test();
-		
+
 		// Create user with manage_options capability
 		$cap_user_id = $this->factory->user->create([
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
 		$cap_user    = new WP_User( $cap_user_id );
 		$cap_user->add_cap( 'manage_options' );
-		
+
 		// User should have elevated permissions due to capability
 		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $cap_user ) );
-		
+
 		wp_delete_user( $cap_user_id );
 	}
 
@@ -314,14 +314,14 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				self::$mode                           = 'BLOCK';
 				self::$considered_inactive_after_days = 90;
 			}
-			
+
 			public static function test_user_has_elevated_permissions( $user ) {
 				return parent::user_has_elevated_permissions( $user );
 			}
 		};
-		
+
 		$inactive_users_class::reset_for_test();
-		
+
 		// Create user with only the capability, not the role
 		$cap_user_id = $this->factory->user->create([
 			'role'            => 'subscriber',
@@ -329,10 +329,10 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		]);
 		$cap_user    = new WP_User( $cap_user_id );
 		$cap_user->add_cap( 'edit_posts' );
-		
+
 		// User should have elevated permissions due to capability even without admin role
 		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $cap_user ) );
-		
+
 		wp_delete_user( $cap_user_id );
 	}
 
@@ -348,34 +348,34 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				self::$mode                           = 'BLOCK';
 				self::$considered_inactive_after_days = 90;
 			}
-			
+
 			public static function test_user_has_elevated_permissions( $user ) {
 				return parent::user_has_elevated_permissions( $user );
 			}
 		};
-		
+
 		$inactive_users_class::reset_for_test();
-		
+
 		// Create user with editor role
 		$editor_user_id = $this->factory->user->create([
 			'role'            => 'editor',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
 		$editor_user    = new WP_User( $editor_user_id );
-		
+
 		// User should have elevated permissions due to role
 		$this->assertTrue( $inactive_users_class::test_user_has_elevated_permissions( $editor_user ) );
-		
+
 		// Create user without elevated role
 		$subscriber_user_id = $this->factory->user->create([
 			'role'            => 'subscriber',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
 		$subscriber_user    = new WP_User( $subscriber_user_id );
-		
+
 		// User should not have elevated permissions
 		$this->assertFalse( $inactive_users_class::test_user_has_elevated_permissions( $subscriber_user ) );
-		
+
 		wp_delete_user( $editor_user_id );
 		wp_delete_user( $subscriber_user_id );
 	}
@@ -429,11 +429,11 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	public function test_capability_filter() {
 		// Create a test to verify the filter works
 		$test_capabilities = [ 'custom_capability', 'another_capability' ];
-		
+
 		add_filter( 'vip_security_boost_inactive_users_elevated_capabilities', function () use ( $test_capabilities ) {
 			return $test_capabilities;
 		});
-		
+
 		// Create instance to test filter application
 		$inactive_users_class = new class() extends Inactive_Users {
 			public static function get_test_capabilities() {
@@ -441,10 +441,10 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				return apply_filters( 'vip_security_boost_inactive_users_elevated_capabilities', $capabilities );
 			}
 		};
-		
+
 		$filtered_caps = $inactive_users_class::get_test_capabilities();
 		$this->assertEquals( $test_capabilities, $filtered_caps );
-		
+
 		// Clean up
 		remove_all_filters( 'vip_security_boost_inactive_users_elevated_capabilities' );
 	}
@@ -532,25 +532,25 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the vip_site_details_index_data filter is added and works correctly
+	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
 	 */
-	public function test_vip_site_details_index_data_filter_is_added() {
+	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
 		// Verify the filter is added during init
-		$this->assertNotFalse( has_filter( 'vip_site_details_index_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
 
 		// Test that the filter works by applying it
 		$initial_data  = [ 'some_key' => 'some_value' ];
-		$filtered_data = apply_filters( 'vip_site_details_index_data', $initial_data );
+		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', $initial_data );
 
 		// Verify the filter was applied and our data was added
 		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
-		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data['vip_security_boost'] );
-		$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count'] );
+		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data );
+		$this->assertIsInt( $filtered_data['inactive_users_count'] );
 
 		// Verify the network-wide count is added only in multisite
 		if ( is_multisite() ) {
-			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data['vip_security_boost'] );
-			$this->assertIsInt( $filtered_data['vip_security_boost']['inactive_users_count_all_blogs'] );
+			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data );
+			$this->assertIsInt( $filtered_data['inactive_users_count_all_blogs'] );
 		}
 
 		// Verify original data is preserved
@@ -581,7 +581,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
 
 		// Should have 3 inactive users (the ones we created)
-		$this->assertEquals( 2, $result['vip_security_boost']['inactive_users_count'] );
+		$this->assertEquals( 2, $result['inactive_users_count'] );
 
 		// Clean up
 		wp_delete_user( $inactive_user_1 );
