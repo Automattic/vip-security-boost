@@ -323,8 +323,20 @@ class Inactive_Users {
 			'count_total' => true,
 		], self::get_inactive_users_query_args() );
 
-		$users_query = new \WP_User_Query( $args );
-		$count       = $users_query->get_total();
+		// 1. Instantiate WP_User_Query but don't run its main query
+		// We have found issues with unreliable FOUND_ROWS() when counting users,
+		// so we're using a custom COUNT query instead
+		$users_query = new \WP_User_Query();
+
+		// 2. Prepare the query object with given filters
+		$users_query->prepare_query( $args );
+
+		// 3. Execute the count query
+		global $wpdb;
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
+		$sql = "SELECT COUNT(DISTINCT {$wpdb->users}.ID) {$users_query->query_from} {$users_query->query_where}";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$count = (int) $wpdb->get_var( $sql );
 
 		// Cache the result for global queries (blog_id = 0)
 		if ( 0 === $blog_id ) {
