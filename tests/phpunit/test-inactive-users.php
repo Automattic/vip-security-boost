@@ -543,7 +543,6 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', $initial_data );
 
 		// Verify the filter was applied and our data was added
-		$this->assertArrayHasKey( 'vip_security_boost', $filtered_data );
 		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data );
 		$this->assertIsInt( $filtered_data['inactive_users_count'] );
 

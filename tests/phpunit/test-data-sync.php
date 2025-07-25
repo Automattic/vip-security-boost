@@ -43,16 +43,18 @@ class Test_Data_Sync extends WP_UnitTestCase {
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
 	 */
-	public function test_get_two_factor_enforcement_status_defaults() {
+	public function test_two_factor_enforcement_status_defaults() {
 		$expected = [
-			'is_enforced_globally'         => false,
-			'is_not_enforced_globally'     => false,
-			'has_two_factor_forced_filter' => false,
-			'is_entirely_disabled'         => false,
-			'has_enable_two_factor_filter' => false,
+			'two_factor_status' => [
+				'is_enforced_globally'         => false,
+				'is_not_enforced_globally'     => false,
+				'has_two_factor_forced_filter' => false,
+				'is_entirely_disabled'         => false,
+				'has_enable_two_factor_filter' => false,
+			],
 		];
 
-		$this->assertSame( $expected, Data_Sync::get_two_factor_enforcement_status() );
+		$this->assertSame( $expected, Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] ) );
 	}
 
 	/**
@@ -64,10 +66,10 @@ class Test_Data_Sync extends WP_UnitTestCase {
 	public function test_get_two_factor_enforcement_status_enforced_globally() {
 		add_filter( 'wpcom_vip_is_two_factor_forced', '__return_true' );
 
-		$status = Data_Sync::get_two_factor_enforcement_status();
+		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
 
-		$this->assertTrue( $status['is_enforced_globally'] );
-		$this->assertTrue( $status['has_two_factor_forced_filter'] );
+		$this->assertTrue( $status['two_factor_status']['is_enforced_globally'] );
+		$this->assertTrue( $status['two_factor_status']['has_two_factor_forced_filter'] );
 	}
 
 	/**
@@ -79,10 +81,10 @@ class Test_Data_Sync extends WP_UnitTestCase {
 	public function test_get_two_factor_enforcement_status_disabled_globally() {
 		add_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' );
 
-		$status = Data_Sync::get_two_factor_enforcement_status();
+		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
 
-		$this->assertTrue( $status['is_not_enforced_globally'] );
-		$this->assertTrue( $status['has_two_factor_forced_filter'] );
+		$this->assertTrue( $status['two_factor_status']['is_not_enforced_globally'] );
+		$this->assertTrue( $status['two_factor_status']['has_two_factor_forced_filter'] );
 	}
 
 	/**
@@ -97,12 +99,28 @@ class Test_Data_Sync extends WP_UnitTestCase {
 		// processes, so we ensure it here.
 		\Automattic\VIP\Security\Data_Sync\Data_Sync::init();
 
-		$this->assertEquals( 10, has_filter( 'vip_site_details_index_data', [ Data_Sync::class, 'add_two_factor_enforcement_status_to_sds_payload' ] ) );
+		$this->assertEquals( 10, has_filter( 'vip_site_details_index_security_boost_data', [ Data_Sync::class, 'add_two_factor_enforcement_status_to_sds_payload' ] ) );
 
 		$site_details = apply_filters( 'vip_site_details_index_data', [] );
-		$expected     = Data_Sync::get_two_factor_enforcement_status();
+		$expected     = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
 
 		$this->assertArrayHasKey( Constants::SDS_DATA_KEY, $site_details );
-		$this->assertSame( $expected, $site_details[ Constants::SDS_DATA_KEY ]['two_factor_status'] );
+		$this->assertSame( $expected, $site_details[ Constants::SDS_DATA_KEY ] );
+	}
+
+	// check that it adds an vip_site_details_index_data filter and it adds the vip_security_boost key
+	public function test_add_security_boost_extended_data() {
+		// Data_Sync hooks itself up in its init() call at the bottom of the file,
+		// but WordPress test bootstrap may not have fired that yet in isolated
+		// processes, so we ensure it here.
+		\Automattic\VIP\Security\Data_Sync\Data_Sync::init();
+
+		$this->assertEquals( 10, has_filter( 'vip_site_details_index_data', [ Data_Sync::class, 'add_security_boost_extended_data' ] ) );
+
+		$site_details = apply_filters( 'vip_site_details_index_data', [] );
+		$expected     = Data_Sync::add_security_boost_extended_data( [] );
+
+		$this->assertArrayHasKey( Constants::SDS_DATA_KEY, $site_details );
+		$this->assertSame( $expected, $site_details);
 	}
 }
