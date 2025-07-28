@@ -25,7 +25,7 @@ class Users_Query_Utils {
 		global $wpdb;
 
 		// Build the reliable count query using the same FROM and WHERE clauses as the main query.
-        // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
 		$count_sql = "SELECT COUNT(DISTINCT {$wpdb->users}.ID) {$query->query_from} {$query->query_where}";
 
 		return $count_sql;
