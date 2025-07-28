@@ -14,6 +14,7 @@ if ( ! class_exists( 'Two_Factor_Core' ) ) {
 
 use Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users;
 use Automattic\VIP\Security\Utils\Configs;
+use Automattic\VIP\Security\Utils\Users_Query_Utils;
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class HighlightMFAUsersTest extends WP_UnitTestCase {
@@ -485,6 +486,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		Highlight_MFA_Users::init();
 
+		$this->assertNotFalse( has_action( 'admin_init', [ Highlight_MFA_Users::class, 'maybe_fix_found_users_query' ] ) );
 		$this->assertNotFalse( has_action( 'admin_notices', [ Highlight_MFA_Users::class, 'display_mfa_disabled_notice' ] ) );
 		$this->assertEquals( 10, has_action( 'admin_notices', [ Highlight_MFA_Users::class, 'display_mfa_disabled_notice' ] ) );
 
@@ -493,9 +495,6 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$this->assertNotFalse( has_filter( 'users_list_table_query_args', [ Highlight_MFA_Users::class, 'sort_columns' ] ) );
 		$this->assertEquals( 10, has_filter( 'users_list_table_query_args', [ Highlight_MFA_Users::class, 'sort_columns' ] ) );
-
-		$this->assertNotFalse( has_filter( 'found_users_query', [ Highlight_MFA_Users::class, 'fix_found_users_query' ] ) );
-		$this->assertEquals( 10, has_filter( 'found_users_query', [ Highlight_MFA_Users::class, 'fix_found_users_query' ] ) );
 
 		// Test that cache clearing actions are hooked
 		$this->assertNotFalse( has_action( 'updated_user_meta', [ Highlight_MFA_Users::class, 'clear_mfa_count_cache_on_meta_update' ] ) );
@@ -700,7 +699,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$query->query_where = 'WHERE 1=1';
 
 		$original_sql = 'SELECT FOUND_ROWS()';
-		$fixed_sql    = Highlight_MFA_Users::fix_found_users_query( $original_sql, $query );
+		$fixed_sql    = Users_Query_Utils::fix_found_users_query( $original_sql, $query );
 
 		// The fixed SQL should be a COUNT query
 		$this->assertStringContainsString( 'SELECT COUNT(DISTINCT', $fixed_sql );
@@ -719,7 +718,7 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		$query        = new \WP_User_Query();
 		$original_sql = 'SELECT FOUND_ROWS()';
-		$result_sql   = Highlight_MFA_Users::fix_found_users_query( $original_sql, $query );
+		$result_sql   = Users_Query_Utils::fix_found_users_query( $original_sql, $query );
 
 		// Should return the original SQL unchanged
 		$this->assertEquals( $original_sql, $result_sql );
