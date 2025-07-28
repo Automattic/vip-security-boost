@@ -121,6 +121,6 @@ class Test_Data_Sync extends WP_UnitTestCase {
 		$expected     = Data_Sync::add_security_boost_extended_data( [] );
 
 		$this->assertArrayHasKey( Constants::SDS_DATA_KEY, $site_details );
-		$this->assertSame( $expected, $site_details);
+		$this->assertSame( $expected, $site_details );
 	}
 }
