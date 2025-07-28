@@ -6,6 +6,7 @@ use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Capability_Utils;
+use Automattic\VIP\Security\Utils\Users_Query_Utils;
 
 class Inactive_Users {
 	protected static $considered_inactive_after_days;
@@ -48,6 +49,7 @@ class Inactive_Users {
 		add_filter( 'determine_current_user', [ __CLASS__, 'record_activity' ], 30, 1 );
 
 		add_action( 'admin_init', [ __CLASS__, 'register_release_date' ] );
+		add_action( 'admin_init', [ __CLASS__, 'maybe_fix_found_users_query' ] );
 
 		// skipping inactivity checks for new users
 		if ( is_multisite() ) {
@@ -93,10 +95,23 @@ class Inactive_Users {
 		add_filter( 'vip_site_details_index_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
 	}
 
+	public static function maybe_fix_found_users_query() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! is_admin() || ! isset( $_GET['last_seen_filter'] ) || 'blocked' !== $_GET['last_seen_filter'] ) {
+			// Not in admin or not filtering for blocked users, nothing to do
+			return;
+		}
+
+		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
+	}
+
 	public static function add_inactive_users_count_to_sds_payload( $data ) {
 		if ( ! isset( $data[ Constants::SDS_DATA_KEY ] ) ) {
 			$data[ Constants::SDS_DATA_KEY ] = array();
 		}
+
+		// Add fix for unreliable FOUND_ROWS() query
+		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
 
 		// Start timer to measure query time
 		$timer = microtime( true );
@@ -323,20 +338,8 @@ class Inactive_Users {
 			'count_total' => true,
 		], self::get_inactive_users_query_args() );
 
-		// 1. Instantiate WP_User_Query but don't run its main query
-		// We have found issues with unreliable FOUND_ROWS() when counting users,
-		// so we're using a custom COUNT query instead
-		$users_query = new \WP_User_Query();
-
-		// 2. Prepare the query object with given filters
-		$users_query->prepare_query( $args );
-
-		// 3. Execute the count query
-		global $wpdb;
-		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
-		$sql = "SELECT COUNT(DISTINCT {$wpdb->users}.ID) {$users_query->query_from} {$users_query->query_where}";
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
-		$count = (int) $wpdb->get_var( $sql );
+		$users_query = new \WP_User_Query( $args );
+		$count       = $users_query->get_total();
 
 		// Cache the result for global queries (blog_id = 0)
 		if ( 0 === $blog_id ) {
