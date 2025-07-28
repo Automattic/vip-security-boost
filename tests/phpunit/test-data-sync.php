@@ -108,7 +108,7 @@ class Test_Data_Sync extends WP_UnitTestCase {
 		$this->assertSame( $expected, $site_details[ Constants::SDS_DATA_KEY ] );
 	}
 
-	// check that it adds an vip_site_details_index_data filter and it adds the vip_security_boost key
+	// check that it adds a vip_site_details_index_data filter and it adds the vip_security_boost key
 	public function test_add_security_boost_extended_data() {
 		// Data_Sync hooks itself up in its init() call at the bottom of the file,
 		// but WordPress test bootstrap may not have fired that yet in isolated
