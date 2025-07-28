@@ -644,7 +644,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Test site 1 count - role__in in WP_User_Query filters by current site roles,
 		// so only users with administrator role on site 1 are counted
 		$site_1_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
-		$this->assertEquals( 2, $site_1_result['vip_security_boost']['inactive_users_count'], 'Site 1 should count 2 inactive users with roles on this site' );
+		$this->assertEquals( 2, $site_1_result['inactive_users_count'], 'Site 1 should count 2 inactive users with roles on this site' );
 
 		restore_current_blog();
 
@@ -665,7 +665,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		// Test site 2 count - only users with administrator role on site 2 are counted
 		$site_2_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
-		$this->assertEquals( 3, $site_2_result['vip_security_boost']['inactive_users_count'], 'Site 2 should count 3 inactive users with roles on this site' );
+		$this->assertEquals( 3, $site_2_result['inactive_users_count'], 'Site 2 should count 3 inactive users with roles on this site' );
 
 		restore_current_blog();
 
@@ -674,7 +674,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		// Test network-wide count - all users with administrator role are counted
 		$network_result = Inactive_Users::add_inactive_users_count_to_sds_payload( [] );
-		$this->assertEquals( 5, $network_result['vip_security_boost']['inactive_users_count_all_blogs'], 'Network-wide should count 5 inactive users with roles on any site' );
+		$this->assertEquals( 5, $network_result['inactive_users_count_all_blogs'], 'Network-wide should count 5 inactive users with roles on any site' );
 
 		// Clean up users
 		wp_delete_user( $site_1_user_1 );
