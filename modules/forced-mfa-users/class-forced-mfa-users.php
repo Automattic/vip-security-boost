@@ -35,7 +35,7 @@ class Forced_MFA_Users {
 			return;
 		}
 
-		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ] );
+		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ], 10 );
 	}
 
 	/**
