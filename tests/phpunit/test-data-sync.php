@@ -21,7 +21,7 @@ class Test_Data_Sync extends WP_UnitTestCase {
 		parent::setUp();
 
 		// Tell the two-factor plugin we're running in a test context.
-		add_action( 'wpcom_vip_is_two_factor_local_testing', '__return_true' );
+		add_filter( 'wpcom_vip_is_two_factor_local_testing', '__return_true' );
 
 		// Remove external filters that might interfere with the detection logic.
 		// Clear any pre-existing filters entirely to get a true default state.
