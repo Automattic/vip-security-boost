@@ -864,7 +864,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that single-site unblock action
+	 * Test that single-site unblock action works
 	 */
 	public function test_single_site_unblock_action() {
 		if ( is_multisite() ) {
