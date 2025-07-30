@@ -102,6 +102,9 @@ class Highlight_MFA_Users {
 
 		$data['users_without_2fa_count'] = $users_without_2fa_count;
 
+		// Remove fix for unreliable FOUND_ROWS() query
+		remove_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
+
 		return $data;
 	}
 
