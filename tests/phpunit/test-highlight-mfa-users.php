@@ -723,4 +723,124 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Should return the original SQL unchanged
 		$this->assertEquals( $original_sql, $result_sql );
 	}
+
+	/**
+	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
+	 */
+	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
+		// Verify the filter is added during init
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users', 'add_users_without_2fa_count_to_sds_payload' ] ) );
+
+		// Test that the filter works by applying it
+		$initial_data  = [ 'some_key' => 'some_value' ];
+		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', $initial_data );
+
+		// Should preserve existing data
+		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
+		// Should add MFA count data
+		$this->assertArrayHasKey( 'users_without_2fa_count', $filtered_data );
+		$this->assertIsInt( $filtered_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test add_users_without_2fa_count_to_sds_payload method directly
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_add_users_without_2fa_count_to_sds_payload() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$initial_data = [ 'existing_key' => 'existing_value' ];
+		$result_data  = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( $initial_data );
+
+		// Should preserve existing data
+		$this->assertEquals( 'existing_value', $result_data['existing_key'] );
+
+		// Should add users_without_2fa_count
+		$this->assertArrayHasKey( 'users_without_2fa_count', $result_data );
+		$this->assertIsInt( $result_data['users_without_2fa_count'] );
+
+		// Should count exactly 3 users without MFA:
+		// - admin_user_mfa_disabled_id (admin without MFA)
+		// - editor_user_id (editor without MFA)
+		// - Default WordPress user (ID 1, admin without MFA)
+		// Excluded: admin_user_mfa_skipped_id (skipped), admin_wpcomvip_ignored_id (bot user)
+		$this->assertEquals( 3, $result_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test that SDS payload respects skipped user IDs
+	 */
+	public function test_sds_payload_respects_skipped_user_ids() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// First, remove the skipped user from skip list to get baseline
+		delete_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$result_without_skip = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$count_without_skip  = $result_without_skip['users_without_2fa_count'];
+
+		// Now add the user back to skip list
+		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$result_with_skip = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$count_with_skip  = $result_with_skip['users_without_2fa_count'];
+
+		// Should be 1 less with skip list (the skipped admin should be excluded)
+		$this->assertEquals( $count_without_skip - 1, $count_with_skip );
+
+		// Restore original skip list for other tests
+		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
+	}
+
+	/**
+	 * Test that SDS payload excludes wpcomvip bot user
+	 */
+	public function test_sds_payload_excludes_wpcomvip_bot() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Get the current count (should exclude the bot user)
+		$result_data = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+
+		// Should count exactly 3 users without MFA:
+		// - admin_user_mfa_disabled_id (admin without MFA)
+		// - editor_user_id (editor without MFA)
+		// - Default WordPress user (ID 1, admin without MFA)
+		// Excluded: admin_user_mfa_skipped_id (skipped), admin_wpcomvip_ignored_id (bot user)
+		$this->assertEquals( 3, $result_data['users_without_2fa_count'] );
+
+		// Verify the bot user exists but is not counted
+		$bot_user = get_user_by( 'ID', $this->admin_wpcomvip_ignored_id );
+		$this->assertNotFalse( $bot_user );
+		$this->assertEquals( Configs::get_bot_login(), $bot_user->user_login );
+	}
+
+	/**
+	 * Test that SDS payload returns zero when all eligible users have MFA enabled
+	 */
+	public function test_sds_payload_zero_when_all_users_have_mfa() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Enable MFA for ALL eligible users (including the default WordPress user)
+		// Get all admin and editor users to ensure we enable MFA for all of them
+		$all_admin_editor_users = get_users( [ 'role__in' => [ 'administrator', 'editor' ] ] );
+		$all_user_ids           = wp_list_pluck( $all_admin_editor_users, 'ID' );
+
+		Two_Factor_Core::$mock_enabled_user_ids = $all_user_ids;
+
+		// Clear cache after enabling MFA for all users
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$initial_data = [];
+		$result_data  = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( $initial_data );
+
+		// Should return zero since all eligible users have MFA
+		$this->assertEquals( 0, $result_data['users_without_2fa_count'] );
+	}
 }

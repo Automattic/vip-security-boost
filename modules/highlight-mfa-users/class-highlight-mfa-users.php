@@ -89,6 +89,20 @@ class Highlight_MFA_Users {
 		add_action( 'set_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
 		add_action( 'add_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
 		add_action( 'remove_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
+
+		// Add SDS hook
+		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_users_without_2fa_count_to_sds_payload' ] );
+	}
+
+	public static function add_users_without_2fa_count_to_sds_payload( $data ) {
+		// Add fix for unreliable FOUND_ROWS() query
+		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
+
+		$users_without_2fa_count = self::get_mfa_disabled_count();
+
+		$data['users_without_2fa_count'] = $users_without_2fa_count;
+
+		return $data;
 	}
 
 	/**
