@@ -132,7 +132,7 @@ class Inactive_Users {
 		do_action( 'vip_security_inactive_users_query_time', $timer );
 
 		// Remove fix for unreliable FOUND_ROWS() query
-		remove_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
+		remove_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10 );
 
 		return $data;
 	}
