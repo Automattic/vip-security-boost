@@ -94,6 +94,12 @@ class Highlight_MFA_Users {
 		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_users_without_2fa_count_to_sds_payload' ] );
 	}
 
+	/**
+	 * Add the users_without_2fa_count to the SDS payload.
+	 *
+	 * @param array $data The SDS payload data.
+	 * @return array The modified SDS payload data.
+	 */
 	public static function add_users_without_2fa_count_to_sds_payload( $data ) {
 		// Add fix for unreliable FOUND_ROWS() query
 		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
