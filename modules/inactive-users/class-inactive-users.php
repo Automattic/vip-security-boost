@@ -45,7 +45,7 @@ class Inactive_Users {
 		// Use a global cache group since users are shared among network sites.
 		wp_cache_add_global_groups( array( self::LAST_SEEN_CACHE_GROUP ) );
 
-		add_filter( 'determine_current_user', [ __CLASS__, 'record_activity' ], 30, 1 );
+		add_action( 'set_current_user', [ __CLASS__, 'record_activity' ], 30, 1 );
 
 		add_action( 'admin_init', [ __CLASS__, 'register_release_date' ] );
 		add_action( 'admin_init', [ __CLASS__, 'maybe_fix_found_users_query' ] );
@@ -134,32 +134,27 @@ class Inactive_Users {
 		return $data;
 	}
 
-	public static function record_activity( $user_id ) {
+	public static function record_activity() {
+		$user_id = get_current_user_id();
+
 		if ( ! $user_id ) {
-			return $user_id;
+			return;
 		}
 
 		if ( wp_cache_get( $user_id, self::LAST_SEEN_CACHE_GROUP ) ) {
 			// Last seen meta was checked recently
-			return $user_id;
-		}
-
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
-			return $user_id;
+			return;
 		}
 
 		if ( self::is_considered_inactive( $user_id ) ) {
 			// User needs to be unblocked first
-			return $user_id;
+			return;
 		}
 
 		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
 		if ( wp_cache_add( $user_id, true, self::LAST_SEEN_CACHE_GROUP, self::LAST_SEEN_UPDATE_USER_META_CACHE_TTL ) ) {
 			update_user_meta( $user_id, self::LAST_SEEN_META_KEY, time() );
 		}
-
-		return $user_id;
 	}
 
 	/**
