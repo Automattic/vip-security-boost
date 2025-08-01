@@ -45,7 +45,7 @@ class Inactive_Users {
 		// Use a global cache group since users are shared among network sites.
 		wp_cache_add_global_groups( array( self::LAST_SEEN_CACHE_GROUP ) );
 
-		add_action( 'set_current_user', [ __CLASS__, 'record_activity' ], 30, 1 );
+		add_action( 'set_current_user', [ __CLASS__, 'record_activity' ], 30 );
 
 		add_action( 'admin_init', [ __CLASS__, 'register_release_date' ] );
 		add_action( 'admin_init', [ __CLASS__, 'maybe_fix_found_users_query' ] );
