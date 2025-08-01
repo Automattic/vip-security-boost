@@ -55,8 +55,9 @@ class Capability_Utils {
 			return false;
 		}
 		
-		// Ensure allcaps is an array to prevent fatal errors
-		if ( ! isset( $user->allcaps ) || ! is_array( $user->allcaps ) ) {
+		// Ensure allcaps exists and is an array to prevent fatal errors
+		// Check property_exists first to satisfy PHPStan, then check if it's set and is array
+		if ( ! property_exists( $user, 'allcaps' ) || ! is_array( $user->allcaps ) ) {
 			return false;
 		}
 		

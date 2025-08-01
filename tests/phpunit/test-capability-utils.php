@@ -118,7 +118,7 @@ class Test_Capability_Utils extends WP_UnitTestCase {
 		$call_count = 0;
 		$max_calls  = 5;
 
-		add_filter( 'map_meta_cap', function ( $caps, $cap, $user_id, $args ) use ( $user, &$call_count, $max_calls ) {
+		add_filter( 'map_meta_cap', function ( $caps, $cap, $user_id ) use ( &$call_count, $max_calls ) {
 			$call_count++;
 			
 			// Prevent actual infinite loop in test
@@ -127,16 +127,16 @@ class Test_Capability_Utils extends WP_UnitTestCase {
 			}
 
 			// This should NOT cause infinite loop because we check allcaps directly
-			if ( 'test_capability' === $cap ) {
+			if ( 'upload_files' === $cap ) {
 				$current_user = get_user_by( 'id', $user_id );
 				Capability_Utils::user_has_any_capability( $current_user, [ 'manage_options' ] );
 			}
 
 			return $caps;
-		}, 10, 4 );
+		}, 10, 3 );
 
 		// Trigger map_meta_cap
-		user_can( $user, 'test_capability' );
+		user_can( $user, 'upload_files' );
 
 		// Remove filter
 		remove_all_filters( 'map_meta_cap' );
