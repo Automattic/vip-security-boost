@@ -43,6 +43,9 @@ class Capability_Utils {
 	/**
 	 * Check if a user has any of the specified capabilities (OR logic).
 	 * 
+	 * This method directly checks the allcaps array to avoid infinite loops
+	 * when called from within map_meta_cap filters.
+	 * 
 	 * @param \WP_User|false|null $user The user to check.
 	 * @param array $capabilities Array of capabilities to check.
 	 * @return bool True if user has any of the capabilities, false otherwise.
@@ -53,8 +56,8 @@ class Capability_Utils {
 		}
 		
 		foreach ( $capabilities as $capability ) {
-			// phpcs:ignore WordPress.WP.Capabilities.Undetermined -- Capability is from configuration
-			if ( user_can( $user, $capability ) ) {
+			// Check if capability exists and is truthy
+			if ( isset( $user->allcaps[ $capability ] ) && $user->allcaps[ $capability ] ) {
 				return true;
 			}
 		}
