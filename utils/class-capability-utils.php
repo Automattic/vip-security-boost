@@ -56,8 +56,13 @@ class Capability_Utils {
 		}
 		
 		// Ensure allcaps exists and is an array to prevent fatal errors
-		// Check property_exists first to satisfy PHPStan, then check if it's set and is array
+		// phpcs:ignore -- PHPStan thinks allcaps always exists, but it can be unset/corrupted
+		// @phpstan-ignore-next-line
 		if ( ! property_exists( $user, 'allcaps' ) || ! is_array( $user->allcaps ) ) {
+			Logger::error(
+				'Capability_Utils::user_has_any_capability',
+				'allcaps does not exist or is not an array'
+			);
 			return false;
 		}
 		
