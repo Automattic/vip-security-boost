@@ -59,8 +59,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * Test that record_activity updates the last seen timestamp
 	 */
 	public function test_record_activity() {
-		$result = Inactive_Users::record_activity( $this->user_id );
+		wp_set_current_user( $this->user_id );
 
+		Inactive_Users::record_activity();
 
 		$last_seen = get_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, true );
 
