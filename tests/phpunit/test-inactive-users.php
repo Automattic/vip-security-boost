@@ -750,4 +750,168 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		wp_delete_user( $u3 );
 		wp_delete_user( $u4 );
 	}
+
+	/**
+	 * Test multisite security: admin can only unblock users who are members of current site
+	 */
+	public function test_multisite_unblock_when_user_not_member_of_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create a user who will be an admin on the current site
+		$network_user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Make the user inactive
+		update_user_meta( $network_user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $network_user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Create a second site
+		$site_2_id = $this->factory->blog->create();
+
+		// Remove the user from the current site and add them to site 2
+		remove_user_from_blog( $network_user_id, get_current_blog_id() );
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_2_id );
+		add_user_to_blog( $site_2_id, $network_user_id, 'administrator' );
+		restore_current_blog();
+
+		// Create an admin user on the current site
+		$current_site_admin = $this->factory->user->create([
+			'role' => 'administrator',
+		]);
+
+		// Set the current user to the admin of the current site
+		wp_set_current_user( $current_site_admin );
+
+		// Verify the network user is not a member of the current site
+		$this->assertFalse( is_user_member_of_blog( $network_user_id, get_current_blog_id() ) );
+
+		// Simulate the unblock action request
+		$_GET['action']                = 'reset_last_seen';
+		$_GET['user_id']               = $network_user_id;
+		$_GET['reset_last_seen_nonce'] = wp_create_nonce( 'reset_last_seen_action' );
+
+		// Call the unblock action method
+		Inactive_Users::last_seen_unblock_action();
+
+		// Verify that the user is still considered inactive, since the user is not a member of the current site
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $network_user_id ) );
+
+		// Clean up
+		wp_delete_user( $network_user_id );
+		wp_delete_user( $current_site_admin );
+		unset( $_GET['action'], $_GET['user_id'], $_GET['reset_last_seen_nonce'] );
+	}
+
+	/**
+	 * Test multisite security: admin can unblock users who ARE members of current site
+	 */
+	public function test_multisite_unblock_when_user_is_member_of_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create a user who IS a member of the current site
+		$site_user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Make the user inactive
+		update_user_meta( $site_user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $site_user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Set the current user to be a super admin (who can edit any user)
+		$super_admin_id = $this->factory->user->create([
+			'role' => 'administrator',
+		]);
+		grant_super_admin( $super_admin_id );
+		wp_set_current_user( $super_admin_id );
+
+		// Verify the user IS a member of the current site
+		$this->assertTrue( is_user_member_of_blog( $site_user_id, get_current_blog_id() ) );
+
+		// Verify the user is initially inactive
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $site_user_id ) );
+
+		// Verify the current user has edit_user capability for this user
+		$this->assertTrue( current_user_can( 'edit_user', $site_user_id ), 'Super admin should have edit_user capability for any user' );
+
+		// Simulate the unblock action request
+		$_GET['action']                = 'reset_last_seen';
+		$_GET['user_id']               = $site_user_id;
+		$_GET['reset_last_seen_nonce'] = wp_create_nonce( 'reset_last_seen_action' );
+
+		// Mock wp_safe_redirect to prevent actual redirect during test
+		add_filter( 'wp_redirect', function () {
+			// Just return false to prevent actual redirect
+			return false;
+		});
+
+		// Call the unblock action method
+		Inactive_Users::last_seen_unblock_action();
+
+		// Verify that the user was successfully unblocked (should no longer be considered inactive)
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $site_user_id ) );
+
+		// Clean up
+		wp_delete_user( $site_user_id );
+		wp_delete_user( $super_admin_id );
+		unset( $_GET['action'], $_GET['user_id'], $_GET['reset_last_seen_nonce'] );
+	}
+
+	/**
+	 * Test that single-site unblock action works
+	 */
+	public function test_single_site_unblock_action() {
+		if ( is_multisite() ) {
+			$this->markTestSkipped( 'This test is for single-site installations only' );
+		}
+
+		// Create a user
+		$user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Make the user inactive
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Create an admin user
+		$admin_user_id = $this->factory->user->create([
+			'role' => 'administrator',
+		]);
+
+		// Set the current user to the admin
+		wp_set_current_user( $admin_user_id );
+
+		// Verify the user is initially inactive
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $user_id ) );
+
+		// Simulate the unblock action request
+		$_GET['action']                = 'reset_last_seen';
+		$_GET['user_id']               = $user_id;
+		$_GET['reset_last_seen_nonce'] = wp_create_nonce( 'reset_last_seen_action' );
+
+		// Mock wp_safe_redirect to prevent actual redirect during test
+		add_filter( 'wp_redirect', function () {
+			return false;
+		});
+
+		// Call the unblock action method
+		Inactive_Users::last_seen_unblock_action();
+
+		// Verify that the user was successfully unblocked (should no longer be considered inactive)
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $user_id ) );
+
+		// Clean up
+		wp_delete_user( $user_id );
+		wp_delete_user( $admin_user_id );
+		unset( $_GET['action'], $_GET['user_id'], $_GET['reset_last_seen_nonce'] );
+	}
 }
