@@ -55,7 +55,17 @@ class Capability_Utils {
 			return false;
 		}
 		
+		// Ensure allcaps is an array to prevent fatal errors
+		if ( ! isset( $user->allcaps ) || ! is_array( $user->allcaps ) ) {
+			return false;
+		}
+		
 		foreach ( $capabilities as $capability ) {
+			// Skip non-scalar capabilities to prevent errors
+			if ( ! is_scalar( $capability ) ) {
+				continue;
+			}
+			
 			// Check if capability exists and is truthy
 			if ( isset( $user->allcaps[ $capability ] ) && $user->allcaps[ $capability ] ) {
 				return true;

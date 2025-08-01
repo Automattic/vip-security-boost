@@ -116,9 +116,9 @@ class Test_Capability_Utils extends WP_UnitTestCase {
 
 		// Track if we're in a potential infinite loop
 		$call_count = 0;
-		$max_calls = 5;
+		$max_calls  = 5;
 
-		add_filter( 'map_meta_cap', function( $caps, $cap, $user_id, $args ) use ( $user, &$call_count, $max_calls ) {
+		add_filter( 'map_meta_cap', function ( $caps, $cap, $user_id, $args ) use ( $user, &$call_count, $max_calls ) {
 			$call_count++;
 			
 			// Prevent actual infinite loop in test
@@ -192,6 +192,72 @@ class Test_Capability_Utils extends WP_UnitTestCase {
 			[ 'administrator', 'editor' ], 
 			Capability_Utils::normalize_roles_input( [ 'administrator', '', 'editor', '   ' ] ),
 			'Should filter out empty values'
+		);
+	}
+
+	/**
+	 * Test user_has_any_capability with corrupted allcaps
+	 */
+	public function test_user_has_any_capability_with_corrupted_allcaps() {
+		$user = $this->factory->user->create_and_get( array(
+			'role' => 'administrator',
+		) );
+
+		// Test with non-array allcaps
+		$user->allcaps = null;
+		$this->assertFalse( 
+			Capability_Utils::user_has_any_capability( $user, [ 'manage_options' ] ),
+			'Should return false when allcaps is null'
+		);
+
+		$user->allcaps = 'string';
+		$this->assertFalse( 
+			Capability_Utils::user_has_any_capability( $user, [ 'manage_options' ] ),
+			'Should return false when allcaps is a string'
+		);
+
+		$user->allcaps = new \stdClass();
+		$this->assertFalse( 
+			Capability_Utils::user_has_any_capability( $user, [ 'manage_options' ] ),
+			'Should return false when allcaps is an object'
+		);
+
+		// Test with unset allcaps
+		unset( $user->allcaps );
+		$this->assertFalse( 
+			Capability_Utils::user_has_any_capability( $user, [ 'manage_options' ] ),
+			'Should return false when allcaps is not set'
+		);
+	}
+
+	/**
+	 * Test user_has_any_capability with non-scalar capabilities
+	 */
+	public function test_user_has_any_capability_with_non_scalar_capabilities() {
+		$user = $this->factory->user->create_and_get( array(
+			'role' => 'administrator',
+		) );
+
+		// Mix of valid and invalid capability types
+		$capabilities = [
+			'manage_options',  // valid
+			123,              // valid (scalar)
+			null,             // invalid
+			[],               // invalid
+			new \stdClass(),  // invalid
+			'edit_posts',     // valid
+		];
+
+		// Should still return true because valid capabilities exist
+		$this->assertTrue( 
+			Capability_Utils::user_has_any_capability( $user, $capabilities ),
+			'Should skip non-scalar capabilities and still find valid ones'
+		);
+
+		// Only non-scalar capabilities
+		$this->assertFalse( 
+			Capability_Utils::user_has_any_capability( $user, [ null, [], new \stdClass() ] ),
+			'Should return false when all capabilities are non-scalar'
 		);
 	}
 }
