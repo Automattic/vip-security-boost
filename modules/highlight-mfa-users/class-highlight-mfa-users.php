@@ -124,7 +124,9 @@ class Highlight_MFA_Users {
 	 *
 	 * @return int The number of users with MFA disabled.
 	 */
-	private static function get_mfa_disabled_count() {
+	private static function get_mfa_disabled_count( $blog_id = null ) {
+		$blog_id = $blog_id ?? get_current_blog_id();
+
 		// Try to get from cache first
 		$cached_count = wp_cache_get( self::get_mfa_count_cache_key(), self::MFA_COUNT_CACHE_GROUP );
 		if ( false !== $cached_count ) {
@@ -151,16 +153,20 @@ class Highlight_MFA_Users {
 			'exclude' => $skipped_user_ids,
 			'number'  => -1, // Get all relevant users
 		];
-		
+
 		// Use native capability filtering if capabilities are configured
 		if ( Capability_Utils::are_capabilities_configured( self::$capabilities ) ) {
 			$args['capability__in'] = self::$capabilities;
 		} else {
 			$args['role__in'] = self::$roles;
 		}
-		
-		$user_query = new \WP_User_Query( $args );
-		$user_ids   = $user_query->get_results();
+
+		// Use our utility method that properly handles network-wide capability filtering
+		$user_ids = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			$args,
+			$blog_id,
+			false // return user IDs, not count
+		);
 
 		$mfa_disabled_count = 0;
 		foreach ( $user_ids as $user_id ) {
