@@ -28,27 +28,41 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			$this->markTestSkipped( 'This test requires multisite to be enabled' );
 		}
 
-		// Create a site and users with different roles
+		// Create a site and multiple users with different roles
 		$site_id = $this->factory->blog->create();
-		
-		$admin_user  = $this->factory->user->create( [ 'role' => 'administrator' ] );
-		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
-		
+
+		// Create multiple users per role to test counting accuracy
+		$admin_user1  = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$admin_user2  = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user1 = $this->factory->user->create( [ 'role' => 'editor' ] );
+		$editor_user2 = $this->factory->user->create( [ 'role' => 'editor' ] );
+
 		// Add users to the site
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
 		switch_to_blog( $site_id );
-		add_user_to_blog( $site_id, $admin_user, 'administrator' );
-		add_user_to_blog( $site_id, $editor_user, 'editor' );
+		add_user_to_blog( $site_id, $admin_user1, 'administrator' );
+		add_user_to_blog( $site_id, $admin_user2, 'administrator' );
+		add_user_to_blog( $site_id, $editor_user1, 'editor' );
+		add_user_to_blog( $site_id, $editor_user2, 'editor' );
 		restore_current_blog();
 
-		// Test site-specific query with capability filtering
+		// Test site-specific query with single capability filtering
 		$site_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[ 'capability__in' => [ 'manage_options' ] ],
 			$site_id,
 			true // count only
 		);
-		
-		$this->assertEquals( 1, $site_count, 'Site-specific query should return 1 user with manage_options capability' );
+
+		$this->assertEquals( 2, $site_count, 'Site-specific query should return exactly 2 users with manage_options capability' );
+
+		// Test site-specific query with multiple capabilities
+		$site_multi_cap_count = Users_Query_Utils::query_users_with_capability_filtering(
+			[ 'capability__in' => [ 'manage_options', 'edit_posts' ] ],
+			$site_id,
+			true // count only
+		);
+
+		$this->assertEquals( 4, $site_multi_cap_count, 'Site-specific query should return exactly 4 users with manage_options OR edit_posts capabilities' );
 
 		// Test site-specific query with role filtering
 		$site_role_count = Users_Query_Utils::query_users_with_capability_filtering(
@@ -56,8 +70,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			$site_id,
 			true // count only
 		);
-		
-		$this->assertEquals( 1, $site_role_count, 'Site-specific query should return 1 user with administrator role' );
+
+		$this->assertEquals( 2, $site_role_count, 'Site-specific query should return exactly 2 users with administrator role' );
 
 		// Test getting user IDs instead of count
 		$site_user_ids = Users_Query_Utils::query_users_with_capability_filtering(
@@ -65,13 +79,16 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			$site_id,
 			false // return user IDs
 		);
-		
-		$this->assertCount( 1, $site_user_ids, 'Should return array with 1 user ID' );
-		$this->assertEquals( $admin_user, $site_user_ids[0], 'Should return the admin user ID' );
+
+		$this->assertCount( 2, $site_user_ids, 'Should return array with exactly 2 user IDs' );
+		$this->assertContains( $admin_user1, $site_user_ids, 'Should contain first admin user ID' );
+		$this->assertContains( $admin_user2, $site_user_ids, 'Should contain second admin user ID' );
 
 		// Clean up
-		wp_delete_user( $admin_user );
-		wp_delete_user( $editor_user );
+		wp_delete_user( $admin_user1 );
+		wp_delete_user( $admin_user2 );
+		wp_delete_user( $editor_user1 );
+		wp_delete_user( $editor_user2 );
 	}
 
 	/**
@@ -83,17 +100,22 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			$this->markTestSkipped( 'This test requires multisite to be enabled' );
 		}
 
-		// Create a site and users with different roles
+		// Create a site and multiple users with different roles
 		$site_id = $this->factory->blog->create();
-		
-		$admin_user  = $this->factory->user->create( [ 'role' => 'administrator' ] );
-		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
-		
+
+		// Create multiple users per role to test counting accuracy
+		$admin_user1  = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$admin_user2  = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user1 = $this->factory->user->create( [ 'role' => 'editor' ] );
+		$editor_user2 = $this->factory->user->create( [ 'role' => 'editor' ] );
+
 		// Add users to the site
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
 		switch_to_blog( $site_id );
-		add_user_to_blog( $site_id, $admin_user, 'administrator' );
-		add_user_to_blog( $site_id, $editor_user, 'editor' );
+		add_user_to_blog( $site_id, $admin_user1, 'administrator' );
+		add_user_to_blog( $site_id, $admin_user2, 'administrator' );
+		add_user_to_blog( $site_id, $editor_user1, 'editor' );
+		add_user_to_blog( $site_id, $editor_user2, 'editor' );
 		restore_current_blog();
 
 		// Test 1: WordPress core WP_User_Query with blog_id=0 (should fail to filter properly)
@@ -103,38 +125,43 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			'fields'         => 'ID',
 		]);
 		$core_results = $core_query->get_results();
-		
+
 		// WordPress core ignores capability filtering with blog_id=0
 		// This assertion demonstrates the core issue
-		$this->assertGreaterThan( 1, count( $core_results ), 
+		$this->assertGreaterThan( 2, count( $core_results ),
 		'WordPress core WP_User_Query with blog_id=0 ignores capability filtering and returns too many users' );
-		
-		// Test 2: Our utility method with network-wide query (should work correctly)
+
+		// Test 2: method with network-wide query (should work correctly)
 		$utility_user_ids = Users_Query_Utils::query_users_with_capability_filtering(
 			[ 'capability__in' => [ 'manage_options' ] ],
 			0, // network-wide
 			false // return user IDs
 		);
-		
-		// Our utility should properly filter by capabilities
-		$this->assertContains( $admin_user, $utility_user_ids, 'Our utility should include the admin user' );
-		$this->assertNotContains( $editor_user, $utility_user_ids, 'Our utility should not include the editor user' );
-		
+
+		// should properly filter by capabilities
+		$this->assertContains( $admin_user1, $utility_user_ids, 'should include the first admin user' );
+		$this->assertContains( $admin_user2, $utility_user_ids, 'should include the second admin user' );
+		$this->assertNotContains( $editor_user1, $utility_user_ids, 'should not include the first editor user' );
+		$this->assertNotContains( $editor_user2, $utility_user_ids, 'should not include the second editor user' );
+
 		// Test 3: Compare counts - our utility should return fewer users than core
 		$utility_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[ 'capability__in' => [ 'manage_options' ] ],
 			0, // network-wide
 			true // count only
 		);
-		
+
 		$this->assertLessThan( count( $core_results ), $utility_count,
-		'Our utility should return fewer users than WordPress core (which ignores filtering)' );
-		$this->assertEquals( count( $utility_user_ids ), $utility_count, 
+		'should return fewer users than WordPress core (which ignores filtering)' );
+		$this->assertEquals( count( $utility_user_ids ), $utility_count,
 		'Count should match array length from our utility' );
+		$this->assertEquals( 2, $utility_count, 'should return exactly 2 admin users' );
 
 		// Clean up
-		wp_delete_user( $admin_user );
-		wp_delete_user( $editor_user );
+		wp_delete_user( $admin_user1 );
+		wp_delete_user( $admin_user2 );
+		wp_delete_user( $editor_user1 );
+		wp_delete_user( $editor_user2 );
 	}
 
 	/**
@@ -148,21 +175,26 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		// Create multiple sites with different users
 		$site1_id = $this->factory->blog->create();
 		$site2_id = $this->factory->blog->create();
-		
-		$admin_user      = $this->factory->user->create( [ 'role' => 'administrator' ] );
-		$editor_user     = $this->factory->user->create( [ 'role' => 'editor' ] );
+
+		// Create multiple users per role to test counting accuracy
+		$admin_user1     = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$admin_user2     = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user1    = $this->factory->user->create( [ 'role' => 'editor' ] );
+		$editor_user2    = $this->factory->user->create( [ 'role' => 'editor' ] );
 		$subscriber_user = $this->factory->user->create( [ 'role' => 'subscriber' ] );
-		
-		// Add admin to site 1
+
+		// Add admins to site 1
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
 		switch_to_blog( $site1_id );
-		add_user_to_blog( $site1_id, $admin_user, 'administrator' );
+		add_user_to_blog( $site1_id, $admin_user1, 'administrator' );
+		add_user_to_blog( $site1_id, $admin_user2, 'administrator' );
 		restore_current_blog();
-		
-		// Add editor to site 2
+
+		// Add editors and subscriber to site 2
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
 		switch_to_blog( $site2_id );
-		add_user_to_blog( $site2_id, $editor_user, 'editor' );
+		add_user_to_blog( $site2_id, $editor_user1, 'editor' );
+		add_user_to_blog( $site2_id, $editor_user2, 'editor' );
 		add_user_to_blog( $site2_id, $subscriber_user, 'subscriber' );
 		restore_current_blog();
 
@@ -172,8 +204,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			0, // network-wide
 			true // count only
 		);
-		
-		$this->assertGreaterThanOrEqual( 1, $admin_count, 'Should find at least our admin user across the network' );
+
+		$this->assertEquals( 2, $admin_count, 'Should find exactly 2 admin users across the network' );
 
 		// Test network-wide role filtering for editors
 		$editor_count = Users_Query_Utils::query_users_with_capability_filtering(
@@ -181,8 +213,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			0, // network-wide
 			true // count only
 		);
-		
-		$this->assertGreaterThanOrEqual( 1, $editor_count, 'Should find at least our editor user across the network' );
+
+		$this->assertEquals( 2, $editor_count, 'Should find exactly 2 editor users across the network' );
 
 		// Test multiple roles
 		$admin_editor_count = Users_Query_Utils::query_users_with_capability_filtering(
@@ -190,12 +222,23 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			0, // network-wide
 			true // count only
 		);
-		
-		$this->assertGreaterThanOrEqual( 2, $admin_editor_count, 'Should find both admin and editor users across the network' );
+
+		$this->assertEquals( 4, $admin_editor_count, 'Should find exactly 4 users (2 admins + 2 editors) across the network' );
+
+		// Test multiple capabilities
+		$multi_cap_count = Users_Query_Utils::query_users_with_capability_filtering(
+			[ 'capability__in' => [ 'manage_options', 'edit_posts' ] ],
+			0, // network-wide
+			true // count only
+		);
+
+		$this->assertEquals( 4, $multi_cap_count, 'Should find exactly 4 users with manage_options OR edit_posts capabilities' );
 
 		// Clean up
-		wp_delete_user( $admin_user );
-		wp_delete_user( $editor_user );
+		wp_delete_user( $admin_user1 );
+		wp_delete_user( $admin_user2 );
+		wp_delete_user( $editor_user1 );
+		wp_delete_user( $editor_user2 );
 		wp_delete_user( $subscriber_user );
 	}
 
