@@ -155,7 +155,7 @@ class Users_Query_Utils {
 		$subquery = "{$wpdb->users}.ID IN (
 			SELECT DISTINCT user_id
 			FROM {$wpdb->usermeta}
-			WHERE meta_key LIKE '%_capabilities'
+			WHERE meta_key LIKE 'wp%_capabilities'
 			AND (" . implode( ' OR ', $capability_checks ) . ')
 		)';
 
