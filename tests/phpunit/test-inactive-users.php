@@ -686,6 +686,122 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the new Users_Query_Utils::query_users_with_capability_filtering method
+	 */
+	public function test_users_query_utils_capability_filtering() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create a site and users with different roles
+		$site_id = $this->factory->blog->create();
+
+		$admin_user  = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
+
+		// Add users to the site
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_id );
+		add_user_to_blog( $site_id, $admin_user, 'administrator' );
+		add_user_to_blog( $site_id, $editor_user, 'editor' );
+		restore_current_blog();
+
+		// Test 1: Site-specific query with capability filtering
+		$site_count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			[ 'capability__in' => [ 'manage_options' ] ],
+			$site_id,
+			true // count only
+		);
+
+		$this->assertEquals( 1, $site_count, 'Site-specific query should return 1 user with manage_options capability' );
+
+		// Test our new utility method with capability filtering
+		$network_user_ids = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			[ 'capability__in' => [ 'manage_options' ] ],
+			0, // network-wide
+			false // return user IDs
+		);
+
+		// Our utility should properly filter by capabilities
+		$this->assertContains( $admin_user, $network_user_ids, 'Network-wide query should include our admin user' );
+		$this->assertNotContains( $editor_user, $network_user_ids, 'Network-wide query should not include editor user' );
+
+		// Test count as well
+		$network_count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			[ 'capability__in' => [ 'manage_options' ] ],
+			0, // network-wide
+			true // count only
+		);
+
+		// Should be at least 1 (our admin user), but may include other admin users from test setup
+		$this->assertGreaterThanOrEqual( 1, $network_count, 'Network-wide count should include at least our admin user' );
+		$this->assertEquals( count( $network_user_ids ), $network_count, 'Count should match array length' );
+
+		// Clean up
+		wp_delete_user( $admin_user );
+		wp_delete_user( $editor_user );
+	}
+
+	/**
+	 * Test that the integrated get_inactive_users_count method now works correctly with network-wide queries
+	 */
+	public function test_integrated_get_inactive_users_count_network_wide() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create a site and users with different roles
+		$site_id = $this->factory->blog->create();
+
+		$admin_user = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		$editor_user = $this->factory->user->create([
+			'role'            => 'editor',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+
+		// Add users to the site with their respective roles
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_id );
+		add_user_to_blog( $site_id, $admin_user, 'administrator' );
+		add_user_to_blog( $site_id, $editor_user, 'editor' );
+		restore_current_blog();
+
+		// Make all users inactive
+		update_user_meta( $admin_user, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		update_user_meta( $editor_user, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Remove ignore flags
+		delete_user_meta( $admin_user, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		delete_user_meta( $editor_user, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		// Flush cache to ensure fresh counts
+		Inactive_Users::flush_cache();
+
+		// Test the integrated method with network-wide query (blog_id=0)
+		$network_count = Inactive_Users::get_inactive_users_count( 0 );
+
+		// The integrated method should now properly filter by capabilities/roles
+		// It should include admin users but not editor users (based on the default config)
+		$this->assertGreaterThanOrEqual( 1, $network_count, 'Network-wide count should include at least our admin user' );
+
+		// Test site-specific query still works
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_id );
+		$site_count = Inactive_Users::get_inactive_users_count( $site_id );
+		restore_current_blog();
+
+		$this->assertEquals( 1, $site_count, 'Site-specific count should only include administrator users' );
+
+		// Clean up
+		wp_delete_user( $admin_user );
+		wp_delete_user( $editor_user );
+	}
+
+	/**
 	 * Test that only inactive are returned for the blocked filter
 	 */
 	public function test_only_inactive_and_release_users_are_returned_blocked_filter(): void {

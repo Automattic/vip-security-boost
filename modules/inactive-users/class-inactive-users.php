@@ -323,13 +323,12 @@ class Inactive_Users {
 			}
 		}
 
-		$args = array_merge( [
-			'blog_id'     => $blog_id,
-			'count_total' => true,
-		], self::get_inactive_users_query_args() );
-
-		$users_query = new \WP_User_Query( $args );
-		$count       = $users_query->get_total();
+		// Use our utility method that properly handles network-wide capability filtering
+		$count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			self::get_inactive_users_query_args(),
+			$blog_id,
+			true // count only
+		);
 
 		// Cache the result for global queries (blog_id = 0)
 		if ( 0 === $blog_id ) {
