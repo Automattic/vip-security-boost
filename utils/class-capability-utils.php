@@ -20,7 +20,8 @@ class Capability_Utils {
 	 * @var array<int, bool>
 	 */
 	private static $checking_capability = [];
-	
+	const LOG_FEATURE_NAME              = 'sb_capability_utils';
+
 	/**
 	 * Check if a user has elevated permissions based on capabilities or roles.
 	 * 
@@ -68,7 +69,11 @@ class Capability_Utils {
 		// Check if we're already checking capabilities for this user
 		if ( isset( self::$checking_capability[ $user->ID ] ) && self::$checking_capability[ $user->ID ] ) {
 			// We're in a recursive call - fall back to allcaps check
-			return self::user_has_any_capability( $user, $capabilities );
+			Logger::error(
+				self::LOG_FEATURE_NAME,
+				'Recursion detected in user_has_any_capability_full for user ID ' . $user->ID
+			);
+				return self::user_has_any_capability( $user, $capabilities );
 		}
 		
 		// Set recursion guard
@@ -112,7 +117,7 @@ class Capability_Utils {
 		}
 		
 		// Ensure allcaps exists and is an array to prevent fatal errors
-		// phpcs:ignore -- PHPStan thinks allcaps always exists, but it can be unset/corrupted
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_allcaps -- PHPStan thinks allcaps always exists, but it can be unset/corrupted
 		// @phpstan-ignore-next-line
 		if ( ! property_exists( $user, 'allcaps' ) || ! is_array( $user->allcaps ) ) {
 			Logger::error(
