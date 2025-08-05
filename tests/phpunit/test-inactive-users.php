@@ -915,10 +915,11 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		Inactive_Users::last_seen_unblock_action();
 
 		// Verify that notice was displayed
+		set_current_screen( 'users' );
 		ob_start();
 		do_action( 'admin_notices' );
 		$output = ob_get_clean();
-		$this->assertStringContainsString( 'You can only unblock users who are members of this site.', $output );
+		$this->assertStringContainsString( 'You do not have permission to unblock this user.', $output );
 
 		// Clean up
 		wp_delete_user( $network_user_id );
