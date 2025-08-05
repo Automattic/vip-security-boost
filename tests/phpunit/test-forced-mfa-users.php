@@ -429,4 +429,67 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		sort( $actual_roles );
 		$this->assertSame( $expected_roles, $actual_roles, 'Custom roles should match the normalized output from the filter.' );
 	}
+	/**
+	 * Test the logic to get the capabilities
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_get_capabilities() {
+		$default_capabilities = [ 'manage_options', 'edit_posts' ];
+		$default_roles        = [ 'administrator', 'subscriber' ];
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [
+					'capabilities' => $default_capabilities,
+					'roles'        => $default_roles,
+				],
+			],
+		] );
+		Forced_MFA_Users::init();
+		$this->assertEquals( $default_capabilities, Forced_MFA_Users::get_capabilities() );
+		add_filter( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, function () use ( $default_capabilities ) {
+			return $default_capabilities;
+		} );
+		$this->assertEquals( array_unique( array_merge( $default_capabilities, $default_capabilities ) ), Forced_MFA_Users::get_capabilities() );
+		remove_all_filters( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME );
+		$this->assertEquals( $default_capabilities, Forced_MFA_Users::get_capabilities() );
+		add_filter( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, function () {
+			return [ 'other_capability', 'edit_posts' ];
+		} );
+		$this->assertEquals( array_unique( array_merge( $default_capabilities, [ 'other_capability' ] ) ), Forced_MFA_Users::get_capabilities() );
+		remove_all_filters( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME );
+	}
+
+	/**
+	 * Test the logic to get the roles.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_get_roles() {
+		$default_capabilities = [ 'manage_options', 'edit_posts' ];
+		$default_roles        = [ 'administrator', 'subscriber' ];
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [
+					'capabilities' => $default_capabilities,
+					'roles'        => $default_roles,
+				],
+			],
+		] );
+		Forced_MFA_Users::init();
+		$this->assertEquals( $default_roles, Forced_MFA_Users::get_roles() );
+		add_filter( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME, function () use ( $default_roles ) {
+			return $default_roles;
+		} );
+		$this->assertEquals( array_unique( array_merge( $default_roles, $default_roles ) ), Forced_MFA_Users::get_roles() );
+		remove_all_filters( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME );
+		$this->assertEquals( $default_roles, Forced_MFA_Users::get_roles() );
+		add_filter( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME, function () {
+			return [ 'other_role', 'subscriber' ];
+		} );
+		$this->assertEquals( array_unique( array_merge( $default_roles, [ 'other_role' ] ) ), Forced_MFA_Users::get_roles() );
+		remove_all_filters( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME );
+	}
 }
