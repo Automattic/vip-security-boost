@@ -72,7 +72,7 @@ class Forced_MFA_Users {
 		// Check if user has elevated permissions based on capabilities or roles
 		$user_has_two_factor_enforced = Capability_Utils::user_has_elevated_permissions(
 			$user,
-			array_merge( self::$capabilities, $custom_enforced_capabilities ),
+			array_unique( array_merge( self::$capabilities, $custom_enforced_capabilities ) ),
 			self::$roles
 		);
 
