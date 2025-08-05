@@ -904,7 +904,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		wp_set_current_user( $current_site_admin );
 
 		// Verify the network user is not a member of the current site
-		$this->assertFalse( is_user_member_of_blog( $network_user_id, get_current_blog_id() ) );
+		$this->assertFalse( is_user_member_of_blog( $network_user_id, get_current_blog_id() ), 'Network user should not be a member of the current site' );
 
 		// Simulate the unblock action request
 		$_GET['action']                = 'reset_last_seen';
@@ -914,8 +914,11 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Call the unblock action method
 		Inactive_Users::last_seen_unblock_action();
 
-		// Verify that the user is still considered inactive, since the user is not a member of the current site
-		$this->assertTrue( Inactive_Users::is_considered_inactive( $network_user_id ) );
+		// Verify that notice was displayed
+		ob_start();
+		do_action( 'admin_notices' );
+		$output = ob_get_clean();
+		$this->assertStringContainsString( 'You can only unblock users who are members of this site.', $output );
 
 		// Clean up
 		wp_delete_user( $network_user_id );
