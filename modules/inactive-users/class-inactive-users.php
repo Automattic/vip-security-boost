@@ -643,8 +643,9 @@ class Inactive_Users {
 			'reset_last_seen_success' => 1,
 		), $url );
 
-		wp_safe_redirect( $url );
-		exit();
+		if ( wp_safe_redirect( $url ) ) {
+			exit();
+		}
 	}
 
 	public static function ignore_inactivity_check_for_user( $user_id, $until_timestamp = null ) {
