@@ -108,6 +108,14 @@ class Highlight_MFA_Users {
 
 		$data['users_without_2fa_count'] = $users_without_2fa_count;
 
+		if ( is_multisite() ) {
+			// Get number of users without 2FA for all blogs (network-wide with blog_id = 0)
+			$users_without_2fa_count_all_blogs = self::get_mfa_disabled_count( 0 );
+
+			// Add network-wide users without 2FA count to the SDS payload
+			$data['users_without_2fa_count_all_blogs'] = $users_without_2fa_count_all_blogs;
+		}
+
 		// Remove fix for unreliable FOUND_ROWS() query
 		remove_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10 );
 

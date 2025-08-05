@@ -739,6 +739,10 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
 		// Should add MFA count data
 		$this->assertArrayHasKey( 'users_without_2fa_count', $filtered_data );
+		// Should add network-wide MFA count data in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'users_without_2fa_count_all_blogs', $filtered_data );
+		}
 		$this->assertIsInt( $filtered_data['users_without_2fa_count'] );
 	}
 
@@ -761,12 +765,23 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'users_without_2fa_count', $result_data );
 		$this->assertIsInt( $result_data['users_without_2fa_count'] );
 
+		// Should add network-wide MFA count data in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'users_without_2fa_count_all_blogs', $result_data );
+			$this->assertIsInt( $result_data['users_without_2fa_count_all_blogs'] );
+		}
+
 		// Should count exactly 3 users without MFA:
 		// - admin_user_mfa_disabled_id (admin without MFA)
 		// - editor_user_id (editor without MFA)
 		// - Default WordPress user (ID 1, admin without MFA)
 		// Excluded: admin_user_mfa_skipped_id (skipped), admin_wpcomvip_ignored_id (bot user)
 		$this->assertEquals( 3, $result_data['users_without_2fa_count'] );
+
+		// Should count exactly 3 users without MFA across the network
+		if ( is_multisite() ) {
+			$this->assertEquals( 3, $result_data['users_without_2fa_count_all_blogs'] );
+		}
 	}
 
 	/**
@@ -842,5 +857,103 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 
 		// Should return zero since all eligible users have MFA
 		$this->assertEquals( 0, $result_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test that network-wide counts are correct with users across different blogs
+	 */
+	public function test_network_wide_counts_across_different_blogs() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Create two additional sites
+		$site_1_id = $this->factory()->blog->create();
+		$site_2_id = $this->factory()->blog->create();
+
+		// Create users for site 1 with different roles
+		$site_1_admin_user      = $this->factory()->user->create([
+			'role' => 'administrator',
+		]);
+		$site_1_editor_user     = $this->factory()->user->create([
+			'role' => 'editor',
+		]);
+		$site_1_subscriber_user = $this->factory()->user->create([
+			'role' => 'subscriber',
+		]);
+
+		// Create users for site 2 with different roles
+		$site_2_admin_user  = $this->factory()->user->create([
+			'role' => 'administrator',
+		]);
+		$site_2_editor_user = $this->factory()->user->create([
+			'role' => 'editor',
+		]);
+		$site_2_author_user = $this->factory()->user->create([
+			'role' => 'author',
+		]);
+
+		// Switch to site 1 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_1_id );
+		add_user_to_blog( $site_1_id, $site_1_admin_user, 'administrator' );
+		add_user_to_blog( $site_1_id, $site_1_editor_user, 'editor' );
+		add_user_to_blog( $site_1_id, $site_1_subscriber_user, 'subscriber' );
+
+		// Enable MFA for site 1 admin user only
+		Two_Factor_Core::$mock_enabled_user_ids[] = $site_1_admin_user;
+
+		// Test site 1 count - should count 1 user without MFA (editor)
+		// Subscriber should be excluded as it's not in the target roles
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		$site_1_result = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$this->assertEquals( 1, $site_1_result['users_without_2fa_count'], 'Site 1 should count 1 user without MFA (editor only)' );
+
+		restore_current_blog();
+
+		// Switch to site 2 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_2_id );
+		add_user_to_blog( $site_2_id, $site_2_admin_user, 'administrator' );
+		add_user_to_blog( $site_2_id, $site_2_editor_user, 'editor' );
+		add_user_to_blog( $site_2_id, $site_2_author_user, 'author' );
+
+		// Enable MFA for site 2 editor user only
+		Two_Factor_Core::$mock_enabled_user_ids[] = $site_2_editor_user;
+
+		// Test site 2 count - should count 1 user without MFA (admin)
+		// Author should be excluded as it's not in the target roles (administrator, editor)
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		$site_2_result = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$this->assertEquals( 1, $site_2_result['users_without_2fa_count'], 'Site 2 should count 1 user without MFA (admin only)' );
+
+		restore_current_blog();
+
+		// Clear cache to ensure fresh network-wide calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Test network-wide count - should count users without MFA across all sites
+		// Expected:
+		// - Original test users: admin_user_mfa_disabled_id (admin), editor_user_id (editor), default user ID 1 (admin) = 3
+		// - Site 1: site_1_editor_user (editor without MFA) = 1
+		// - Site 2: site_2_admin_user (admin without MFA) = 1
+		// Total: 5 users without MFA across the network
+		$network_result = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$this->assertEquals( 5, $network_result['users_without_2fa_count_all_blogs'], 'Network-wide should count 5 users without MFA across all sites' );
+
+		// Verify that users with MFA enabled are not counted
+		$this->assertContains( $site_1_admin_user, Two_Factor_Core::$mock_enabled_user_ids );
+		$this->assertContains( $site_2_editor_user, Two_Factor_Core::$mock_enabled_user_ids );
+
+		// Clean up users
+		wp_delete_user( $site_1_admin_user );
+		wp_delete_user( $site_1_editor_user );
+		wp_delete_user( $site_1_subscriber_user );
+		wp_delete_user( $site_2_admin_user );
+		wp_delete_user( $site_2_editor_user );
+		wp_delete_user( $site_2_author_user );
 	}
 }
