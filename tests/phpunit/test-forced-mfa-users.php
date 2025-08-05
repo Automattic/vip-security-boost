@@ -374,4 +374,59 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 		$this->assertFalse( has_action( 'set_current_user', [ Forced_MFA_Users::class, 'maybe_enforce_two_factor' ] ) );
 	}
+
+	/**
+	 * Ensure add_custom_enforced_capabilities_to_sds returns empty array when no additional capabilities filter present.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_add_custom_enforced_capabilities_roles_to_sds_without_filter() {
+		// Prepare dummy input data
+		$payload = [ 'foo' => 'bar' ];
+
+		// Sanity: the filter should not be present
+		$this->assertFalse( has_filter( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME ) );
+		$this->assertFalse( has_filter( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME ) );
+
+		$result = Forced_MFA_Users::add_custom_enforced_capabilities_to_sds( $payload );
+
+		$this->assertArrayHasKey( 'custom_capabilities', $result );
+		$this->assertSame( 'false', $result['custom_capabilities'], 'Expected custom_capabilities to be an empty array when no filter is registered.' );
+		$this->assertArrayHasKey( 'custom_roles', $result );
+		$this->assertSame( 'false', $result['custom_roles'], 'Expected custom_roles to be an empty array when no filter is registered.' );
+	}
+
+	/**
+	 * Ensure add_custom_enforced_capabilities_to_sds correctly injects normalized capabilities when the additional capabilities filter is present.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_add_custom_enforced_capabilities_roles_to_sds_with_filter() {
+		// Define a filter that returns a mix of whitespace and duplicates to test normalization
+		add_filter( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, static function () {
+			return [ 'manage_options', 'edit_posts' ];
+		} );
+		add_filter( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME, static function () {
+			return [ 'administrator', 'subscriber' ];
+		} );
+
+		$payload = [ 'foo' => 'bar' ];
+
+		$result = Forced_MFA_Users::add_custom_enforced_capabilities_to_sds( $payload );
+
+		$this->assertArrayHasKey( 'custom_capabilities', $result );
+		$expected_capabilities = [ 'manage_options', 'edit_posts' ];
+		sort( $expected_capabilities );
+		$actual_capabilities = explode( ',', $result['custom_capabilities'] );
+		sort( $actual_capabilities );
+		$this->assertSame( $expected_capabilities, $actual_capabilities, 'Custom capabilities should match the normalized output from the filter.' );
+		$this->assertArrayHasKey( 'custom_roles', $result );
+		$expected_roles = [ 'administrator', 'subscriber' ];
+		sort( $expected_roles );
+		$actual_roles = explode( ',', $result['custom_roles'] );
+		sort( $actual_roles );
+		$this->assertSame( $expected_roles, $actual_roles, 'Custom roles should match the normalized output from the filter.' );
+	}
 }

@@ -6,6 +6,7 @@ use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Forced_MFA_Users {
 	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'wpcom_vip_sb_forced_mfa_users_additional_capabilities';
+	public const ADDITIONAL_ROLES_FILTER_NAME        = 'wpcom_vip_sb_forced_mfa_users_additional_roles';
 	/**
 	 * The roles that should have MFA enforced.
 	 *
@@ -42,12 +43,36 @@ class Forced_MFA_Users {
 
 	public static function add_custom_enforced_capabilities_to_sds( $data ) {
 		$has_custom_capabilities_filter = has_filter( self::ADDITIONAL_CAPABILITIES_FILTER_NAME ) !== false;
-		$data['custom_capabilities']    = $has_custom_capabilities_filter ? self::get_custom_enforced_capabilities() : [];
+		$data['custom_capabilities']    = $has_custom_capabilities_filter ? implode( ',', self::get_custom_enforced_capabilities() ) : 'false';
+		$has_custom_roles_filter        = has_filter( self::ADDITIONAL_ROLES_FILTER_NAME ) !== false;
+		$data['custom_roles']           = $has_custom_roles_filter ? implode( ',', self::get_custom_enforced_roles() ) : 'false';
 		return $data;
 	}
 
 	public static function get_custom_enforced_capabilities() {
 		return Capability_Utils::normalize_capabilities_input( apply_filters( self::ADDITIONAL_CAPABILITIES_FILTER_NAME, [] ) );
+	}
+
+	public static function get_custom_enforced_roles() {
+		return Capability_Utils::normalize_roles_input( apply_filters( self::ADDITIONAL_ROLES_FILTER_NAME, [] ) );
+	}
+
+	/**
+	 * Returns the merged array of capabilities from the config and the custom enforced capabilities
+	 *
+	 * @return array
+	 */
+	public static function get_capabilities() {
+		return array_unique( array_merge( self::$capabilities, self::get_custom_enforced_capabilities() ) );
+	}
+
+	/**
+	 * Returns the merged array of roles from the config and the custom enforced roles
+	 *
+	 * @return array
+	 */
+	public static function get_roles() {
+		return array_unique( array_merge( self::$roles, self::get_custom_enforced_roles() ) );
 	}
 
 	/**
@@ -66,14 +91,11 @@ class Forced_MFA_Users {
 		if ( ! $user->exists() ) {
 			return;
 		}
-
-		$custom_enforced_capabilities = self::get_custom_enforced_capabilities();
-
 		// Check if user has elevated permissions based on capabilities or roles
 		$user_has_two_factor_enforced = Capability_Utils::user_has_elevated_permissions(
 			$user,
-			array_unique( array_merge( self::$capabilities, $custom_enforced_capabilities ) ),
-			self::$roles
+			self::get_capabilities(), // we're using the merged array of capabilities
+			self::get_roles() // we're using the merged array of roles
 		);
 
 		if ( $user_has_two_factor_enforced ) {
