@@ -5,6 +5,7 @@ use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Forced_MFA_Users {
+	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'wpcom_vip_sb_forced_mfa_users_additional_capabilities';
 	/**
 	 * The roles that should have MFA enforced.
 	 *
@@ -36,6 +37,17 @@ class Forced_MFA_Users {
 		}
 
 		add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ], 10 );
+		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_custom_enforced_capabilities_to_sds' ] );
+	}
+
+	public static function add_custom_enforced_capabilities_to_sds( $data ) {
+		$has_custom_capabilities_filter = has_filter( self::ADDITIONAL_CAPABILITIES_FILTER_NAME ) !== false;
+		$data['custom_capabilities']    = $has_custom_capabilities_filter ? self::get_custom_enforced_capabilities() : [];
+		return $data;
+	}
+
+	public static function get_custom_enforced_capabilities() {
+		return Capability_Utils::normalize_capabilities_input( apply_filters( self::ADDITIONAL_CAPABILITIES_FILTER_NAME, [] ) );
 	}
 
 	/**
@@ -55,10 +67,12 @@ class Forced_MFA_Users {
 			return;
 		}
 
+		$custom_enforced_capabilities = self::get_custom_enforced_capabilities();
+
 		// Check if user has elevated permissions based on capabilities or roles
 		$user_has_two_factor_enforced = Capability_Utils::user_has_elevated_permissions(
 			$user,
-			self::$capabilities,
+			array_merge( self::$capabilities, $custom_enforced_capabilities ),
 			self::$roles
 		);
 
