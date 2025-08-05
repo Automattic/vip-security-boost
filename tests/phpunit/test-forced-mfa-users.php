@@ -492,4 +492,78 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$this->assertEquals( array_unique( array_merge( $default_roles, [ 'other_role' ] ) ), Forced_MFA_Users::get_roles() );
 		remove_all_filters( Forced_MFA_Users::ADDITIONAL_ROLES_FILTER_NAME );
 	}
+
+	/**
+	 * Test the logic to get the roles.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_honor_vip_should_force_two_factor_false() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [
+					'capabilities' => [ 'manage_options' ],
+					'roles'        => [],
+				],
+			],
+		] );
+
+		// we're now removing the filter to ensure that the logic is working as expected
+		remove_all_filters( 'wpcom_vip_is_two_factor_forced' );
+		remove_all_filters( 'wpcom_vip_internal_is_two_factor_forced' );
+		Forced_MFA_Users::init();
+		add_filter( 'wpcom_vip_is_two_factor_forced', function () {
+			return false;
+		} );
+		$this->setup_user_and_filter( 'administrator' );
+
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true because we honor the wpcom_vip_is_two_factor_forced filter.' );
+		// we're now removing the filter to ensure that the logic is working as expected
+		remove_all_filters( 'wpcom_vip_is_two_factor_forced' );
+		remove_all_filters( 'wpcom_vip_internal_is_two_factor_forced' );
+		Forced_MFA_Users::maybe_enforce_two_factor();
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has one of the required capabilities.' );
+	}
+
+
+	/**
+	 * Test the logic to get the roles.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_honor_vip_should_force_two_factor_true() {
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [
+					'capabilities' => [],
+					'roles'        => [ 'administrator' ],
+				],
+			],
+		] );
+
+		// we're now removing the filter to ensure that the logic is working as expected
+		remove_all_filters( 'wpcom_vip_is_two_factor_forced' );
+		remove_all_filters( 'wpcom_vip_internal_is_two_factor_forced' );
+		Forced_MFA_Users::init();
+		add_filter( 'wpcom_vip_is_two_factor_forced', function () {
+			return true;
+		} );
+		// we're creating an editor user but will require admin role to enforce 2FA
+		$this->setup_user_and_filter( 'editor' );
+
+		// testing both the wpcom_vip_is_two_factor_forced function that will change based on the filter, and how the internal filter works once we add our MFA enforcement
+		$this->assertTrue( wpcom_vip_is_two_factor_forced(), 'Filter should be true because we honor the wpcom_vip_is_two_factor_forced filter.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', true ), 'Filter should be true because we honor the wpcom_vip_is_two_factor_forced filter.' );
+
+		// we're now removing the filter to ensure that the logic is working as expected
+		remove_all_filters( 'wpcom_vip_is_two_factor_forced' );
+		remove_all_filters( 'wpcom_vip_internal_is_two_factor_forced' );
+		Forced_MFA_Users::maybe_enforce_two_factor();
+
+		// testing both the wpcom_vip_is_two_factor_forced function that will change based on the filter, and how the internal filter works once we add our MFA enforcement
+		$this->assertFalse( wpcom_vip_is_two_factor_forced(), 'Filter should be false when user has none of the required capabilities.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be false when user has none of the required capabilities.' );
+	}
 }
