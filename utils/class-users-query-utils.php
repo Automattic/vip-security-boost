@@ -151,12 +151,11 @@ class Users_Query_Utils {
 		}
 
 		// Meta keys follow pattern: {prefix}_capabilities or {prefix}_{site_id}_capabilities
-		$base_prefix = $wpdb->base_prefix; // Always 'wp_' unless customized
 		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users -- Required for network-wide user capability filtering
 		$subquery = "{$wpdb->users}.ID IN (
 			SELECT DISTINCT user_id
 			FROM {$wpdb->usermeta}
-			WHERE meta_key LIKE '{$base_prefix}%_capabilities'
+			WHERE meta_key LIKE 'wp%_capabilities'
 			AND (" . implode( ' OR ', $capability_checks ) . ')
 		)';
 
