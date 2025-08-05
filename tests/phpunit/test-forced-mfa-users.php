@@ -528,7 +528,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 
 	/**
-	 * Test the logic to get the roles.
+	 * Test that the logic honors the vip_should_force_two_factor filter when it returns true.
 	 *
 	 * @runInSeparateProcess
 	 * @preserveGlobalState disabled
