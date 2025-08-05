@@ -98,12 +98,18 @@ class Forced_MFA_Users {
 			self::get_roles() // we're using the merged array of roles
 		);
 
-		if ( $user_has_two_factor_enforced ) {
-			// TODO migrate to wpcom_vip_internal_is_two_factor_forced once PR https://github.com/Automattic/vip-go-mu-plugins/pull/6424 is released
-			add_filter( 'wpcom_vip_is_two_factor_forced', function () {
-				return true;
-			}, PHP_INT_MAX );
+		// we're intentionally applying the is_two_factor_forced filter with a default of "true" to check if someone is overriding the value and returning false.
+		$is_forced_to_false_via_filter = apply_filters( 'wpcom_vip_is_two_factor_forced', true ) === false;
+		if ( $is_forced_to_false_via_filter ) {
+			// honor the filter and don't enforce 2FA
+			error_log( 'Forced MFA Users: User has 2FA forced via filter, but filter returned false.' );
+			return;
 		}
+
+		add_filter( 'wpcom_vip_internal_is_two_factor_forced', function ( $limited ) use ( $user_has_two_factor_enforced ) {
+			// we're honoring the $limited value in case it's stricter than ours.
+			return $limited || $user_has_two_factor_enforced;
+		}, PHP_INT_MAX, 1 );
 	}
 }
 

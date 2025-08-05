@@ -11,8 +11,8 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		add_action( 'wpcom_vip_is_two_factor_local_testing', '__return_true' ); // Tell the two-factor plugin we're in local testing
 
 		// removing these for the SDS testing part
-		remove_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' );
-		remove_filter( 'wpcom_vip_is_two_factor_forced', [ Attendant::instance(), 'bypass_two_factor_auth' ], PHP_INT_MAX );
+		remove_filter( 'wpcom_vip_internal_is_two_factor_forced', '__return_false' );
+		remove_filter( 'wpcom_vip_internal_is_two_factor_forced', [ Attendant::instance(), 'bypass_two_factor_auth' ], PHP_INT_MAX );
 
 		// Loads the Two_Factor_Core class (required for the wpcom_vip_should_force_two_factor to work)
 		require_once WPVIP_MU_PLUGIN_DIR . '/shared-plugins/two-factor/two-factor.php';
@@ -114,7 +114,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init(); // Run init to set the static property
 
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when no role is set.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true when no role is set.' );
 	}
 
 	/**
@@ -130,7 +130,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has the single required role.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has the single required role.' );
 	}
 
 	/**
@@ -146,7 +146,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'subscriber' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when user lacks the single required role.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true when user lacks the single required role.' );
 	}
 
 	/**
@@ -163,7 +163,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'editor' );
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has one of the required roles.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has one of the required roles.' );
 	}
 
 	/**
@@ -180,7 +180,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'author' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when user lacks all required roles.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true when user lacks all required roles.' );
 	}
 
 	/**
@@ -197,7 +197,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true with an empty role array.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true with an empty role array.' );
 	}
 
 	/**
@@ -214,7 +214,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'editor' );
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has a valid role even if other array items are invalid.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has a valid role even if other array items are invalid.' );
 	}
 
 	/**
@@ -231,7 +231,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when all roles in array are invalid types.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true when all roles in array are invalid types.' );
 	}
 
 	/**
@@ -250,7 +250,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		add_filter( 'wpcom_vip_is_user_using_two_factor', '__return_true' ); // we're using this to change the behavior of the wpcom_vip_should_force_two_factor to return false.
 
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true if wpcom_vip_should_force_two_factor returns false even if the user has the required capability.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true if wpcom_vip_should_force_two_factor returns false even if the user has the required capability.' );
 	}
 
 	/**
@@ -271,7 +271,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 		// Create administrator user (has manage_options capability but not subscriber role)
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has the required capability.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has the required capability.' );
 	}
 
 	/**
@@ -289,7 +289,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 		// Administrator has edit_posts capability
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has the single required capability.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has the single required capability.' );
 	}
 
 	/**
@@ -307,7 +307,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 
 		// Subscriber doesn't have manage_options capability
 		$this->setup_user_and_filter( 'subscriber' );
-		$this->assertFalse( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should not be true when user lacks the required capability.' );
+		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should not be true when user lacks the required capability.' );
 	}
 
 	/**
@@ -332,7 +332,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		wp_set_current_user( $user_id );
 
 		Forced_MFA_Users::maybe_enforce_two_factor();
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should be true when user has one of the required capabilities.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be true when user has one of the required capabilities.' );
 	}
 
 	/**
@@ -352,7 +352,7 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		Forced_MFA_Users::init();
 
 		$this->setup_user_and_filter( 'administrator' );
-		$this->assertTrue( apply_filters( 'wpcom_vip_is_two_factor_forced', false ), 'Filter should use roles when capabilities array is empty.' );
+		$this->assertTrue( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should use roles when capabilities array is empty.' );
 	}
 
 	/**
