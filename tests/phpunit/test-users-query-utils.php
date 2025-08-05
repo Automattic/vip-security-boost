@@ -135,7 +135,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$utility_user_ids = Users_Query_Utils::query_users_with_capability_filtering(
 			[
 				'capability__in' => [ 'manage_options' ],
-				'exclude'        => [ 1 ], // exclude the super admin user
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'        => [ 1 ],
 			],
 			0, // network-wide
 			false // return user IDs
@@ -151,7 +152,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$utility_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[
 				'capability__in' => [ 'manage_options' ],
-				'exclude'        => [ 1 ], // exclude the super admin user
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'        => [ 1 ],
 			],
 			0, // network-wide
 			true // count only
@@ -208,7 +210,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$admin_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[
 				'role__in' => [ 'administrator' ],
-				'exclude'  => [ 1 ], // exclude the super admin user
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'  => [ 1 ],
 			],
 			0, // network-wide
 			true // count only
@@ -220,7 +223,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$editor_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[
 				'role__in' => [ 'editor' ],
-				'exclude'  => [ 1 ], // exclude the super admin user
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'  => [ 1 ],
 			],
 			0, // network-wide
 			true // count only
@@ -232,7 +236,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$admin_editor_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[
 				'role__in' => [ 'administrator', 'editor' ],
-				'exclude'  => [ 1 ], // exclude the super admin user
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'  => [ 1 ],
 			],
 			0, // network-wide
 			true // count only
@@ -244,7 +249,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$multi_cap_count = Users_Query_Utils::query_users_with_capability_filtering(
 			[
 				'capability__in' => [ 'manage_options', 'edit_posts' ],
-				'exclude'        => [ 1 ], // exclude the super admin user
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'        => [ 1 ],
 			],
 			0, // network-wide
 			true // count only
