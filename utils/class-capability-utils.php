@@ -83,7 +83,7 @@ class Capability_Utils {
 		
 		try {
 			foreach ( $capabilities as $capability ) {
-				if ( ! is_scalar( $capability ) ) {
+				if ( ! is_string( $capability ) || trim( $capability ) === '' ) {
 					continue;
 				}
 				
@@ -129,7 +129,7 @@ class Capability_Utils {
 
 		foreach ( $capabilities as $capability ) {
 			// Skip non-scalar capabilities to prevent errors
-			if ( ! is_scalar( $capability ) ) {
+			if ( ! is_string( $capability ) || trim( $capability ) === '' ) {
 				continue;
 			}
 			
