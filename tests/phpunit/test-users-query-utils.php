@@ -133,7 +133,11 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Test 2: method with network-wide query (should work correctly)
 		$utility_user_ids = Users_Query_Utils::query_users_with_capability_filtering(
-			[ 'capability__in' => [ 'manage_options' ] ],
+			[
+				'capability__in' => [ 'manage_options' ],
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'        => [ 1 ],
+			],
 			0, // network-wide
 			false // return user IDs
 		);
@@ -146,7 +150,11 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Test 3: Compare counts - our utility should return fewer users than core
 		$utility_count = Users_Query_Utils::query_users_with_capability_filtering(
-			[ 'capability__in' => [ 'manage_options' ] ],
+			[
+				'capability__in' => [ 'manage_options' ],
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'        => [ 1 ],
+			],
 			0, // network-wide
 			true // count only
 		);
@@ -200,7 +208,11 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Test network-wide role filtering for administrators
 		$admin_count = Users_Query_Utils::query_users_with_capability_filtering(
-			[ 'role__in' => [ 'administrator' ] ],
+			[
+				'role__in' => [ 'administrator' ],
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'  => [ 1 ],
+			],
 			0, // network-wide
 			true // count only
 		);
@@ -209,7 +221,11 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Test network-wide role filtering for editors
 		$editor_count = Users_Query_Utils::query_users_with_capability_filtering(
-			[ 'role__in' => [ 'editor' ] ],
+			[
+				'role__in' => [ 'editor' ],
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'  => [ 1 ],
+			],
 			0, // network-wide
 			true // count only
 		);
@@ -218,7 +234,11 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Test multiple roles
 		$admin_editor_count = Users_Query_Utils::query_users_with_capability_filtering(
-			[ 'role__in' => [ 'administrator', 'editor' ] ],
+			[
+				'role__in' => [ 'administrator', 'editor' ],
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'  => [ 1 ],
+			],
 			0, // network-wide
 			true // count only
 		);
@@ -227,7 +247,11 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Test multiple capabilities
 		$multi_cap_count = Users_Query_Utils::query_users_with_capability_filtering(
-			[ 'capability__in' => [ 'manage_options', 'edit_posts' ] ],
+			[
+				'capability__in' => [ 'manage_options', 'edit_posts' ],
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+				'exclude'        => [ 1 ],
+			],
 			0, // network-wide
 			true // count only
 		);
