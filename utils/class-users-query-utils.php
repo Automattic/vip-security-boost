@@ -61,7 +61,7 @@ class Users_Query_Utils {
 			}
 
 			$user_query = new \WP_User_Query( $query_args );
-			return $count_only ? $user_query->get_total() : $user_query->get_results();
+			return $count_only ? $user_query->get_total() : array_map( 'intval', $user_query->get_results() );
 		}
 
 		// Network-wide query
@@ -81,7 +81,7 @@ class Users_Query_Utils {
 
 		if ( empty( $capability_where ) ) {
 			// No capability/role filtering needed, use the temp query results
-			return $count_only ? $temp_query->get_total() : $temp_query->get_results();
+			return $count_only ? $temp_query->get_total() : array_map( 'intval', $temp_query->get_results() );
 		}
 
 		// Build the final query using WP_User_Query's SQL with our additional WHERE clause
