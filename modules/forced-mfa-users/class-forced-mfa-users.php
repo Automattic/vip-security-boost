@@ -102,7 +102,6 @@ class Forced_MFA_Users {
 		$is_forced_to_false_via_filter = apply_filters( 'wpcom_vip_is_two_factor_forced', true ) === false;
 		if ( $is_forced_to_false_via_filter ) {
 			// honor the filter and don't enforce 2FA
-			error_log( 'Forced MFA Users: User has 2FA forced via filter, but filter returned false.' );
 			return;
 		}
 
