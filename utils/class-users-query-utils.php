@@ -61,7 +61,7 @@ class Users_Query_Utils {
 			}
 
 			$user_query = new \WP_User_Query( $query_args );
-			return $count_only ? $user_query->get_total() : $user_query->get_results();
+			return $count_only ? $user_query->get_total() : array_map( 'intval', $user_query->get_results() );
 		}
 
 		// Network-wide query
@@ -71,7 +71,8 @@ class Users_Query_Utils {
 		// Remove capability/role filters from query args and let WP_User_Query build the base query
 		$base_query_args = $query_args;
 		unset( $base_query_args['capability__in'], $base_query_args['role__in'] );
-		$base_query_args['fields'] = 'ID';
+		$base_query_args['fields']  = 'ID';
+		$base_query_args['blog_id'] = 0;
 
 		// Create WP_User_Query to get the base SQL clauses
 		$temp_query = new \WP_User_Query( $base_query_args );
@@ -81,7 +82,7 @@ class Users_Query_Utils {
 
 		if ( empty( $capability_where ) ) {
 			// No capability/role filtering needed, use the temp query results
-			return $count_only ? $temp_query->get_total() : $temp_query->get_results();
+			return $count_only ? $temp_query->get_total() : array_map( 'intval', $temp_query->get_results() );
 		}
 
 		// Build the final query using WP_User_Query's SQL with our additional WHERE clause
@@ -151,12 +152,11 @@ class Users_Query_Utils {
 		}
 
 		// Meta keys follow pattern: {prefix}_capabilities or {prefix}_{site_id}_capabilities
-		$base_prefix = $wpdb->base_prefix; // Always 'wp_' unless customized
 		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users -- Required for network-wide user capability filtering
 		$subquery = "{$wpdb->users}.ID IN (
 			SELECT DISTINCT user_id
 			FROM {$wpdb->usermeta}
-			WHERE meta_key LIKE '{$base_prefix}%_capabilities'
+			WHERE meta_key LIKE 'wp%_capabilities'
 			AND (" . implode( ' OR ', $capability_checks ) . ')
 		)';
 
