@@ -397,8 +397,8 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		}
 
 		// Create users with different roles
-		$admin_user = $this->factory->user->create( [ 'role' => 'administrator' ] );
-		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
+		$admin_user      = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user     = $this->factory->user->create( [ 'role' => 'editor' ] );
 		$subscriber_user = $this->factory->user->create( [ 'role' => 'subscriber' ] );
 
 		// Grant a custom capability directly to the subscriber (not through role)
@@ -440,7 +440,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$site3_id = $this->factory->blog->create();
 
 		// Create users
-		$admin_user = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$admin_user  = $this->factory->user->create( [ 'role' => 'administrator' ] );
 		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
 
 		// Add the SAME admin user to multiple sites (this is the key test scenario)
