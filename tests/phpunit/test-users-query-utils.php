@@ -387,4 +387,113 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		// Clean up
 		wp_delete_user( $admin_user );
 	}
+
+	/**
+	 * Test that capability filtering correctly matches users with direct capability grants
+	 */
+	public function test_direct_capability_grants() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create users with different roles
+		$admin_user = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
+		$subscriber_user = $this->factory->user->create( [ 'role' => 'subscriber' ] );
+
+		// Grant a custom capability directly to the subscriber (not through role)
+		$user = new WP_User( $subscriber_user );
+		$user->add_cap( 'custom_capability' );
+
+		// Test that direct capability grants are found
+		$custom_cap_count = Users_Query_Utils::query_users_with_capability_filtering([
+			'capability__in' => [ 'custom_capability' ],
+		], 0, true);
+
+		$this->assertEquals( 1, $custom_cap_count, 'Should find user with directly granted custom capability' );
+
+		// Test that we can find users by both role-based and direct capabilities
+		$mixed_cap_count = Users_Query_Utils::query_users_with_capability_filtering([
+			'capability__in' => [ 'manage_options', 'custom_capability' ],
+		], 0, true);
+
+		// Should find admin (via role) + subscriber (via direct grant)
+		$this->assertGreaterThanOrEqual( 2, $mixed_cap_count, 'Should find users with both role-based and direct capability grants' );
+
+		// Clean up
+		wp_delete_user( $admin_user );
+		wp_delete_user( $editor_user );
+		wp_delete_user( $subscriber_user );
+	}
+
+	/**
+	 * Test that network-wide queries don't double-count users who have the same capability on multiple sites
+	 */
+	public function test_network_wide_user_deduplication_across_sites() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Create multiple sites
+		$site1_id = $this->factory->blog->create();
+		$site2_id = $this->factory->blog->create();
+		$site3_id = $this->factory->blog->create();
+
+		// Create users
+		$admin_user = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_user = $this->factory->user->create( [ 'role' => 'editor' ] );
+
+		// Add the SAME admin user to multiple sites (this is the key test scenario)
+		// This creates multiple wp_X_capabilities entries for the same user
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site1_id );
+		add_user_to_blog( $site1_id, $admin_user, 'administrator' );
+		restore_current_blog();
+
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site2_id );
+		add_user_to_blog( $site2_id, $admin_user, 'administrator' );
+		restore_current_blog();
+
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site3_id );
+		add_user_to_blog( $site3_id, $editor_user, 'editor' );
+		restore_current_blog();
+
+		// Network-wide query should count the admin user only ONCE
+		// even though they have admin capabilities on multiple sites (site1 and site2)
+		$network_admin_count = Users_Query_Utils::query_users_with_capability_filtering([
+			'capability__in' => [ 'manage_options' ],
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+			'exclude'        => [ 1 ],
+		], 0, true);
+
+		$this->assertEquals( 1, $network_admin_count, 'Should count admin user only once despite having admin role on multiple sites (tests DISTINCT clause)' );
+
+		// Network-wide query should find editor
+		$network_editor_count = Users_Query_Utils::query_users_with_capability_filtering([
+			'capability__in' => [ 'edit_posts' ],
+			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding super admin (user_id=1)
+			'exclude'        => [ 1 ],
+		], 0, true);
+
+		$this->assertGreaterThanOrEqual( 1, $network_editor_count, 'Should find editor user with edit_posts capability' );
+
+		// Site-specific queries should work correctly
+		$site1_admin_count = Users_Query_Utils::query_users_with_capability_filtering([
+			'capability__in' => [ 'manage_options' ],
+		], $site1_id, true);
+
+		$this->assertEquals( 1, $site1_admin_count, 'Should find admin on site1' );
+
+		$site3_admin_count = Users_Query_Utils::query_users_with_capability_filtering([
+			'capability__in' => [ 'manage_options' ],
+		], $site3_id, true);
+
+		$this->assertEquals( 0, $site3_admin_count, 'Should not find admin on site3 (only has editor)' );
+
+		// Clean up
+		wp_delete_user( $admin_user );
+		wp_delete_user( $editor_user );
+	}
 }
