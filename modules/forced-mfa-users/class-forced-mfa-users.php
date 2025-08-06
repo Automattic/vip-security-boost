@@ -5,8 +5,8 @@ use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Utils\Capability_Utils;
 
 class Forced_MFA_Users {
-	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'wpcom_vip_sb_forced_mfa_users_additional_capabilities';
-	public const ADDITIONAL_ROLES_FILTER_NAME        = 'wpcom_vip_sb_forced_mfa_users_additional_roles';
+	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'wpcom_vip_wsc_forced_mfa_users_additional_capabilities';
+	public const ADDITIONAL_ROLES_FILTER_NAME        = 'wpcom_vip_wsc_forced_mfa_users_additional_roles';
 	/**
 	 * The roles that should have MFA enforced.
 	 *
