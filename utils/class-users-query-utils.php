@@ -150,6 +150,7 @@ class Users_Query_Utils {
 		// Remove duplicates to avoid redundant SQL conditions
 		$capability_checks = array_unique( $capability_checks );
 
+		// @phpstan-ignore empty.variable
 		if ( empty( $capability_checks ) ) {
 			return '';
 		}
