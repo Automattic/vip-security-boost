@@ -723,4 +723,237 @@ class HighlightMFAUsersTest extends WP_UnitTestCase {
 		// Should return the original SQL unchanged
 		$this->assertEquals( $original_sql, $result_sql );
 	}
+
+	/**
+	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
+	 */
+	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
+		// Verify the filter is added during init
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\MFAUsers\Highlight_MFA_Users', 'add_users_without_2fa_count_to_sds_payload' ] ) );
+
+		// Test that the filter works by applying it
+		$initial_data  = [ 'some_key' => 'some_value' ];
+		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', $initial_data );
+
+		// Should preserve existing data
+		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
+		// Should add MFA count data
+		$this->assertArrayHasKey( 'users_without_2fa_count', $filtered_data );
+		// Should add network-wide MFA count data in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'users_without_2fa_count_all_blogs', $filtered_data );
+		}
+		$this->assertIsInt( $filtered_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test add_users_without_2fa_count_to_sds_payload method directly
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_add_users_without_2fa_count_to_sds_payload() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$initial_data = [ 'existing_key' => 'existing_value' ];
+		$result_data  = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( $initial_data );
+
+		// Should preserve existing data
+		$this->assertEquals( 'existing_value', $result_data['existing_key'] );
+
+		// Should add users_without_2fa_count
+		$this->assertArrayHasKey( 'users_without_2fa_count', $result_data );
+		$this->assertIsInt( $result_data['users_without_2fa_count'] );
+
+		// Should add network-wide MFA count data in multisite
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'users_without_2fa_count_all_blogs', $result_data );
+			$this->assertIsInt( $result_data['users_without_2fa_count_all_blogs'] );
+		}
+
+		// Should count exactly 3 users without MFA:
+		// - admin_user_mfa_disabled_id (admin without MFA)
+		// - editor_user_id (editor without MFA)
+		// - Default WordPress user (ID 1, admin without MFA)
+		// Excluded: admin_user_mfa_skipped_id (skipped), admin_wpcomvip_ignored_id (bot user)
+		$this->assertEquals( 3, $result_data['users_without_2fa_count'] );
+
+		// Should count exactly 3 users without MFA across the network
+		if ( is_multisite() ) {
+			$this->assertEquals( 3, $result_data['users_without_2fa_count_all_blogs'] );
+		}
+	}
+
+	/**
+	 * Test that SDS payload respects skipped user IDs
+	 */
+	public function test_sds_payload_respects_skipped_user_ids() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// First, remove the skipped user from skip list to get baseline
+		delete_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY );
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$result_without_skip = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$count_without_skip  = $result_without_skip['users_without_2fa_count'];
+
+		// Now add the user back to skip list
+		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$result_with_skip = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$count_with_skip  = $result_with_skip['users_without_2fa_count'];
+
+		// Should be 1 less with skip list (the skipped admin should be excluded)
+		$this->assertEquals( $count_without_skip - 1, $count_with_skip );
+
+		// Restore original skip list for other tests
+		update_option( Highlight_MFA_Users::MFA_SKIP_USER_IDS_OPTION_KEY, [ $this->admin_user_mfa_skipped_id ] );
+	}
+
+	/**
+	 * Test that SDS payload excludes wpcomvip bot user
+	 */
+	public function test_sds_payload_excludes_wpcomvip_bot() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Get the current count (should exclude the bot user)
+		$result_data = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+
+		// Should count exactly 3 users without MFA:
+		// - admin_user_mfa_disabled_id (admin without MFA)
+		// - editor_user_id (editor without MFA)
+		// - Default WordPress user (ID 1, admin without MFA)
+		// Excluded: admin_user_mfa_skipped_id (skipped), admin_wpcomvip_ignored_id (bot user)
+		$this->assertEquals( 3, $result_data['users_without_2fa_count'] );
+
+		// Verify the bot user exists but is not counted
+		$bot_user = get_user_by( 'ID', $this->admin_wpcomvip_ignored_id );
+		$this->assertNotFalse( $bot_user );
+		$this->assertEquals( Configs::get_bot_login(), $bot_user->user_login );
+	}
+
+	/**
+	 * Test that SDS payload returns zero when all eligible users have MFA enabled
+	 */
+	public function test_sds_payload_zero_when_all_users_have_mfa() {
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Enable MFA for ALL eligible users (including the default WordPress user)
+		// Get all admin and editor users to ensure we enable MFA for all of them
+		$all_admin_editor_users = get_users( [ 'role__in' => [ 'administrator', 'editor' ] ] );
+		$all_user_ids           = wp_list_pluck( $all_admin_editor_users, 'ID' );
+
+		Two_Factor_Core::$mock_enabled_user_ids = $all_user_ids;
+
+		// Clear cache after enabling MFA for all users
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		$initial_data = [];
+		$result_data  = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( $initial_data );
+
+		// Should return zero since all eligible users have MFA
+		$this->assertEquals( 0, $result_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test that network-wide counts are correct with users across different blogs
+	 */
+	public function test_network_wide_counts_across_different_blogs() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		// Clear cache to ensure fresh calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Create two additional sites
+		$site_1_id = $this->factory()->blog->create();
+		$site_2_id = $this->factory()->blog->create();
+
+		// Create users for site 1 with different roles
+		$site_1_admin_user      = $this->factory()->user->create([
+			'role' => 'administrator',
+		]);
+		$site_1_editor_user     = $this->factory()->user->create([
+			'role' => 'editor',
+		]);
+		$site_1_subscriber_user = $this->factory()->user->create([
+			'role' => 'subscriber',
+		]);
+
+		// Create users for site 2 with different roles
+		$site_2_admin_user  = $this->factory()->user->create([
+			'role' => 'administrator',
+		]);
+		$site_2_editor_user = $this->factory()->user->create([
+			'role' => 'editor',
+		]);
+		$site_2_author_user = $this->factory()->user->create([
+			'role' => 'author',
+		]);
+
+		// Switch to site 1 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_1_id );
+		add_user_to_blog( $site_1_id, $site_1_admin_user, 'administrator' );
+		add_user_to_blog( $site_1_id, $site_1_editor_user, 'editor' );
+		add_user_to_blog( $site_1_id, $site_1_subscriber_user, 'subscriber' );
+
+		// Enable MFA for site 1 admin user only
+		Two_Factor_Core::$mock_enabled_user_ids[] = $site_1_admin_user;
+
+		// Test site 1 count - should count 1 user without MFA (editor)
+		// Subscriber should be excluded as it's not in the target roles
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		$site_1_result = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$this->assertEquals( 1, $site_1_result['users_without_2fa_count'], 'Site 1 should count 1 user without MFA (editor only)' );
+
+		restore_current_blog();
+
+		// Switch to site 2 and add users to it
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog
+		switch_to_blog( $site_2_id );
+		add_user_to_blog( $site_2_id, $site_2_admin_user, 'administrator' );
+		add_user_to_blog( $site_2_id, $site_2_editor_user, 'editor' );
+		add_user_to_blog( $site_2_id, $site_2_author_user, 'author' );
+
+		// Enable MFA for site 2 editor user only
+		Two_Factor_Core::$mock_enabled_user_ids[] = $site_2_editor_user;
+
+		// Test site 2 count - should count 1 user without MFA (admin)
+		// Author should be excluded as it's not in the target roles (administrator, editor)
+		Highlight_MFA_Users::clear_mfa_count_cache();
+		$site_2_result = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$this->assertEquals( 1, $site_2_result['users_without_2fa_count'], 'Site 2 should count 1 user without MFA (admin only)' );
+
+		restore_current_blog();
+
+		// Clear cache to ensure fresh network-wide calculation
+		Highlight_MFA_Users::clear_mfa_count_cache();
+
+		// Test network-wide count - should count users without MFA across all sites
+		// Expected:
+		// - Original test users: admin_user_mfa_disabled_id (admin), editor_user_id (editor), default user ID 1 (admin) = 3
+		// - Site 1: site_1_editor_user (editor without MFA) = 1
+		// - Site 2: site_2_admin_user (admin without MFA) = 1
+		// Total: 5 users without MFA across the network
+		$network_result = Highlight_MFA_Users::add_users_without_2fa_count_to_sds_payload( [] );
+		$this->assertEquals( 5, $network_result['users_without_2fa_count_all_blogs'], 'Network-wide should count 5 users without MFA across all sites' );
+
+		// Verify that users with MFA enabled are not counted
+		$this->assertContains( $site_1_admin_user, Two_Factor_Core::$mock_enabled_user_ids );
+		$this->assertContains( $site_2_editor_user, Two_Factor_Core::$mock_enabled_user_ids );
+
+		// Clean up users
+		wp_delete_user( $site_1_admin_user );
+		wp_delete_user( $site_1_editor_user );
+		wp_delete_user( $site_1_subscriber_user );
+		wp_delete_user( $site_2_admin_user );
+		wp_delete_user( $site_2_editor_user );
+		wp_delete_user( $site_2_author_user );
+	}
 }
