@@ -45,6 +45,18 @@ composer test
 
 This script uses Docker to run the tests in an isolated environment.
 
+To test for a specific test module you can run
+
+```bash
+composer test -- --filter Test_Forced_MFA_Users
+```
+
+or, in case you want to test for a specific function you can run
+
+```bash
+composer test -- --filter test_honor_vip_should_force_two_factor
+```
+
 #### Testing Modules
 
 When testing classes defined within the `modules/` directory, ensure they are correctly autoloaded for the test environment. Add the necessary file paths to the `autoload-dev` section in `composer.json`:
