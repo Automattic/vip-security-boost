@@ -144,8 +144,15 @@ class Highlight_MFA_Users {
 		$blog_id = $blog_id ?? get_current_blog_id();
 
 		// Include a hash of the roles configuration to invalidate cache when roles change
-		$roles_hash        = md5( wp_json_encode( self::$roles ) );
-		$capabilities_hash = md5( wp_json_encode( self::$capabilities ) );
+		// Remove duplicates + sort to make the cache key stable regardless of array order
+		$roles = array_values( array_unique( self::$roles ) );
+		$caps  = array_values( array_unique( self::$capabilities ) );
+
+		sort( $roles, SORT_STRING );
+		sort( $caps,  SORT_STRING );
+
+		$roles_hash        = md5( wp_json_encode( $roles ) );
+		$capabilities_hash = md5( wp_json_encode( $caps ) );
 
 		return self::MFA_COUNT_CACHE_KEY_PREFIX . '_' . $blog_id . '_' . $roles_hash . '_' . $capabilities_hash;
 	}
