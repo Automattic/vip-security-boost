@@ -129,7 +129,7 @@ class Users_Query_Utils {
 		if ( ! empty( $capabilities ) ) {
 			foreach ( $capabilities as $capability ) {
 				$capability_escaped  = esc_sql( $capability );
-				$capability_checks[] = "meta_value LIKE '%\"{$capability_escaped}\";b:1%'";
+				$capability_checks[] = "meta_value LIKE '%\"{$capability_escaped}\";b:1;%'";
 
 				$roles_with_capability = self::get_roles_with_capability( $capability );
 				foreach ( $roles_with_capability as $role ) {
