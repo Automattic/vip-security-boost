@@ -225,8 +225,13 @@ class Highlight_MFA_Users {
 	 * Clear the MFA disabled count cache.
 	 * Called when user MFA settings or roles change.
 	 */
-	public static function clear_mfa_count_cache() {
-		wp_cache_delete( self::get_mfa_count_cache_key(), self::MFA_COUNT_CACHE_GROUP );
+	public static function clear_mfa_count_cache( $blog_id = null ) {
+		$blog_id = $blog_id ?? get_current_blog_id();
+
+		wp_cache_delete( self::get_mfa_count_cache_key( $blog_id ), self::MFA_COUNT_CACHE_GROUP );
+
+		// Clear the network-wide key as well
+    wp_cache_delete( self::get_mfa_count_cache_key( 0 ), self::MFA_COUNT_CACHE_GROUP );
 	}
 
 	/**
@@ -241,6 +246,9 @@ class Highlight_MFA_Users {
 			self::clear_mfa_count_cache();
 			return;
 		}
+
+		// Clear the network-wide key as well
+		wp_cache_delete( self::get_mfa_count_cache_key( 0 ), self::MFA_COUNT_CACHE_GROUP );
 
 		// Get all sites where this user has roles
 		$user_blogs = get_blogs_of_user( $user_id );
