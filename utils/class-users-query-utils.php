@@ -128,7 +128,7 @@ class Users_Query_Utils {
 		// Build capability conditions - convert capabilities to roles
 		if ( ! empty( $capabilities ) ) {
 			foreach ( $capabilities as $capability ) {
-				$capability_escaped  = esc_sql( $capability );
+				$capability_escaped  = esc_sql( $wpdb->esc_like( $capability ) );
 				$capability_checks[] = "meta_value LIKE '%\"{$capability_escaped}\";b:1;%'";
 
 				$roles_with_capability = self::get_roles_with_capability( $capability );
