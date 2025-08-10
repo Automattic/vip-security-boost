@@ -149,7 +149,7 @@ class Highlight_MFA_Users {
 		$caps  = array_values( array_unique( self::$capabilities ) );
 
 		sort( $roles, SORT_STRING );
-		sort( $caps,  SORT_STRING );
+		sort( $caps, SORT_STRING );
 
 		$roles_hash        = md5( wp_json_encode( $roles ) );
 		$capabilities_hash = md5( wp_json_encode( $caps ) );
@@ -163,7 +163,7 @@ class Highlight_MFA_Users {
 	 * @return int The number of users with MFA disabled.
 	 */
 	private static function get_mfa_disabled_count( $blog_id = null ) {
-		$blog_id = $blog_id ?? get_current_blog_id();
+		$blog_id   = $blog_id ?? get_current_blog_id();
 		$cache_key = self::get_mfa_count_cache_key( $blog_id );
 
 		// Try to get from cache first
@@ -231,7 +231,7 @@ class Highlight_MFA_Users {
 		wp_cache_delete( self::get_mfa_count_cache_key( $blog_id ), self::MFA_COUNT_CACHE_GROUP );
 
 		// Clear the network-wide key as well
-    wp_cache_delete( self::get_mfa_count_cache_key( 0 ), self::MFA_COUNT_CACHE_GROUP );
+		wp_cache_delete( self::get_mfa_count_cache_key( 0 ), self::MFA_COUNT_CACHE_GROUP );
 	}
 
 	/**
