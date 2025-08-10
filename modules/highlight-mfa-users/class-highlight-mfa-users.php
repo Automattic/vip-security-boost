@@ -157,9 +157,10 @@ class Highlight_MFA_Users {
 	 */
 	private static function get_mfa_disabled_count( $blog_id = null ) {
 		$blog_id = $blog_id ?? get_current_blog_id();
+		$cache_key = self::get_mfa_count_cache_key( $blog_id );
 
 		// Try to get from cache first
-		$cached_count = wp_cache_get( self::get_mfa_count_cache_key(), self::MFA_COUNT_CACHE_GROUP );
+		$cached_count = wp_cache_get( $cache_key, self::MFA_COUNT_CACHE_GROUP );
 		if ( false !== $cached_count ) {
 			return (int) $cached_count;
 		}
@@ -208,7 +209,7 @@ class Highlight_MFA_Users {
 
 		// Cache the result
 		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
-		wp_cache_set( self::get_mfa_count_cache_key(), $mfa_disabled_count, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
+		wp_cache_set( $cache_key, $mfa_disabled_count, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
 
 		return $mfa_disabled_count;
 	}
