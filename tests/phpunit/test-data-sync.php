@@ -54,7 +54,7 @@ class Test_Data_Sync extends WP_UnitTestCase {
 				'is_entirely_disabled'                   => false,
 				'has_enable_two_factor_filter'           => false,
 				'has_mfa_additional_capabilities_filter' => false,
-				'mfa_additional_capabilities_content'    => '',
+				'mfa_additional_required_capabilities'   => '',
 			],
 		];
 
@@ -122,16 +122,16 @@ class Test_Data_Sync extends WP_UnitTestCase {
 		// Test with no filter present
 		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
 		$this->assertFalse( $status['two_factor_status']['has_mfa_additional_capabilities_filter'] );
-		$this->assertSame( '', $status['two_factor_status']['mfa_additional_capabilities_content'] );
+		$this->assertSame( '', $status['two_factor_status']['mfa_additional_required_capabilities'] );
 
 		// Test with filter present returning capabilities
-		add_filter( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, function() {
+		add_filter( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, function () {
 			return [ 'edit_posts', 'manage_options', 'upload_files' ];
 		} );
 
 		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
 		$this->assertTrue( $status['two_factor_status']['has_mfa_additional_capabilities_filter'] );
-		$this->assertSame( 'edit_posts,manage_options,upload_files', $status['two_factor_status']['mfa_additional_capabilities_content'] );
+		$this->assertSame( 'edit_posts,manage_options,upload_files', $status['two_factor_status']['mfa_additional_required_capabilities'] );
 
 		// Clean up
 		remove_all_filters( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME );

@@ -56,7 +56,7 @@ class Data_Sync {
 	 *         'is_entirely_disabled'                   => bool,   // 2FA disabled via `wpcom_vip_enable_two_factor` returning false
 	 *         'has_enable_two_factor_filter'           => bool,   // Any filter present on `wpcom_vip_enable_two_factor`
 	 *         'has_mfa_additional_capabilities_filter' => bool,   // Any filter present on MFA additional capabilities
-	 *         'mfa_additional_capabilities_content'    => string, // Comma-separated list of additional capabilities when filter is present
+	 *         'mfa_additional_required_capabilities'    => string, // Comma-separated list of additional capabilities when filter is present
 	 *     ],
 	 *
 	 * @param array $data The current SDS payload data array.
@@ -74,7 +74,7 @@ class Data_Sync {
 			'has_enable_two_factor_filter'           => \has_filter( 'wpcom_vip_enable_two_factor' ) !== false,
 
 			'has_mfa_additional_capabilities_filter' => $has_additional_capabilities_filter,
-			'mfa_additional_capabilities_content'    => $has_additional_capabilities_filter ? implode( ',', apply_filters( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, [] ) ) : '',
+			'mfa_additional_required_capabilities'    => $has_additional_capabilities_filter ? implode( ',', apply_filters( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, [] ) ) : '',
 		];
 		return $data;
 	}
