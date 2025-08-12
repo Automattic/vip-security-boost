@@ -49,3 +49,5 @@ phpcs.xml
 # Editor/IDE related
 .vscode/*
 !.vscode/launch.json
+
+.claude
