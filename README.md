@@ -57,6 +57,8 @@ or, in case you want to test for a specific function you can run
 composer test -- --filter test_honor_vip_should_force_two_factor
 ```
 
+If you are using Claude in VSCode/Cursor and find trouble with running the tests, it's because you need to pass the CI environment variable to the test script.
+Run ```composer test-noninteractive``` instead of ```composer test```. All the rest applies.
 #### Testing Modules
 
 When testing classes defined within the `modules/` directory, ensure they are correctly autoloaded for the test environment. Add the necessary file paths to the `autoload-dev` section in `composer.json`:

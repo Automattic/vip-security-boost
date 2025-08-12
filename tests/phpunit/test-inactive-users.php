@@ -1034,4 +1034,72 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		wp_delete_user( $admin_user_id );
 		unset( $_GET['action'], $_GET['user_id'], $_GET['reset_last_seen_nonce'] );
 	}
+
+	/**
+	 * Test XML-RPC authentication for inactive users returns proper error message
+	 */
+	public function test_xmlrpc_authentication_inactive_user_error_message() {
+		// Create an inactive user
+		$user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$user = new WP_User( $user_id );
+
+		// Test authentication with inactive user
+		$result = Inactive_Users::maybe_block_inactive_user_on_authenticate( $user );
+		if ( ! defined( 'XMLRPC_REQUEST' ) ) {
+			define( 'XMLRPC_REQUEST', true );
+		}
+		// Verify that authentication returns an error
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'inactive_account', $result->get_error_code() );
+		$this->assertEquals( '<strong>Error</strong>: Your account has been flagged as inactive. Please contact your site administrator.', $result->get_error_message() );
+
+		// check that if we pass a WP_Error to the filter, the xmlrpc_login_error filter is added
+		remove_all_filters( 'xmlrpc_login_error' );
+		Inactive_Users::maybe_block_inactive_user_on_app_password_auth( true, $user );
+		$result = Inactive_Users::maybe_block_inactive_user_on_authenticate( new \WP_Error( 'random_error', 'random error' ) );
+
+		$this->assertTrue( has_filter( 'xmlrpc_login_error' ) !== false );
+		$error = apply_filters( 'xmlrpc_login_error', null );
+		$this->assertInstanceOf( 'IXR_Error', $error );
+		$this->assertEquals( 403, $error->code );
+		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site administrator.', $error->message );
+
+		wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test application password authentication for inactive users
+	 */
+	public function test_application_password_authentication_inactive_user() {
+		// Create an inactive user
+		$user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$user = new WP_User( $user_id );
+
+		// Test application password availability for inactive user
+		$available = Inactive_Users::maybe_block_inactive_user_on_app_password_auth( true, $user );
+		$this->assertFalse( $available );
+
+		// Verify that the error was stored properly for REST API usage
+		$reflection = new ReflectionClass( Inactive_Users::class );
+		$property   = $reflection->getProperty( 'application_password_authentication_error' );
+		$property->setAccessible( true );
+		$error = $property->getValue();
+
+		$this->assertInstanceOf( 'WP_Error', $error );
+		$this->assertEquals( 'inactive_account', $error->get_error_code() );
+		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site administrator.', $error->get_error_message() );
+		$this->assertEquals( 403, $error->get_error_data()['status'] );
+
+		wp_delete_user( $user_id );
+	}
 }
