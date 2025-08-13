@@ -17,14 +17,14 @@ class Forced_MFA_Users {
 	 *
 	 * @var array An array of role slugs.
 	 */
-	private static $roles;
+	private static $roles = [];
 
 	/**
 	 * The capabilities that should have MFA enforced.
 	 *
 	 * @var array An array of capability slugs.
 	 */
-	private static $capabilities;
+	private static $capabilities = [];
 
 	public static function init() {
 		$forced_mfa_configs = Configs::get_module_configs( 'forced-mfa-users' );
@@ -86,8 +86,7 @@ class Forced_MFA_Users {
 	 * @return array
 	 */
 	public static function get_capabilities() {
-		$capabilities = self::$capabilities ?? [];
-		return array_unique( array_merge( $capabilities, self::get_custom_enforced_capabilities() ) );
+		return array_unique( array_merge( self::$capabilities, self::get_custom_enforced_capabilities() ) );
 	}
 
 	/**
@@ -96,8 +95,7 @@ class Forced_MFA_Users {
 	 * @return array
 	 */
 	public static function get_roles() {
-		$roles = self::$roles ?? [];
-		return array_unique( array_merge( $roles, self::get_custom_enforced_roles() ) );
+		return array_unique( array_merge( self::$roles, self::get_custom_enforced_roles() ) );
 	}
 
 	/**
