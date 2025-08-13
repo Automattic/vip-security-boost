@@ -141,11 +141,6 @@ class Forced_MFA_Users {
 	 * @return array The modified SDS payload data.
 	 */
 	public static function add_users_without_2fa_count_to_sds_payload( $data ) {
-		// Ensure the Two Factor plugin is active
-		if ( ! class_exists( '\Two_Factor_Core' ) ) {
-			return $data;
-		}
-
 		// Add fix for unreliable FOUND_ROWS() query
 		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
 
