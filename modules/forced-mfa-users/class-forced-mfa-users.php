@@ -8,8 +8,8 @@ use Automattic\VIP\Security\Utils\Users_Query_Utils;
 class Forced_MFA_Users {
 	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'wpcom_vip_wsc_forced_mfa_users_additional_capabilities';
 	public const ADDITIONAL_ROLES_FILTER_NAME        = 'wpcom_vip_wsc_forced_mfa_users_additional_roles';
-	const MFA_COUNT_CACHE_GROUP                      = 'vip_security_mfa_count';
-	const MFA_COUNT_CACHE_KEY_PREFIX                 = 'mfa_disabled_count';
+	const MFA_COUNT_CACHE_GROUP                      = 'vip_security_forced_mfa_count';
+	const MFA_COUNT_CACHE_KEY_PREFIX                 = 'forced_mfa_disabled_count';
 	const MFA_COUNT_CACHE_TTL                        = HOUR_IN_SECONDS; // Cache for 1 hour
 	const MFA_SKIP_USER_IDS_OPTION_KEY               = 'vip_security_mfa_skip_user_ids';
 	/**
@@ -305,13 +305,24 @@ class Forced_MFA_Users {
 
 	/**
 	 * Clear the MFA count cache when Two Factor user meta is updated.
+	 * Also clears cache when user capabilities are updated (e.g., via WP-CLI).
 	 *
 	 * @param int    $meta_id  ID of updated metadata entry.
 	 * @param int    $user_id  User ID.
 	 * @param string $meta_key Metadata key.
 	 */
 	public static function clear_mfa_count_cache_on_meta_update( $meta_id, $user_id, $meta_key ) {
+		global $wpdb;
+		
+		// Clear cache when 2FA settings change
 		if ( \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY === $meta_key ) {
+			self::clear_mfa_count_cache_for_user_sites( $user_id );
+		}
+		
+		// Clear cache when capabilities change (handles WP-CLI updates)
+		// Check for both single site and multisite capability keys
+		if ( $wpdb->prefix . 'capabilities' === $meta_key || 
+			strpos( $meta_key, '_capabilities' ) !== false ) {
 			self::clear_mfa_count_cache_for_user_sites( $user_id );
 		}
 	}

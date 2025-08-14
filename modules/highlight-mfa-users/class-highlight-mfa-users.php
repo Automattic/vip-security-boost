@@ -236,13 +236,24 @@ class Highlight_MFA_Users {
 
 	/**
 	 * Clear the MFA count cache when Two Factor user meta is updated.
+	 * Also clears cache when user capabilities are updated (e.g., via WP-CLI).
 	 *
 	 * @param int    $meta_id  ID of updated metadata entry.
 	 * @param int    $user_id  User ID.
 	 * @param string $meta_key Metadata key.
 	 */
 	public static function clear_mfa_count_cache_on_meta_update( $meta_id, $user_id, $meta_key ) {
+		global $wpdb;
+		
+		// Clear cache when 2FA settings change
 		if ( \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY === $meta_key ) {
+			self::clear_mfa_count_cache_for_user_sites( $user_id );
+		}
+		
+		// Clear cache when capabilities change (handles WP-CLI updates)
+		// Check for both single site and multisite capability keys
+		if ( $wpdb->prefix . 'capabilities' === $meta_key || 
+			strpos( $meta_key, '_capabilities' ) !== false ) {
 			self::clear_mfa_count_cache_for_user_sites( $user_id );
 		}
 	}
