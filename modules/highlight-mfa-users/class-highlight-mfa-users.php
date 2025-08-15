@@ -169,7 +169,7 @@ class Highlight_MFA_Users {
 		
 		// For single site or specific blog in multisite
 		if ( ! is_multisite() || 0 !== $blog_id ) {
-			// $blog_id is already set from line 137, no need to reassign
+			// $blog_id has already been set earlier in this function and does not need to be reassigned here
 			$meta_key_prefix = $wpdb->get_blog_prefix( $blog_id );
 			
 			// Build conditions for roles
