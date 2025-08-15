@@ -45,10 +45,8 @@ class Highlight_MFA_Users {
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
 
-
-		self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
 		// Make it default to DEFAULT_ADMIN_EDITOR_ROLE_SLUGS for now
-		self::$roles = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
+		self::$roles = Capability_Utils::normalize_roles_input( self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		add_action( 'admin_init', [ __CLASS__, 'maybe_fix_found_users_query' ] );
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
