@@ -567,4 +567,111 @@ class Test_Forced_MFA_Users extends WP_UnitTestCase {
 		$this->assertFalse( wpcom_vip_is_two_factor_forced(), 'Filter should be false when user has none of the required capabilities.' );
 		$this->assertFalse( apply_filters( 'wpcom_vip_internal_is_two_factor_forced', false ), 'Filter should be false when user has none of the required capabilities.' );
 	}
+
+	/**
+	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
+		// Set up config with capabilities
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 'capabilities' => [ 'edit_posts' ] ],
+			],
+		] );
+		
+		// Two Factor Core mock is defined at the top of the file
+		
+		Forced_MFA_Users::init();
+		
+		// Verify the filter is added during init
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\MFAUsers\Forced_MFA_Users', 'add_users_without_2fa_count_to_sds_payload' ] ) );
+
+		// Test that the filter works by applying it
+		$initial_data  = [ 'some_key' => 'some_value' ];
+		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', $initial_data );
+
+		// Should preserve existing data
+		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
+		// Should add MFA count data
+		$this->assertArrayHasKey( 'users_without_2fa_count', $filtered_data );
+		$this->assertIsInt( $filtered_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test that SDS reporting works even without forced MFA config
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_sds_reporting_without_config() {
+		// Initialize without any config
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [] );
+		
+		// Mock Two Factor Core class
+		if ( ! class_exists( '\Two_Factor_Core' ) ) {
+			require_once __DIR__ . '/mocks/mock-two-factor-core.php';
+		}
+		
+		Forced_MFA_Users::init();
+		
+		// Verify the SDS filter is still added
+		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\MFAUsers\Forced_MFA_Users', 'add_users_without_2fa_count_to_sds_payload' ] ) );
+		
+		// Apply the filter
+		$initial_data  = [];
+		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', $initial_data );
+		
+		// Should add MFA count data even without config
+		// When no config is set, no users are counted (capabilities and roles are empty)
+		$this->assertArrayHasKey( 'users_without_2fa_count', $filtered_data );
+		// The count should be 0 since no capabilities or roles are configured
+		$this->assertEquals( 0, $filtered_data['users_without_2fa_count'] );
+	}
+
+	/**
+	 * Test that SDS payload uses forced MFA capabilities and roles
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_sds_payload_uses_forced_mfa_config() {
+		// Set up config with specific capabilities
+		define( 'VIP_SECURITY_BOOST_CONFIGS', [
+			'module_configs' => [
+				'forced-mfa-users' => [ 
+					'capabilities' => [ 'manage_options' ],
+					'roles'        => [ 'administrator' ],
+				],
+			],
+		] );
+		
+		// Mock Two Factor Core class
+		if ( ! class_exists( '\Two_Factor_Core' ) ) {
+			require_once __DIR__ . '/mocks/mock-two-factor-core.php';
+		}
+		
+		// Create test users
+		$admin_without_mfa  = $this->factory->user->create( [ 'role' => 'administrator' ] );
+		$editor_without_mfa = $this->factory->user->create( [ 'role' => 'editor' ] );
+		
+		// In the real test environment, users don't have MFA by default
+		
+		Forced_MFA_Users::init();
+		
+		// Clear any cached counts
+		Forced_MFA_Users::clear_mfa_count_cache();
+		
+		// Apply the filter
+		$filtered_data = apply_filters( 'vip_site_details_index_security_boost_data', [] );
+		
+		// Should count only the administrator (forced MFA role), not the editor
+		// Note: The count includes the default WordPress admin user (ID 1) plus our created admin
+		$this->assertArrayHasKey( 'users_without_2fa_count', $filtered_data );
+		// Should be at least 2 (default admin + created admin)
+		$this->assertGreaterThanOrEqual( 2, $filtered_data['users_without_2fa_count'] );
+		
+		// Clean up
+		wp_delete_user( $admin_without_mfa );
+		wp_delete_user( $editor_without_mfa );
+	}
 }
