@@ -1056,7 +1056,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Verify that authentication returns an error
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'inactive_account', $result->get_error_code() );
-		$this->assertEquals( '<strong>Error</strong>: Your account has been flagged as inactive. Please contact your site administrator.', $result->get_error_message() );
+		$this->assertEquals( '<strong>Error</strong>: Your account has been flagged as inactive. Please contact your site Administrator.', $result->get_error_message() );
 
 		// check that if we pass a WP_Error to the filter, the xmlrpc_login_error filter is added
 		remove_all_filters( 'xmlrpc_login_error' );
@@ -1067,7 +1067,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$error = apply_filters( 'xmlrpc_login_error', null );
 		$this->assertInstanceOf( 'IXR_Error', $error );
 		$this->assertEquals( 403, $error->code );
-		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site administrator.', $error->message );
+		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site Administrator.', $error->message );
 
 		wp_delete_user( $user_id );
 	}
@@ -1097,7 +1097,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Error', $error );
 		$this->assertEquals( 'inactive_account', $error->get_error_code() );
-		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site administrator.', $error->get_error_message() );
+		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site Administrator.', $error->get_error_message() );
 		$this->assertEquals( 403, $error->get_error_data()['status'] );
 
 		wp_delete_user( $user_id );
