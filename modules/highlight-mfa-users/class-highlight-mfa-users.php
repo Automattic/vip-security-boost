@@ -44,10 +44,11 @@ class Highlight_MFA_Users {
 
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
+
 		
-		// Normalize capabilities and roles configuration
-		self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
-		self::$roles        = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
+		self::$capabilities = [];
+		// Make it default to DEFAULT_ADMIN_EDITOR_ROLE_SLUGS for now
+		self::$roles = Capability_Utils::normalize_roles_input( self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		add_action( 'admin_init', [ __CLASS__, 'maybe_fix_found_users_query' ] );
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
@@ -89,38 +90,8 @@ class Highlight_MFA_Users {
 		add_action( 'set_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
 		add_action( 'add_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
 		add_action( 'remove_user_role', [ __CLASS__, 'clear_mfa_count_cache_for_user_role_change' ], 10, 1 );
-
-		// Add SDS hook
-		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_users_without_2fa_count_to_sds_payload' ] );
 	}
 
-	/**
-	 * Add the users_without_2fa_count to the SDS payload.
-	 *
-	 * @param array $data The SDS payload data.
-	 * @return array The modified SDS payload data.
-	 */
-	public static function add_users_without_2fa_count_to_sds_payload( $data ) {
-		// Add fix for unreliable FOUND_ROWS() query
-		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
-
-		$users_without_2fa_count = self::get_mfa_disabled_count();
-
-		$data['users_without_2fa_count'] = $users_without_2fa_count;
-
-		if ( is_multisite() ) {
-			// Get number of users without 2FA for all blogs (network-wide with blog_id = 0)
-			$users_without_2fa_count_all_blogs = self::get_mfa_disabled_count( 0 );
-
-			// Add network-wide users without 2FA count to the SDS payload
-			$data['users_without_2fa_count_all_blogs'] = $users_without_2fa_count_all_blogs;
-		}
-
-		// Remove fix for unreliable FOUND_ROWS() query
-		remove_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10 );
-
-		return $data;
-	}
 
 	/**
 	 * Add filter to fix found_users_query when filtering for MFA disabled users.
@@ -266,13 +237,24 @@ class Highlight_MFA_Users {
 
 	/**
 	 * Clear the MFA count cache when Two Factor user meta is updated.
+	 * Also clears cache when user capabilities are updated (e.g., via WP-CLI).
 	 *
 	 * @param int    $meta_id  ID of updated metadata entry.
 	 * @param int    $user_id  User ID.
 	 * @param string $meta_key Metadata key.
 	 */
 	public static function clear_mfa_count_cache_on_meta_update( $meta_id, $user_id, $meta_key ) {
+		global $wpdb;
+		
+		// Clear cache when 2FA settings change
 		if ( \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY === $meta_key ) {
+			self::clear_mfa_count_cache_for_user_sites( $user_id );
+		}
+		
+		// Clear cache when capabilities change (handles WP-CLI updates)
+		// Check for both single site and multisite capability keys
+		if ( $wpdb->prefix . 'capabilities' === $meta_key || 
+			strpos( $meta_key, '_capabilities' ) !== false ) {
 			self::clear_mfa_count_cache_for_user_sites( $user_id );
 		}
 	}
@@ -303,9 +285,9 @@ class Highlight_MFA_Users {
 		}
 
 		// Check if capabilities are configured or using default roles
-		$has_capabilities  = Capability_Utils::are_capabilities_configured( self::$capabilities );
-		$is_default_config = ! $has_capabilities && 
-								empty( array_diff( self::$roles, self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS ) );
+		$has_capabilities = Capability_Utils::are_capabilities_configured( self::$capabilities );
+		// Set to true for now to show Administrator and Editor in notice
+		$is_default_config = true;
 
 		// Get the cached MFA disabled count
 		$mfa_disabled_count = self::get_mfa_disabled_count();
