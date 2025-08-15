@@ -45,10 +45,10 @@ class Highlight_MFA_Users {
 		// Feature is always active unless specific users are skipped via option.
 		$highlight_mfa_configs = Configs::get_module_configs( 'highlight-mfa-users' );
 
-		
-		self::$capabilities = [];
+
+		self::$capabilities = Capability_Utils::normalize_capabilities_input( $highlight_mfa_configs['capabilities'] ?? [] );
 		// Make it default to DEFAULT_ADMIN_EDITOR_ROLE_SLUGS for now
-		self::$roles = Capability_Utils::normalize_roles_input( self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
+		self::$roles = Capability_Utils::normalize_roles_input( $highlight_mfa_configs['roles'] ?? self::DEFAULT_ADMIN_EDITOR_ROLE_SLUGS );
 
 		add_action( 'admin_init', [ __CLASS__, 'maybe_fix_found_users_query' ] );
 		add_action( 'admin_notices', [ __CLASS__, 'display_mfa_disabled_notice' ] );
@@ -170,7 +170,7 @@ class Highlight_MFA_Users {
 		
 		// For single site or specific blog in multisite
 		if ( ! is_multisite() || 0 !== $blog_id ) {
-			$blog_id         = $blog_id ?? get_current_blog_id();
+			// $blog_id is already set from line 137, no need to reassign
 			$meta_key_prefix = $wpdb->get_blog_prefix( $blog_id );
 			
 			// Build conditions for roles
@@ -234,8 +234,9 @@ class Highlight_MFA_Users {
 			// phpcs:enable WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
 			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery
-			$mfa_disabled_count = (int) $wpdb->get_var( $sql );
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$mfa_disabled_count = (int) $wpdb->get_var( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		} else {
 			// For network-wide queries (blog_id = 0), we need a different approach
 			// Fall back to the original method for now as network-wide is complex
