@@ -6,8 +6,8 @@ use Automattic\VIP\Security\Utils\Capability_Utils;
 use Automattic\VIP\Security\Utils\Users_Query_Utils;
 
 class Forced_MFA_Users {
-	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'wpcom_vip_wsc_forced_mfa_users_additional_capabilities';
-	public const ADDITIONAL_ROLES_FILTER_NAME        = 'wpcom_vip_wsc_forced_mfa_users_additional_roles';
+	public const ADDITIONAL_CAPABILITIES_FILTER_NAME = 'vip_wsc_forced_mfa_users_additional_capabilities';
+	public const ADDITIONAL_ROLES_FILTER_NAME        = 'vip_wsc_forced_mfa_users_additional_roles';
 	const MFA_COUNT_CACHE_GROUP                      = 'vip_security_forced_mfa_count';
 	const MFA_COUNT_CACHE_KEY_PREFIX                 = 'forced_mfa_disabled_count';
 	const MFA_COUNT_CACHE_TTL                        = HOUR_IN_SECONDS; // Cache for 1 hour
@@ -38,7 +38,7 @@ class Forced_MFA_Users {
 			add_action( 'set_current_user', [ __CLASS__, 'maybe_enforce_two_factor' ], 10 );
 			add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_custom_enforced_capabilities_to_sds' ] );
 		}
-		
+
 		// Always add SDS reporting hook (even without config, to report zero count)
 		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_users_without_2fa_count_to_sds_payload' ] );
 
@@ -224,7 +224,7 @@ class Forced_MFA_Users {
 		// Use native capability filtering if capabilities are configured
 		$capabilities = self::get_capabilities();
 		$roles        = self::get_roles();
-		
+
 		// If neither capabilities nor roles are configured, return 0
 		if ( empty( $capabilities ) && empty( $roles ) ) {
 			// Cache the result
@@ -232,7 +232,7 @@ class Forced_MFA_Users {
 			wp_cache_set( $cache_key, 0, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
 			return 0;
 		}
-		
+
 		if ( Capability_Utils::are_capabilities_configured( $capabilities ) ) {
 			$args['capability__in'] = $capabilities;
 		} else {
@@ -313,15 +313,15 @@ class Forced_MFA_Users {
 	 */
 	public static function clear_mfa_count_cache_on_meta_update( $meta_id, $user_id, $meta_key ) {
 		global $wpdb;
-		
+
 		// Clear cache when 2FA settings change
 		if ( \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY === $meta_key ) {
 			self::clear_mfa_count_cache_for_user_sites( $user_id );
 		}
-		
+
 		// Clear cache when capabilities change (handles WP-CLI updates)
 		// Check for both single site and multisite capability keys
-		if ( $wpdb->prefix . 'capabilities' === $meta_key || 
+		if ( $wpdb->prefix . 'capabilities' === $meta_key ||
 			strpos( $meta_key, '_capabilities' ) !== false ) {
 			self::clear_mfa_count_cache_for_user_sites( $user_id );
 		}
