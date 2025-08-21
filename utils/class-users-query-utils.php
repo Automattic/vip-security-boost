@@ -52,16 +52,30 @@ class Users_Query_Utils {
 		// Single blog query
 		if ( ! is_multisite() || 0 !== $blog_id ) {
 			$query_args['blog_id'] = $blog_id;
+			$query_args['fields']  = 'ID';
+
 			if ( $count_only ) {
 				$query_args['count_total'] = true;
-				$query_args['fields']      = 'ID';
 				$query_args['number']      = 1; // We only need the count
-			} else {
-				$query_args['fields'] = 'ID';
 			}
 
-			$user_query = new \WP_User_Query( $query_args );
-			return $count_only ? $user_query->get_total() : array_map( 'intval', $user_query->get_results() );
+			$user_query = new \WP_User_Query();
+			$user_query->prepare_query( $query_args );
+
+			if ( $count_only ) {
+				// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
+				$user_query->query_fields = 'COUNT(DISTINCT ' . $wpdb->users . '.ID)';
+			}
+
+			$request =
+				"SELECT {$user_query->query_fields}
+				{$user_query->query_from}
+				{$user_query->query_where}
+				{$user_query->query_orderby}
+				{$user_query->query_limit}";
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			return $count_only ? ( (int) $wpdb->get_var( $request ) ) : array_map( 'intval', $wpdb->get_col( $request ) );
 		}
 
 		// Network-wide query
@@ -75,7 +89,8 @@ class Users_Query_Utils {
 		$base_query_args['blog_id'] = 0;
 
 		// Create WP_User_Query to get the base SQL clauses
-		$temp_query = new \WP_User_Query( $base_query_args );
+		$temp_query = new \WP_User_Query();
+		$temp_query->prepare_query( $base_query_args );
 
 		// Build our network-wide capability filtering clause
 		$capability_where = self::build_network_capability_where_clause( $capabilities, $roles );
