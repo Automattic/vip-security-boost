@@ -75,7 +75,11 @@ class Users_Query_Utils {
 				{$user_query->query_limit}";
 
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			return $count_only ? ( (int) $wpdb->get_var( $request ) ) : array_map( 'intval', $wpdb->get_col( $request ) );
+			if ( $count_only ) {
+				return (int) $wpdb->get_var( $request );
+			} else {
+				return array_map( 'intval', $wpdb->get_col( $request ) );
+			}
 		}
 
 		// Network-wide query
