@@ -74,10 +74,11 @@ class Users_Query_Utils {
 				{$user_query->query_orderby}
 				{$user_query->query_limit}";
 
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 			if ( $count_only ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 				return (int) $wpdb->get_var( $request );
 			} else {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 				return array_map( 'intval', $wpdb->get_col( $request ) );
 			}
 		}
