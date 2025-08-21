@@ -105,9 +105,6 @@ class Inactive_Users {
 	}
 
 	public static function add_inactive_users_count_to_sds_payload( $data ) {
-		// Add fix for unreliable FOUND_ROWS() query
-		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
-
 		// Start timer to measure query time
 		$timer = microtime( true );
 
@@ -130,9 +127,6 @@ class Inactive_Users {
 
 		// Register query time metric
 		do_action( 'vip_security_inactive_users_query_time', $timer );
-
-		// Remove fix for unreliable FOUND_ROWS() query
-		remove_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10 );
 
 		return $data;
 	}
