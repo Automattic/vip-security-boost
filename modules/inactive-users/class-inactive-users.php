@@ -95,7 +95,7 @@ class Inactive_Users {
 	}
 
 	public static function maybe_fix_found_users_query() {
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! is_admin() || ! isset( $_GET['last_seen_filter'] ) || 'blocked' !== $_GET['last_seen_filter'] ) {
 			// Not in admin or not filtering for blocked users, nothing to do
 			return;
@@ -105,6 +105,18 @@ class Inactive_Users {
 	}
 
 	public static function add_inactive_users_count_to_sds_payload( $data ) {
+		$inact_ts = self::get_inactivity_timestamp();
+
+		// Users whose last_seen < inactivity cutoff
+		$or_clauses = array(
+			'relation' => 'OR',
+			array(
+				'key'     => self::LAST_SEEN_META_KEY,
+				'value'   => $inact_ts,
+				'type'    => 'NUMERIC',
+				'compare' => '<',
+			),
+		);
 		// Start timer to measure query time
 		$timer = microtime( true );
 
@@ -148,7 +160,7 @@ class Inactive_Users {
 			return;
 		}
 
-	// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
 		if ( wp_cache_add( $user_id, true, self::LAST_SEEN_CACHE_GROUP, self::LAST_SEEN_UPDATE_USER_META_CACHE_TTL ) ) {
 			update_user_meta( $user_id, self::LAST_SEEN_META_KEY, time() );
 		}
@@ -325,12 +337,24 @@ class Inactive_Users {
 			}
 		}
 
+		/**
+		 * We're doing two separate queries to avoid the query getting too complex and slow since excluding the last_seen meta would add an extra join
+		 * multiplying the complexity of the query beneath it
+		 */
 		// Use our utility method that properly handles network-wide capability filtering
-		$count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
-			self::get_inactive_users_query_args(),
+		$inactive_users_with_last_seen_count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			self::get_inactive_users_query_args( 'with_last_seen' ),
 			$blog_id,
 			true // count only
 		);
+
+		$inactive_users_without_last_seen_count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
+			self::get_inactive_users_query_args( 'without_last_seen' ),
+			$blog_id,
+			true // count only
+		);
+
+		$count = $inactive_users_with_last_seen_count + $inactive_users_without_last_seen_count;
 
 		// Cache the result for global queries (blog_id = 0)
 		if ( 0 === $blog_id ) {
@@ -341,19 +365,30 @@ class Inactive_Users {
 		return $count;
 	}
 
-	public static function get_inactive_users_query_args() {
+	/**
+	 * 'full' will do a single query with both last_seen and NOT EXISTS clauses which is more expensive.
+	 * 'with_last_seen' will do a single query with only last_seen clause.
+	 * 'without_last_seen' will do a single query with only NOT EXISTS clause.
+	 *
+	 *
+	 * @param string $select_type 'full' or 'with_last_seen' or 'without_last_seen'
+	 */
+	public static function get_inactive_users_query_args( $select_type = 'full' ) {
 		$inact_ts = self::get_inactivity_timestamp();
 
 		// Users whose last_seen < inactivity cutoff
-		$or_clauses = array(
-			'relation' => 'OR',
-			array(
-				'key'     => self::LAST_SEEN_META_KEY,
-				'value'   => $inact_ts,
-				'type'    => 'NUMERIC',
-				'compare' => '<',
-			),
-		);
+		$last_seen_or_clauses = array();
+		if ( 'with_last_seen' === $select_type || 'full' === $select_type ) {
+			$last_seen_or_clauses[] = array(
+				'relation' => 'OR',
+				array(
+					'key'     => self::LAST_SEEN_META_KEY,
+					'value'   => $inact_ts,
+					'type'    => 'NUMERIC',
+					'compare' => '<',
+				),
+			);
+		}
 
 		$release_ts = get_option( self::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
 		if ( false === $release_ts ) {
@@ -362,27 +397,17 @@ class Inactive_Users {
 
 		// If release date older than the cutoff, include “NOT EXISTS”
 		if ( $release_ts < $inact_ts ) {
-			$or_clauses[] = array(
-				'key'     => self::LAST_SEEN_META_KEY,
-				'compare' => 'NOT EXISTS',
-			);
+			if ( 'without_last_seen' === $select_type || 'full' === $select_type ) {
+				$last_seen_or_clauses[] = array(
+					'key'     => self::LAST_SEEN_META_KEY,
+					'compare' => 'NOT EXISTS',
+				);
+			}
 		}
-
-		// Users whose “ignore until” has expired (or was never set)
-		$ignore_clause = array(
-			'relation' => 'OR',
-			array(
-				'key'     => self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY,
-				'value'   => time(),
-				'type'    => 'NUMERIC',
-				'compare' => '<',
-			),
-			array(
-				'key'     => self::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY,
-				'compare' => 'NOT EXISTS',
-			),
-		);
-
+		/*
+		 * we are intentionally not excluding users with LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY to keep the query light.
+		 * This will result in a possible difference between the count and the actual number of inactive users
+		 */
 		$vars = array(
 			// Only consider users that registered before the inactivity threshold
 			'date_query' => array(
@@ -392,14 +417,13 @@ class Inactive_Users {
 			),
 
 			// Only consider users that have not been active since the inactivity threshold
-		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		'meta_query'     => array(
-			[
-				'relation' => 'AND',
-				$or_clauses,
-				$ignore_clause,
-			],
-		),
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				[
+					'relation' => 'AND',
+					$last_seen_or_clauses,
+				],
+			),
 		);
 		// Use capability__in if capabilities are configured, otherwise use role__in
 		if ( ! empty( self::$elevated_capabilities ) ) {
