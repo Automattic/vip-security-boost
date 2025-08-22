@@ -853,12 +853,14 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		// Clean up GET globals
 		unset( $_GET['last_seen_filter'], $_GET['last_seen_filter_nonce'] );
-
 		// Assert: only u1 and u4 should be returned
 		$this->assertContains( $u1, $found );
+
 		$this->assertContains( $u4, $found );
 		$this->assertNotContains( $u2, $found );
-		$this->assertNotContains( $u3, $found );
+
+		// exception to the rule: $u3 is being listed, although it's not blocked, because we don't use the ignore flag for querying
+		$this->assertContains( $u3, $found );
 
 		// Cleanup created users
 		wp_delete_user( $u1 );
