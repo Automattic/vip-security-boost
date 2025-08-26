@@ -169,8 +169,8 @@ class Inactive_Users {
 			return $user;
 		}
 
-		// If user is not found, return it to avoid null reference errors below
-		if ( ! $user ) {
+		// If user is not a WP_User instance, return it to avoid null reference errors below
+		if ( ! $user instanceof \WP_User ) {
 			return $user;
 		}
 
