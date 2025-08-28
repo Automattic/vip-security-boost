@@ -547,11 +547,12 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data );
 		$this->assertIsInt( $filtered_data['inactive_users_count'] );
 
+		// TODO - Re-enable network-wide query once performance issues are resolved
 		// Verify the network-wide count is added only in multisite
-		if ( is_multisite() ) {
-			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data );
-			$this->assertIsInt( $filtered_data['inactive_users_count_all_blogs'] );
-		}
+		// if ( is_multisite() ) {
+		// 	$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data );
+		// 	$this->assertIsInt( $filtered_data['inactive_users_count_all_blogs'] );
+		// }
 
 		// Verify original data is preserved
 		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
@@ -593,6 +594,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * Each site should have its own count of inactive users
 	 */
 	public function test_add_inactive_users_count_to_sds_payload_multisite_counts() {
+		$this->markTestSkipped( 'Skipping for now since network-wide queries are temporarily disabled' );
+
 		if ( ! is_multisite() ) {
 			$this->markTestSkipped( 'This test requires multisite to be enabled' );
 		}

@@ -105,7 +105,6 @@ class Inactive_Users {
 	}
 
 	public static function add_inactive_users_count_to_sds_payload( $data ) {
-		$inact_ts = self::get_inactivity_timestamp();
 		// Start timer to measure query time
 		$timer = microtime( true );
 
@@ -115,13 +114,14 @@ class Inactive_Users {
 		// Add inactive users count for the current blog to the SDS payload
 		$data['inactive_users_count'] = $inactive_users_count;
 
-		if ( is_multisite() ) {
-			// Get number of inactive users for all blogs (network-wide with blog_id = 0)
-			$inactive_users_count_all_blogs = self::get_inactive_users_count( 0 );
+		// TODO - Fix performance issues with network-wide queries
+		// if ( is_multisite() ) {
+		// 	// Get number of inactive users for all blogs (network-wide with blog_id = 0)
+		// 	$inactive_users_count_all_blogs = self::get_inactive_users_count( 0 );
 
-			// Add network-wide inactive users count to the SDS payload
-			$data['inactive_users_count_all_blogs'] = $inactive_users_count_all_blogs;
-		}
+		// 	// Add network-wide inactive users count to the SDS payload
+		// 	$data['inactive_users_count_all_blogs'] = $inactive_users_count_all_blogs;
+		// }
 
 		// Stop timer
 		$timer = microtime( true ) - $timer;
