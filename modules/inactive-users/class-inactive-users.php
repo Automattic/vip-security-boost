@@ -90,8 +90,9 @@ class Inactive_Users {
 			add_action( 'admin_init', [ __CLASS__, 'last_seen_unblock_action' ] );
 		}
 
+		// TODO - Fix performance issues with network-wide queries
 		// Add SDS hook
-		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
+		// add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
 	}
 
 	public static function maybe_fix_found_users_query() {
@@ -114,14 +115,13 @@ class Inactive_Users {
 		// Add inactive users count for the current blog to the SDS payload
 		$data['inactive_users_count'] = $inactive_users_count;
 
-		// TODO - Fix performance issues with network-wide queries
-		// if ( is_multisite() ) {
-		// 	// Get number of inactive users for all blogs (network-wide with blog_id = 0)
-		// 	$inactive_users_count_all_blogs = self::get_inactive_users_count( 0 );
+		if ( is_multisite() ) {
+			// Get number of inactive users for all blogs (network-wide with blog_id = 0)
+			$inactive_users_count_all_blogs = self::get_inactive_users_count( 0 );
 
-		// 	// Add network-wide inactive users count to the SDS payload
-		// 	$data['inactive_users_count_all_blogs'] = $inactive_users_count_all_blogs;
-		// }
+			// Add network-wide inactive users count to the SDS payload
+			$data['inactive_users_count_all_blogs'] = $inactive_users_count_all_blogs;
+		}
 
 		// Stop timer
 		$timer = microtime( true ) - $timer;

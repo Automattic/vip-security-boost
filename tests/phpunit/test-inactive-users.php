@@ -536,7 +536,10 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
 	 */
 	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
+		$this->markTestSkipped( 'Skipping for now since SDS sync is temporarily disabled' );
+
 		// Verify the filter is added during init
+		// @phpstan-ignore-next-line deadCode.unreachable
 		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
 
 		// Test that the filter works by applying it
@@ -547,12 +550,11 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'inactive_users_count', $filtered_data );
 		$this->assertIsInt( $filtered_data['inactive_users_count'] );
 
-		// TODO - Re-enable network-wide query once performance issues are resolved
 		// Verify the network-wide count is added only in multisite
-		// if ( is_multisite() ) {
-		// 	$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data );
-		// 	$this->assertIsInt( $filtered_data['inactive_users_count_all_blogs'] );
-		// }
+		if ( is_multisite() ) {
+			$this->assertArrayHasKey( 'inactive_users_count_all_blogs', $filtered_data );
+			$this->assertIsInt( $filtered_data['inactive_users_count_all_blogs'] );
+		}
 
 		// Verify original data is preserved
 		$this->assertEquals( 'some_value', $filtered_data['some_key'] );
@@ -594,8 +596,6 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * Each site should have its own count of inactive users
 	 */
 	public function test_add_inactive_users_count_to_sds_payload_multisite_counts() {
-		$this->markTestSkipped( 'Skipping for now since network-wide queries are temporarily disabled' );
-
 		if ( ! is_multisite() ) {
 			$this->markTestSkipped( 'This test requires multisite to be enabled' );
 		}
