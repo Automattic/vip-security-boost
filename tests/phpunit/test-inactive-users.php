@@ -536,7 +536,10 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
 	 */
 	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
+		$this->markTestSkipped( 'Skipping for now since SDS sync is temporarily disabled' );
+
 		// Verify the filter is added during init
+		// @phpstan-ignore-next-line deadCode.unreachable
 		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
 
 		// Test that the filter works by applying it
