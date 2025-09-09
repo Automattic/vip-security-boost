@@ -27,20 +27,10 @@ class Forced_MFA_Users {
 	private static $capabilities = [];
 
 	public static function init() {
-		// If plugins_loaded has already fired (e.g., in tests), register hooks immediately
-		if ( did_action( 'plugins_loaded' ) ) {
-			self::register_hooks();
-		} else {
-			add_action( 'plugins_loaded', [ __CLASS__, 'register_hooks' ] );
-		}
+		self::register_hooks(); // we want to add the hooks right away. Adding it with the "plugin_loaded" action won't work. We want to run it ASAP to make sure we add wpcom_vip_internal_is_two_factor_forced if needed.
 	}
 
 	public static function register_hooks() {
-		// Ensure the Two Factor plugin is active
-		if ( ! class_exists( '\Two_Factor_Core' ) ) {
-			return;
-		}
-
 		$forced_mfa_configs = Configs::get_module_configs( 'forced-mfa-users' );
 
 		// Normalize capabilities and roles configuration
@@ -116,6 +106,11 @@ class Forced_MFA_Users {
 	 * Require 2FA based on capabilities or roles set in config
 	 */
 	public static function maybe_enforce_two_factor() {
+		// Ensure the Two Factor plugin is active
+		if ( ! class_exists( '\Two_Factor_Core' ) ) {
+			return;
+		}
+
 		if ( ! is_user_logged_in() ) {
 			return;
 		}
@@ -155,6 +150,10 @@ class Forced_MFA_Users {
 	 * @return array The modified SDS payload data.
 	 */
 	public static function add_users_without_2fa_count_to_sds_payload( $data ) {
+		// Ensure the Two Factor plugin is active
+		if ( ! class_exists( '\Two_Factor_Core' ) ) {
+			return $data;
+		}
 		// Add fix for unreliable FOUND_ROWS() query
 		add_filter( 'found_users_query', [ Users_Query_Utils::class, 'fix_found_users_query' ], 10, 2 );
 
