@@ -1,9 +1,6 @@
 <?php
 
 use Automattic\VIP\Security\MFAUsers\Forced_MFA_Users;
-use Automattic\VIP\Security\Utils\Testable_Logger;
-use Automattic\VIP\Jetpack\Connection_Pilot\Attendant;
-use Automattic\VIP\Security\Constants;
 
 /**
  * Tests for Forced_MFA_Users when Two Factor plugin (Two_Factor_Core) is missing.
