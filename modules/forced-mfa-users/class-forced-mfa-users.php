@@ -166,7 +166,7 @@ class Forced_MFA_Users {
 	 */
 	public static function add_users_without_2fa_count_to_sds_payload( $data ) {
 		// Ensure the Two Factor plugin is active
-		if ( ! class_exists( '\Two_Factor_Core' ) ) {
+		if ( ! self::has_two_factor_plugin() ) {
 			return $data;
 		}
 		// Add fix for unreliable FOUND_ROWS() query
