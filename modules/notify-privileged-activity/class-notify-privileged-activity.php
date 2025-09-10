@@ -8,6 +8,12 @@ use Automattic\VIP\Support_User\User as Support_User;
 
 class Notify_Privileged_Activity {
 	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
+
+	private static function is_jetpack_connection_owner( $user ): bool {
+		return ( $user instanceof \WP_User )
+			&& 'wpvip-jetpack-connection-owner' === strtolower( $user->user_login );
+	}
+
 	public static function init() {
 		if ( is_multisite() ) {
 			add_action( 'add_user_to_blog', [ __CLASS__, 'notify_admin_user_creation' ] );
@@ -108,6 +114,15 @@ class Notify_Privileged_Activity {
 	 * @param string   $subject The email subject.
 	 */
 	private static function send_notification( $user, $subject, $email_title, $template ) {
+		// Skip notification for the Jetpack connection owner
+	if ( self::is_jetpack_connection_owner( $user ) ) {
+		Logger::info(
+			self::LOG_FEATURE_NAME,
+			'Skipping notification for Jetpack connection owner: ' . $user->user_login
+		);
+		return;
+	}
+
 		// Skip notification for VIP Support users
 		if ( class_exists( Support_User::class ) && Support_User::user_has_vip_support_role( $user->ID ) ) {
 			Logger::info(
