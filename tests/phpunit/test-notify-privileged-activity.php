@@ -291,69 +291,69 @@ class TestNotifyPrivilegedActivity extends WP_UnitTestCase {
  * @runInSeparateProcess
  * @preserveGlobalState disabled
  */
-public function test_jetpack_connection_owner_creation_skips_email() {
-	$user_id = self::factory()->user->create( [
-		'role'       => 'administrator',
-		'user_login' => 'wpvip-jetpack-connection-owner',
-		'user_email' => 'vip-jetpack-owner+1@wpvip.com',
-	] );
+	public function test_jetpack_connection_owner_creation_skips_email() {
+		$user_id = self::factory()->user->create( [
+			'role'       => 'administrator',
+			'user_login' => 'wpvip-jetpack-connection-owner',
+			'user_email' => 'vip-jetpack-owner+1@wpvip.com',
+		] );
 
-	// Ensure admin_email is valid so any skip is due to our logic, not config.
-	update_option( 'admin_email', 'admin@example.com' );
+		// Ensure admin_email is valid so any skip is due to our logic, not config.
+		update_option( 'admin_email', 'admin@example.com' );
 
-	Notify_Privileged_Activity::notify_admin_user_creation( $user_id );
+		Notify_Privileged_Activity::notify_admin_user_creation( $user_id );
 
-	$this->assertNull(
-		Email::$last_call_args_for_test,
-		'Email::send should be skipped for the Jetpack connection owner on creation.'
-	);
-}
-
-/**
- * @runInSeparateProcess
- * @preserveGlobalState disabled
- */
-public function test_jetpack_connection_owner_promotion_skips_email() {
-	$user_id = self::factory()->user->create( [
-		'role'       => 'author',
-		'user_login' => 'wpvip-jetpack-connection-owner',
-		'user_email' => 'vip-jetpack-owner+2@wpvip.com',
-	] );
-
-	update_option( 'admin_email', 'admin@example.com' );
-
-	Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'author' ] );
-
-	$this->assertNull(
-		Email::$last_call_args_for_test,
-		'Email::send should be skipped for the Jetpack connection owner on promotion.'
-	);
-}
-
-/**
- * @runInSeparateProcess
- * @preserveGlobalState disabled
- */
-public function test_jetpack_connection_owner_super_admin_grant_skips_email() {
-	if ( ! is_multisite() ) {
-		$this->markTestSkipped( 'Multisite is required for this test.' );
+		$this->assertNull(
+			Email::$last_call_args_for_test,
+			'Email::send should be skipped for the Jetpack connection owner on creation.'
+		);
 	}
 
-	$user_id = self::factory()->user->create( [
-		'role'       => 'administrator',
-		'user_login' => 'wpvip-jetpack-connection-owner',
-		'user_email' => 'vip-jetpack-owner+3@wpvip.com',
-	] );
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_jetpack_connection_owner_promotion_skips_email() {
+		$user_id = self::factory()->user->create( [
+			'role'       => 'author',
+			'user_login' => 'wpvip-jetpack-connection-owner',
+			'user_email' => 'vip-jetpack-owner+2@wpvip.com',
+		] );
 
-	update_option( 'admin_email', 'admin@example.com' );
+		update_option( 'admin_email', 'admin@example.com' );
 
-	Notify_Privileged_Activity::notify_user_granted_super_admin( $user_id );
+		Notify_Privileged_Activity::notify_user_promoted_to_admin( $user_id, 'administrator', [ 'author' ] );
 
-	$this->assertNull(
-		Email::$last_call_args_for_test,
-		'Email::send should be skipped for the Jetpack connection owner on super admin grant.'
-	);
-}
+		$this->assertNull(
+			Email::$last_call_args_for_test,
+			'Email::send should be skipped for the Jetpack connection owner on promotion.'
+		);
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_jetpack_connection_owner_super_admin_grant_skips_email() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite is required for this test.' );
+		}
+
+		$user_id = self::factory()->user->create( [
+			'role'       => 'administrator',
+			'user_login' => 'wpvip-jetpack-connection-owner',
+			'user_email' => 'vip-jetpack-owner+3@wpvip.com',
+		] );
+
+		update_option( 'admin_email', 'admin@example.com' );
+
+		Notify_Privileged_Activity::notify_user_granted_super_admin( $user_id );
+
+		$this->assertNull(
+			Email::$last_call_args_for_test,
+			'Email::send should be skipped for the Jetpack connection owner on super admin grant.'
+		);
+	}
 
 	/**
 	 * Mock the VIP Support User class for testing

@@ -115,13 +115,13 @@ class Notify_Privileged_Activity {
 	 */
 	private static function send_notification( $user, $subject, $email_title, $template ) {
 		// Skip notification for the Jetpack connection owner
-	if ( self::is_jetpack_connection_owner( $user ) ) {
-		Logger::info(
-			self::LOG_FEATURE_NAME,
-			'Skipping notification for Jetpack connection owner: ' . $user->user_login
-		);
-		return;
-	}
+		if ( self::is_jetpack_connection_owner( $user ) ) {
+			Logger::info(
+				self::LOG_FEATURE_NAME,
+				'Skipping notification for Jetpack connection owner: ' . $user->user_login
+			);
+			return;
+		}
 
 		// Skip notification for VIP Support users
 		if ( class_exists( Support_User::class ) && Support_User::user_has_vip_support_role( $user->ID ) ) {
