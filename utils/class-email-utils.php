@@ -13,6 +13,7 @@ class Email_Utils {
 		if ( ! is_email( $normalized ) ) {
 			return null;
 		}
+		// phpcs:ignore Squiz.PHP.CommentedOutCode.Found
 		$part = strrchr( $normalized, '@' ); // "@domain" or false
 		if ( false === $part ) {
 			return null;
