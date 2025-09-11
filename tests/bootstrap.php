@@ -7,6 +7,7 @@ require_once __DIR__ . '/../utils/class-constants.php';
 require_once __DIR__ . '/../utils/class-capability-utils.php';
 require_once __DIR__ . '/../utils/class-users-query-utils.php';
 require_once __DIR__ . '/../utils/class-logger.php';
+require_once __DIR__ . '/../utils/class-email-utils.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
 require_once __DIR__ . '/../email/class-email.php';
 require_once __DIR__ . '/class-testable-logger.php';
