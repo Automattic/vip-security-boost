@@ -2,6 +2,7 @@
 namespace Automattic\VIP\Security\PrivilegedActivityNotifier;
 
 use Automattic\VIP\Security\Email\Email;
+use Automattic\VIP\Security\Utils\Email_Utils;
 use Automattic\VIP\Security\Constants;
 use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Support_User\User as Support_User;
@@ -9,9 +10,17 @@ use Automattic\VIP\Support_User\User as Support_User;
 class Notify_Privileged_Activity {
 	const LOG_FEATURE_NAME = 'sb_notify_privileged_activity';
 
+	/**
+	 * Only treat as the Jetpack connection owner if:
+	 *  - The login matches the canonical owner
+	 *  - Email domain is A8C/VIP owned
+	 */
 	private static function is_jetpack_connection_owner( $user ): bool {
 		return ( $user instanceof \WP_User )
-			&& 'wpvip-jetpack-connection-owner' === strtolower( $user->user_login );
+			&& strtolower( (string) $user->user_login ) === ( defined( Constants::class . '::JETPACK_OWNER_LOGIN' )
+				? Constants::JETPACK_OWNER_LOGIN
+				: 'wpvip-jetpack-connection-owner' )
+			&& Email_Utils::is_a8c_owned( $user->user_email );
 	}
 
 	public static function init() {
