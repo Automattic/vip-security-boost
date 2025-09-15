@@ -27,6 +27,11 @@ if ( ! class_exists( '\Automattic\VIP\Support_User\User' ) ) {
 			return in_array( $domain, $a8c_domains, true );
 		}
 
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		public static function is_verified_automattician( $user_id ) {
+			return false;
+		}
+
 		public static function reset_mock() {
 			self::$mock_vip_support_users = [];
 		}

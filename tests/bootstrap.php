@@ -11,6 +11,7 @@ require_once __DIR__ . '/../utils/class-email-utils.php';
 require_once __DIR__ . '/class-speedup-isolated-wp-tests.php';
 require_once __DIR__ . '/../email/class-email.php';
 require_once __DIR__ . '/class-testable-logger.php';
+require_once __DIR__ . '/phpunit/mocks/class-support-user-mock.php';
 
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
