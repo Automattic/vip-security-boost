@@ -16,11 +16,19 @@ class Notify_Privileged_Activity {
 	 *  - Email domain is A8C/VIP owned
 	 */
 	private static function is_jetpack_connection_owner( $user ): bool {
-		return ( $user instanceof \WP_User )
-			&& strtolower( (string) $user->user_login ) === ( defined( Constants::class . '::JETPACK_OWNER_LOGIN' )
-				? Constants::JETPACK_OWNER_LOGIN
-				: 'wpvip-jetpack-connection-owner' )
-			&& Email_Utils::is_a8c_owned( $user->user_email );
+		if ( ! ( $user instanceof \WP_User ) ) {
+			return false;
+		}
+
+		if ( strtolower( (string) $user->user_login ) !== Constants::JETPACK_OWNER_LOGIN ) {
+			return false;
+		}
+
+		if ( ! Email_Utils::is_a8c_owned( $user->user_email ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	public static function init() {
