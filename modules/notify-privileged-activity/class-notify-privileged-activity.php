@@ -24,11 +24,7 @@ class Notify_Privileged_Activity {
 			return false;
 		}
 
-		if ( class_exists( Support_User::class ) && method_exists( Support_User::class, 'is_a8c_email' ) ) {
-			if ( ! Support_User::is_a8c_email( $user->user_email ) ) {
-				return false;
-			}
-		} else {
+		if ( ! class_exists( Support_User::class ) || ! Support_User::is_a8c_email( $user->user_email ) ) {
 			return false;
 		}
 
