@@ -1,6 +1,7 @@
 <?php
 
 use Automattic\VIP\Security\Utils\Users_Query_Utils;
+use Automattic\VIP\Security\Utils\Role_Sanitizer;
 
 /**
  * Tests for Automattic\VIP\Security\Utils\Users_Query_Utils
@@ -9,7 +10,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 	public function setUp(): void {
 		parent::setUp();
-		
+
 		// Ensure we have a clean cache state
 		wp_cache_flush();
 	}
@@ -279,7 +280,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
 		]);
-		
+
 		$new_admin = $this->factory->user->create([
 			'role'            => 'administrator',
 			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-10 days' ) ),
@@ -295,7 +296,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 				],
 			],
 		], 0, true);
-		
+
 		$this->assertGreaterThanOrEqual( 1, $old_admin_count, 'Should find old admin users' );
 
 		// Test with exclude parameter
@@ -304,12 +305,12 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Testing exclude functionality in controlled test environment
 			'exclude'        => [ $old_admin ],
 		], 0, true);
-		
+
 		// Should find fewer users when excluding the old admin
 		$total_count = Users_Query_Utils::query_users_with_capability_filtering([
 			'capability__in' => [ 'manage_options' ],
 		], 0, true);
-		
+
 		$this->assertLessThan( $total_count, $excluded_count, 'Excluding users should reduce the count' );
 
 		// Clean up
@@ -334,7 +335,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 			0, // should fall back to current site
 			true // count only
 		);
-		
+
 		$this->assertGreaterThanOrEqual( 1, $count, 'Should find admin users on single site' );
 
 		// Clean up
@@ -424,6 +425,130 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		wp_delete_user( $admin_user );
 		wp_delete_user( $editor_user );
 		wp_delete_user( $subscriber_user );
+	}
+
+	/**
+	 * Ensure capability filtering still operates when role metadata is missing the human readable name.
+	 */
+	public function test_capability_filtering_with_roles_array_is_broken() {
+		global $wp_roles;
+		global $wpdb;
+
+		// Create a user with a capability provided via role.
+		$admin_user_id = $this->factory->user->create( [ 'role' => 'administrator' ] );
+
+		// Determine the roles option name and corrupt it to mimic database issues.
+		$current_blog_id   = function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : null;
+		$roles_option_name = is_multisite()
+			? $wpdb->get_blog_prefix( (int) $current_blog_id ) . 'user_roles'
+			: $wpdb->prefix . 'user_roles';
+		$original_option   = get_option( $roles_option_name );
+		$corrupted_option  = $original_option;
+
+		if ( isset( $corrupted_option['administrator'] ) ) {
+			unset( $corrupted_option['administrator']['name'] );
+		}
+
+		update_option( $roles_option_name, $corrupted_option );
+
+		$original_wp_roles = $wp_roles instanceof WP_Roles ? $wp_roles : null;
+
+		// Force WordPress to rebuild the roles object from the (now corrupted) option.
+		$wp_roles = null;
+
+		$repaired_roles = [];
+		$repaired_names = [];
+
+		try {
+			$results = Users_Query_Utils::query_users_with_capability_filtering(
+				[
+					'capability__in' => [ 'manage_options' ],
+					'include'        => [ $admin_user_id ],
+				],
+				function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : null,
+				false
+			);
+
+			// Trigger roles loading after our query to validate the repair logic.
+			$wp_roles = wp_roles();
+
+			$repaired_roles = $wp_roles->roles;
+			$repaired_names = $wp_roles->role_names;
+		} finally {
+			update_option( $roles_option_name, $original_option );
+
+			if ( $original_wp_roles instanceof WP_Roles ) {
+				$wp_roles = $original_wp_roles;
+			} else {
+				$wp_roles = new WP_Roles();
+			}
+		}
+
+		wp_delete_user( $admin_user_id );
+
+		$this->assertContains( $admin_user_id, $results, 'Administrator should still be matched when the role definition lacks a name.' );
+
+		$this->assertArrayHasKey( 'administrator', $repaired_roles, 'Administrator role should still exist after repair.' );
+		$this->assertArrayHasKey( 'name', $repaired_roles['administrator'], 'Role repair should restore the missing name key.' );
+		$this->assertNotEmpty( $repaired_roles['administrator']['name'], 'Restored role name should not be empty.' );
+
+		$this->assertArrayHasKey( 'administrator', $repaired_names, 'Role names index should be rebuilt for administrator.' );
+		$this->assertNotEmpty( $repaired_names['administrator'], 'Role names index should contain the fallback label.' );
+	}
+
+	/**
+	 * Ensure role sanitization hooks are cleaned up after running a query.
+	 */
+	public function test_role_sanitizer_hooks_removed_after_query() {
+		global $wpdb;
+		global $wp_roles;
+
+		$current_blog_id   = function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : null;
+		$roles_option_name = is_multisite()
+			? $wpdb->get_blog_prefix( (int) $current_blog_id ) . 'user_roles'
+			: $wpdb->prefix . 'user_roles';
+
+		$original_option  = get_option( $roles_option_name );
+		$corrupted_option = $original_option;
+
+		if ( isset( $corrupted_option['administrator'] ) ) {
+			unset( $corrupted_option['administrator']['name'] );
+		}
+
+		update_option( $roles_option_name, $corrupted_option );
+
+		$original_wp_roles = $wp_roles instanceof WP_Roles ? $wp_roles : null;
+
+		// Force rebuild from corrupted option.
+		$wp_roles = null;
+
+		try {
+			Users_Query_Utils::query_users_with_capability_filtering(
+				[
+					'role__in' => [ 'administrator' ],
+				],
+				$current_blog_id,
+				true
+			);
+		} finally {
+			update_option( $roles_option_name, $original_option );
+
+			if ( $original_wp_roles instanceof WP_Roles ) {
+				$wp_roles = $original_wp_roles;
+			} else {
+				$wp_roles = new WP_Roles();
+			}
+		}
+
+		$this->assertFalse(
+			has_filter( "option_{$roles_option_name}", [ Role_Sanitizer::class, 'repair_roles_array' ] ),
+			'Roles option filter should be removed after the query completes.'
+		);
+
+		$this->assertFalse(
+			has_action( 'switch_blog', [ Role_Sanitizer::class, 'handle_switch_blog' ] ),
+			'Switch blog hook should be removed after the query completes.'
+		);
 	}
 
 	/**
