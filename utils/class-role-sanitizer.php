@@ -145,8 +145,8 @@ class Role_Sanitizer {
 					trigger_error( esc_html( "Repaired capabilities for role '{$role_key}' from string to array. Previous value: {$capability}. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
 				}
 				if ( ! isset( $role_definition['capabilities'] ) || ! is_array( $role_definition['capabilities'] ) ) {
-					// if capabilities are a string, convert to array
-						$role_definition['capabilities'] = [];
+					// Ensure capabilities is an array; default to empty array.
+					$role_definition['capabilities'] = [];
 
 				}
 				// if the name is missing
