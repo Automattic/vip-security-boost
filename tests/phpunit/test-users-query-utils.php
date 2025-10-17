@@ -546,7 +546,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		);
 
 		$this->assertFalse(
-			has_action( 'switch_blog', [ Role_Sanitizer::class, 'handle_switch_blog' ] ),
+			has_action( 'switch_blog', [ Role_Sanitizer::class, 'register_role_option_filter' ] ),
 			'Switch blog hook should be removed after the query completes.'
 		);
 	}

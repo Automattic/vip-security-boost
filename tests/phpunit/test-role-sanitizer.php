@@ -80,7 +80,7 @@ class RoleSanitizerTest extends WP_UnitTestCase {
 		Role_Sanitizer::maybe_register_role_sanitizers();
 
 		$this->assertNotFalse(
-			has_action( 'switch_blog', [ Role_Sanitizer::class, 'handle_switch_blog' ] ),
+			has_action( 'switch_blog', [ Role_Sanitizer::class, 'register_role_option_filter' ] ),
 			'Role sanitizers should hook into switch_blog when repair is needed.'
 		);
 		$this->assertNotFalse(
@@ -97,7 +97,7 @@ class RoleSanitizerTest extends WP_UnitTestCase {
 			'Role sanitizers should not register filters when role metadata is valid.'
 		);
 		$this->assertFalse(
-			has_action( 'switch_blog', [ Role_Sanitizer::class, 'handle_switch_blog' ] ),
+			has_action( 'switch_blog', [ Role_Sanitizer::class, 'register_role_option_filter' ] ),
 			'Role sanitizers should not hook switch_blog when repair is not needed.'
 		);
 	}
