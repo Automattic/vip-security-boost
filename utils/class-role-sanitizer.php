@@ -73,35 +73,6 @@ class Role_Sanitizer {
 			}
 		}
 	}
-
-	/**
-	 * Get all roles that have a specific capability.
-	 *
-	 * @param string $capability The capability to check for.
-	 * @return array Array of role names that have the capability.
-	 */
-	public static function get_roles_with_capability( $capability ) {
-		global $wp_roles;
-
-		self::maybe_register_role_sanitizers();
-		self::ensure_roles_have_names();
-
-		if ( ! $wp_roles instanceof \WP_Roles ) {
-			return [];
-		}
-
-		$roles_with_capability = [];
-
-		foreach ( $wp_roles->roles as $role_name => $role_info ) {
-			if ( isset( $role_info['capabilities'][ $capability ] ) && $role_info['capabilities'][ $capability ] ) {
-				$roles_with_capability[] = $role_name;
-			}
-		}
-
-		return $roles_with_capability;
-	}
-
-
 	/**
 	 * Remove any temporary hooks registered for role sanitization.
 	 *
