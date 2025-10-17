@@ -132,34 +132,31 @@ class Role_Sanitizer {
 		if ( ! is_array( $roles ) ) {
 			return $roles;
 		}
-		try {
-			foreach ( $roles as $role_key => &$role_definition ) {
-				if ( ! is_array( $role_definition ) ) {
-					$role_definition = [];
-				}
-				// if the capabilities are a string, convert to array
-				if ( isset( $role_definition['capabilities'] ) && is_string( $role_definition['capabilities'] ) ) {
-					$capability                      = $role_definition['capabilities'];
-					$role_definition['capabilities'] = [ $capability ];
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Logging a warning when repairing role capabilities to inform the user
-					trigger_error( esc_html( "Repaired capabilities for role '{$role_key}' from string to array. Previous value: {$capability}. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
-				}
-				if ( ! isset( $role_definition['capabilities'] ) || ! is_array( $role_definition['capabilities'] ) ) {
-					// Ensure capabilities is an array; default to empty array.
-					$role_definition['capabilities'] = [];
-
-				}
-				// if the name is missing
-				if ( ! isset( $role_definition['name'] ) || ! is_string( $role_definition['name'] ) || '' === trim( $role_definition['name'] ) ) {
-
-					$role_definition['name'] = self::build_fallback_role_label( $role_key );
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Logging a warning when repairing role name to inform the user
-					trigger_error( esc_html( "Repaired missing name for role '{$role_key}' to '{$role_definition['name']}'. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
-				}
+		foreach ( $roles as $role_key => &$role_definition ) {
+			if ( ! is_array( $role_definition ) ) {
+				$role_definition = [];
 			}
-		} finally {
-			return $roles;
+			// if the capabilities are a string, convert to array
+			if ( isset( $role_definition['capabilities'] ) && is_string( $role_definition['capabilities'] ) ) {
+				$capability                      = $role_definition['capabilities'];
+				$role_definition['capabilities'] = [ $capability ];
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Logging a warning when repairing role capabilities to inform the user
+				trigger_error( esc_html( "Repaired capabilities for role '{$role_key}' from string to array. Previous value: {$capability}. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
+			}
+			if ( ! isset( $role_definition['capabilities'] ) || ! is_array( $role_definition['capabilities'] ) ) {
+				// Ensure capabilities is an array; default to empty array.
+				$role_definition['capabilities'] = [];
+
+			}
+			// if the name is missing
+			if ( ! isset( $role_definition['name'] ) || ! is_string( $role_definition['name'] ) || '' === trim( $role_definition['name'] ) ) {
+
+				$role_definition['name'] = self::build_fallback_role_label( $role_key );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Logging a warning when repairing role name to inform the user
+				trigger_error( esc_html( "Repaired missing name for role '{$role_key}' to '{$role_definition['name']}'. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
+			}
 		}
+		return $roles;
 	}
 
 	/**
