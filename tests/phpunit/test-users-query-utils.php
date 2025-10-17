@@ -458,7 +458,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		// Expect a warning to be triggered when repairing the administrator role
 		$this->expectWarning();
-		$this->expectWarningMessage( "Repaired missing name for role &#039;administrator&#039; to &#039;Administrator&#039;. Please review your user roles db data as it might be corrupted." );
+		$this->expectWarningMessage( 'Repaired missing name for role &#039;administrator&#039; to &#039;Administrator&#039;. Please review your user roles db data as it might be corrupted.' );
 
 		try {
 			$results = Users_Query_Utils::query_users_with_capability_filtering(

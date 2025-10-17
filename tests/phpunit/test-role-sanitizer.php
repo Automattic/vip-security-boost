@@ -110,7 +110,7 @@ class RoleSanitizerTest extends WP_UnitTestCase {
 
 		// Expect a warning to be triggered when repairing the role name
 		$this->expectWarning();
-		$this->expectWarningMessage( "Repaired missing name for role &#039;subscriber&#039; to &#039;Subscriber&#039;. Please review your user roles db data as it might be corrupted." );
+		$this->expectWarningMessage( 'Repaired missing name for role &#039;subscriber&#039; to &#039;Subscriber&#039;. Please review your user roles db data as it might be corrupted.' );
 
 		Role_Sanitizer::ensure_roles_have_names();
 
@@ -142,7 +142,7 @@ class RoleSanitizerTest extends WP_UnitTestCase {
 
 		// Expect a warning to be triggered when repairing the administrator role name
 		$this->expectWarning();
-		$this->expectWarningMessage( "Repaired missing name for role &#039;administrator&#039; to &#039;Administrator&#039;. Please review your user roles db data as it might be corrupted." );
+		$this->expectWarningMessage( 'Repaired missing name for role &#039;administrator&#039; to &#039;Administrator&#039;. Please review your user roles db data as it might be corrupted.' );
 
 		$repaired_roles = Role_Sanitizer::repair_roles_array( $roles );
 
