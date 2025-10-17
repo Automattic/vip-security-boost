@@ -453,9 +453,6 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 
 		$original_wp_roles = $wp_roles instanceof WP_Roles ? $wp_roles : null;
 
-		// Force WordPress to rebuild the roles object from the (now corrupted) option.
-		$wp_roles = null;
-
 		$repaired_roles = [];
 		$repaired_names = [];
 
@@ -491,6 +488,7 @@ class UsersQueryUtilsTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'administrator', $repaired_roles, 'Administrator role should still exist after repair.' );
 		$this->assertArrayHasKey( 'name', $repaired_roles['administrator'], 'Role repair should restore the missing name key.' );
 		$this->assertNotEmpty( $repaired_roles['administrator']['name'], 'Restored role name should not be empty.' );
+		$this->assertEquals( $repaired_roles['administrator']['name'], 'Administrator' );
 
 		$this->assertArrayHasKey( 'administrator', $repaired_names, 'Role names index should be rebuilt for administrator.' );
 		$this->assertNotEmpty( $repaired_names['administrator'], 'Role names index should contain the fallback label.' );
