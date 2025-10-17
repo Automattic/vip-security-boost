@@ -43,7 +43,7 @@ class Role_Sanitizer {
 		self::$sanitizers_registered = true;
 
 		self::register_role_option_filter();
-		add_action( 'switch_blog', [ __CLASS__, 'register_role_option_filter' ], 10, 2 );
+		add_action( 'switch_blog', [ __CLASS__, 'register_role_option_filter' ], 10, 1 );
 	}
 
 	/**
@@ -168,9 +168,10 @@ class Role_Sanitizer {
 				}
 				// if the capabilities are a string, convert to array
 				if ( isset( $role_definition['capabilities'] ) && is_string( $role_definition['capabilities'] ) ) {
-					$role_definition['capabilities'] = [ $role_definition['capabilities'] ];
+					$capability                      = $role_definition['capabilities'];
+					$role_definition['capabilities'] = [ $capability ];
 					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Logging a warning when repairing role capabilities to inform the user
-					trigger_error( esc_html( "Repaired capabilities for role '{$role_key}' from string to array. Previous value: {$role_definition['capabilities']}. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
+					trigger_error( esc_html( "Repaired capabilities for role '{$role_key}' from string to array. Previous value: {$capability}. Please review your user roles db data as it might be corrupted." ), E_USER_WARNING );
 				}
 				if ( ! isset( $role_definition['capabilities'] ) || ! is_array( $role_definition['capabilities'] ) ) {
 					// if capabilities are a string, convert to array
