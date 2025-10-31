@@ -49,3 +49,10 @@ vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user update vipgo --user_
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbcontributor test-contributor@example.local --user_pass=password --role=contributor
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbeditor test-editor@example.local --user_pass=password --role=editor
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbadmin test-admin@example.local --user_pass=password --role=administrator
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbinactiveadmin test-inactiveadmin@example.local --user_pass=password --role=administrator
+
+# set the admin as inactive
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp option set wpvip_last_seen_release_date_timestamp 1708528298
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user update sbinactiveadmin --user_registered='2023-01-15 10:00:00'
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user meta set sbinactiveadmin wpvip_last_seen 1699459200
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user meta set sbinactiveadmin wpvip_last_seen_ignore_inactivity_check_until 1599459200
