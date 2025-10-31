@@ -46,3 +46,6 @@ vip dev-env exec --slug e2e-sb-test-site --quiet -- wp rewrite structure '/%post
 
 # Change admin password to "password"
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user update vipgo --user_pass=password
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbcontributor test-contributor@example.local --user_pass=password --role=contributor
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbeditor test-editor@example.local --user_pass=password --role=editor
+vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user create sbadmin test-admin@example.local --user_pass=password --role=administrator
