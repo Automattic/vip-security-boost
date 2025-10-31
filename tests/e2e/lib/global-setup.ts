@@ -17,7 +17,9 @@ async function globalSetup( config: FullConfig ) {
 	const artifactsDir = 'test-results/setup/';
 	const { baseURL, storageState } = config.projects[ 0 ].use;
 	const browser = await chromium.launch( { headless: config.projects[ 0 ].use.headless } );
-	const context = await browser.newContext( { recordVideo: { dir: artifactsDir } } );
+	const context = await browser.newContext( {
+		recordVideo: { dir: artifactsDir },
+	} );
 	const page = await context.newPage();
 	const user = process.env.E2E_USER ? process.env.E2E_USER : 'vipgo';
 	const pass = process.env.E2E_PASSWORD ? process.env.E2E_PASSWORD : 'password';

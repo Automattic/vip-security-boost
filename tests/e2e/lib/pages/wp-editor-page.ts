@@ -26,8 +26,8 @@ const selectors = {
 	settingsToggle: '.edit-post-header__settings .interface-pinned-items button:first-child',
 	saveDraftButton: '.editor-post-save-draft',
 	previewButton: ':is(button:text("Preview"), a:text("Preview"))',
-	publishButton: (parentSelector: string) =>
-		`${parentSelector} button:text("Publish")[aria-disabled=false]`,
+	publishButton: ( parentSelector: string ) =>
+		`${ parentSelector } button:text("Publish")[aria-disabled=false]`,
 	updateButton: '.editor-post-publish-button',
 	// Settings panel.
 	settingsPanel: '.interface-complementary-area',
@@ -58,7 +58,7 @@ export class EditorPage {
 	 *
 	 * @param { Page } page The underlying page
 	 */
-	constructor(page: Page) {
+	constructor( page: Page ) {
 		this.page = page;
 	}
 
@@ -66,39 +66,39 @@ export class EditorPage {
 	 * Dismisses the Welcome Tour (card) if it is present.
 	 */
 	public dismissWelcomeTour(): Promise<void> {
-		return this.clickButtonIfExists(this.page.locator(selectors.welcomeTourCloseButton));
+		return this.clickButtonIfExists( this.page.locator( selectors.welcomeTourCloseButton ) );
 	}
 
 	public dismissPatternSelector(): Promise<void> {
-		return this.clickButtonIfExists(this.page.locator(selectors.choosePatternCloseButton));
+		return this.clickButtonIfExists( this.page.locator( selectors.choosePatternCloseButton ) );
 	}
 
-	private async clickButtonIfExists(locator: Locator): Promise<void> {
+	private async clickButtonIfExists( locator: Locator ): Promise<void> {
 		try {
-			await locator.click({ timeout: 5000, trial: true });
+			await locator.click( { timeout: 5000, trial: true } );
 		} catch {
 			return;
 		}
 
-		return locator.click({ delay: 20, timeout: 1000 });
+		return locator.click( { delay: 20, timeout: 1000 } );
 	}
 
 	private async getEditorFrame(): Promise<Frame | null> {
-		const existingFrame = this.page.frame({ name: 'editor-canvas' });
-		if (existingFrame) {
+		const existingFrame = this.page.frame( { name: 'editor-canvas' } );
+		if ( existingFrame ) {
 			return existingFrame;
 		}
 
 		try {
-			await this.page.waitForSelector('iframe[name="editor-canvas"]', {
+			await this.page.waitForSelector( 'iframe[name="editor-canvas"]', {
 				state: 'attached',
 				timeout: 5000,
-			});
+			} );
 		} catch {
 			return null;
 		}
 
-		return this.page.frame({ name: 'editor-canvas' });
+		return this.page.frame( { name: 'editor-canvas' } );
 	}
 
 	private async getEditorScope(): Promise<Page | Frame> {
@@ -111,12 +111,12 @@ export class EditorPage {
 	 *
 	 * @param {string} title Page/Post Title
 	 */
-	public async enterTitle(title: string): Promise<void> {
+	public async enterTitle( title: string ): Promise<void> {
 		await this.dismissPatternSelector();
 
 		const editor = await this.getEditorScope();
-		await editor.click(selectors.editorTitle);
-		await editor.fill(selectors.editorTitle, title);
+		await editor.click( selectors.editorTitle );
+		await editor.fill( selectors.editorTitle, title );
 	}
 
 	/**
@@ -124,14 +124,14 @@ export class EditorPage {
 	 *
 	 * @param {string} text Text to enter
 	 */
-	public async enterText(text: string): Promise<void> {
-		const lines = text.split('\n');
+	public async enterText( text: string ): Promise<void> {
+		const lines = text.split( '\n' );
 		const editor = await this.getEditorScope();
 
-		if (await editor.isVisible(selectors.blockAppender)) {
-			await editor.click(selectors.blockAppender);
+		if ( await editor.isVisible( selectors.blockAppender ) ) {
+			await editor.click( selectors.blockAppender );
 		} else {
-			await editor.click(selectors.paragraphBlocks);
+			await editor.click( selectors.paragraphBlocks );
 		}
 
 		// Playwright does not break up newlines in Gutenberg. This causes issues when we expect
@@ -140,10 +140,10 @@ export class EditorPage {
 		// frame.type() will respect newlines like a human would, but it is slow.
 		// This approach will run faster than using frame.type() while respecting the newline chars.
 		await Promise.all(
-			lines.map(async (line, index) => {
-				await editor.fill(`${selectors.paragraphBlocks}:nth-of-type(${index + 1})`, line);
-				await this.page.keyboard.press('Enter');
-			})
+			lines.map( async ( line, index ) => {
+				await editor.fill( `${ selectors.paragraphBlocks }:nth-of-type(${ index + 1 })`, line );
+				await this.page.keyboard.press( 'Enter' );
+			} ),
 		);
 	}
 
@@ -152,11 +152,11 @@ export class EditorPage {
 	 */
 	public async clearTitle(): Promise<void> {
 		const editor = await this.getEditorScope();
-		await editor.click(selectors.editorTitle);
-		await this.page.keyboard.down('Shift');
-		await this.page.keyboard.press('Home');
-		await this.page.keyboard.up('Shift');
-		await this.page.keyboard.press('Backspace');
+		await editor.click( selectors.editorTitle );
+		await this.page.keyboard.down( 'Shift' );
+		await this.page.keyboard.press( 'Home' );
+		await this.page.keyboard.up( 'Shift' );
+		await this.page.keyboard.press( 'Backspace' );
 	}
 
 	/**
@@ -166,13 +166,13 @@ export class EditorPage {
 		const editor = await this.getEditorScope();
 
 		/* eslint-disable no-await-in-loop */
-		while (await editor.isVisible(selectors.block)) {
-			await editor.click(selectors.block);
-			await this.page.keyboard.down('Shift');
-			await this.page.keyboard.press('Home');
-			await this.page.keyboard.up('Shift');
-			await this.page.keyboard.press('Backspace');
-			await this.page.keyboard.press('Backspace');
+		while ( await editor.isVisible( selectors.block ) ) {
+			await editor.click( selectors.block );
+			await this.page.keyboard.down( 'Shift' );
+			await this.page.keyboard.press( 'Home' );
+			await this.page.keyboard.up( 'Shift' );
+			await this.page.keyboard.press( 'Backspace' );
+			await this.page.keyboard.press( 'Backspace' );
 		}
 		/* eslint-enable no-await-in-loop */
 	}
@@ -182,55 +182,55 @@ export class EditorPage {
 	 *
 	 * @param {string} fileName Name of image file to add
 	 */
-	public async addImage(fileName: string): Promise<void> {
+	public async addImage( fileName: string ): Promise<void> {
 		await this.dismissPatternSelector();
 		const editor = await this.getEditorScope();
 
-		if (await editor.isVisible(selectors.blockAppender)) {
-			await editor.click(selectors.blockAppender);
+		if ( await editor.isVisible( selectors.blockAppender ) ) {
+			await editor.click( selectors.blockAppender );
 		} else {
-			const lastBlock = editor.locator(selectors.paragraphBlocks).last();
-			if (await lastBlock.count()) {
+			const lastBlock = editor.locator( selectors.paragraphBlocks ).last();
+			if ( await lastBlock.count() ) {
 				await lastBlock.click();
 			}
 		}
 
 		let blockInserted = false;
-		const inserterToggle = this.page.locator(selectors.blockInserterToggle);
-		if (await inserterToggle.isVisible()) {
+		const inserterToggle = this.page.locator( selectors.blockInserterToggle );
+		if ( await inserterToggle.isVisible() ) {
 			try {
 				await inserterToggle.click();
-				const inserterPanel = this.page.locator(selectors.blockInserterPanel);
-				const searchInput = this.page.locator(selectors.blockSearch);
-				await inserterPanel.waitFor({ state: 'visible', timeout: 5000 });
-				await searchInput.fill('Image');
+				const inserterPanel = this.page.locator( selectors.blockInserterPanel );
+				const searchInput = this.page.locator( selectors.blockSearch );
+				await inserterPanel.waitFor( { state: 'visible', timeout: 5000 } );
+				await searchInput.fill( 'Image' );
 				const imageBlockResult = this.page
-					.locator(selectors.blockInserterResultItem)
-					.filter({ hasText: /Image/i })
+					.locator( selectors.blockInserterResultItem )
+					.filter( { hasText: /Image/i } )
 					.first();
-				await imageBlockResult.click({ timeout: 5000 });
-				await inserterPanel.waitFor({ state: 'hidden', timeout: 5000 });
+				await imageBlockResult.click( { timeout: 5000 } );
+				await inserterPanel.waitFor( { state: 'hidden', timeout: 5000 } );
 				blockInserted = true;
 			} catch {
 				blockInserted = false;
 			}
 		}
 
-		if (!blockInserted) {
-			const inlineInserter = editor.locator(selectors.blockInserter).first();
+		if ( ! blockInserted ) {
+			const inlineInserter = editor.locator( selectors.blockInserter ).first();
 			await inlineInserter.click();
-			await editor.locator(selectors.imageBlocks).first().click();
+			await editor.locator( selectors.imageBlocks ).first().click();
 		}
 
-		const [fileChooser] = await Promise.all([
+		const [ fileChooser ] = await Promise.all( [
 			// It is important to call waitForEvent before click to set up waiting.
-			this.page.waitForEvent('filechooser'),
+			this.page.waitForEvent( 'filechooser' ),
 			// This has to click twice, the first focuses in the block, the second opens the upload
-			editor.click(selectors.uploadImageButton),
-			editor.click(selectors.uploadImageButton),
-		]);
-		await fileChooser.setFiles(fileName);
-		await editor.locator(selectors.spinner).waitFor({ state: 'detached' });
+			editor.click( selectors.uploadImageButton ),
+			editor.click( selectors.uploadImageButton ),
+		] );
+		await fileChooser.setFiles( fileName );
+		await editor.locator( selectors.spinner ).waitFor( { state: 'detached' } );
 	}
 
 	/**
@@ -239,13 +239,13 @@ export class EditorPage {
 	 * @param {boolean} visit Whether to then visit the page.
 	 * @return {string} Url of published post or page
 	 */
-	public async publish({ visit = false }: { visit?: boolean } = {}): Promise<string> {
-		await this.page.click(selectors.publishButton(selectors.postToolbar));
-		await this.page.click(selectors.publishButton(selectors.publishPanel));
-		const publishedURL = (await this.page.locator(selectors.viewButton).getAttribute('href'))!;
+	public async publish( { visit = false }: { visit?: boolean } = {} ): Promise<string> {
+		await this.page.click( selectors.publishButton( selectors.postToolbar ) );
+		await this.page.click( selectors.publishButton( selectors.publishPanel ) );
+		const publishedURL = ( await this.page.locator( selectors.viewButton ).getAttribute( 'href' ) )!;
 
-		if (visit) {
-			await this.visitPublishedPost(publishedURL);
+		if ( visit ) {
+			await this.visitPublishedPost( publishedURL );
 		}
 		return publishedURL;
 	}
@@ -254,7 +254,7 @@ export class EditorPage {
 	 * Updates the post or page.
 	 */
 	public update(): Promise<void> {
-		return this.page.click(selectors.updateButton);
+		return this.page.click( selectors.updateButton );
 	}
 
 	/**
@@ -262,10 +262,10 @@ export class EditorPage {
 	 *
 	 * @param {string} url Url to visit
 	 */
-	private visitPublishedPost(url: string): Promise<unknown> {
-		return Promise.all([
-			this.page.waitForURL(url, { waitUntil: 'load' }),
-			this.page.click(selectors.viewButton),
-		]);
+	private visitPublishedPost( url: string ): Promise<unknown> {
+		return Promise.all( [
+			this.page.waitForURL( url, { waitUntil: 'load' } ),
+			this.page.click( selectors.viewButton ),
+		] );
 	}
 }
