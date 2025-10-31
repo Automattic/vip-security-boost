@@ -38,7 +38,6 @@ vip dev-env destroy --slug=e2e-sb-test-site || true
 vip --slug=e2e-sb-test-site dev-env create --title="E2E Testing site" --mailpit false --wordpress="${WPVER}" --multisite=false --php 8.2 --xdebug false --phpmyadmin false --elasticsearch false < /dev/null
 vip dev-env start --slug e2e-sb-test-site --skip-wp-versions-check
 vip dev-env shell --root --slug e2e-sb-test-site -- chown -R www-data:www-data /wp/wp-content
-vip dev-env exec --slug e2e-sb-test-site --quiet -- wp plugin install --activate classic-editor
 if [ "${WPVER}" = 'trunk' ]; then
     vip dev-env exec --slug e2e-sb-test-site --quiet -- wp core update --force --version="${version}"
     vip dev-env exec --slug e2e-sb-test-site --quiet -- wp core update-db
