@@ -3,7 +3,7 @@ export interface SecurityBoostConfig {
 	available_modules: string[];
 	module_configs: {
 		'inactive-users': {
-			mode: string;
+			mode: 'REPORT' | 'BLOCK';
 			considered_inactive_after_days: number;
 			roles: string[];
 			capabilities: string[];
@@ -15,7 +15,7 @@ export interface SecurityBoostConfig {
 			needs_review: boolean;
 		};
 		'xml-rpc': {
-			mode: string;
+			mode: 'RESTRICT' | 'DISABLE' | 'ALLOW';
 			needs_review: boolean;
 		};
 		'session-control': {
