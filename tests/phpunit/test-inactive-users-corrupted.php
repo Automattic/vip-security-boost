@@ -35,6 +35,7 @@ class InactiveUsersCorruptedRolesTest extends \InactiveUsersTest {
 		parent::setUp();
 
 		// Install custom error handler to suppress expected role repair warnings
+		//phpcs:ignore  WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Custom error handler for test
 		$this->original_error_handler = set_error_handler( [ $this, 'handle_expected_role_warnings' ] );
 
 		// Save and corrupt roles
@@ -73,11 +74,12 @@ class InactiveUsersCorruptedRolesTest extends \InactiveUsersTest {
 	 */
 	public function handle_expected_role_warnings( $errno, $errstr, $errfile, $errline ) {
 		// Suppress E_USER_WARNING from Role_Sanitizer about repaired roles
-		if ( $errno === E_USER_WARNING && strpos( $errstr, 'Repaired' ) !== false && strpos( $errfile, 'class-role-sanitizer.php' ) !== false ) {
+		if ( E_USER_WARNING === $errno && strpos( $errstr, 'Repaired' ) !== false && false !== strpos( $errfile, 'class-role-sanitizer.php' ) ) {
 			return true; // Suppress this warning
 		}
 
 		// For all other errors, call the original handler or return false to use default
+		// @phpstan-ignore booleanAnd.rightAlwaysTrue
 		if ( null !== $this->original_error_handler && is_callable( $this->original_error_handler ) ) {
 			return call_user_func( $this->original_error_handler, $errno, $errstr, $errfile, $errline );
 		}
@@ -116,6 +118,7 @@ class InactiveUsersCorruptedRolesTest extends \InactiveUsersTest {
 
 		// Clear wp_roles global to force reload with corrupted data
 		global $wp_roles;
+		//phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Need to reset global for roles
 		$wp_roles = null;
 	}
 
@@ -131,6 +134,7 @@ class InactiveUsersCorruptedRolesTest extends \InactiveUsersTest {
 
 		// Clear wp_roles global to force reload with original data
 		global $wp_roles;
+		//phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Need to reset global for roles
 		$wp_roles = null;
 	}
 
