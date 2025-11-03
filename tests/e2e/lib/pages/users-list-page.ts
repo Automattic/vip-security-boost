@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 
 const selectors = {
 	usersTable: 'table.wp-list-table',
-	userRowByUsername: (username: string) => `text=${username}`,
+	userRowByUsername: ( username: string ) => `text=${ username }`,
 	inactiveUserBadge: '.inactive-user-badge.inactive-user-badge--inactive',
 };
 
@@ -15,16 +15,16 @@ export class UsersListPage {
 	 *
 	 * @param { Page } page The underlying page
 	 */
-	constructor(page: Page) {
+	constructor( page: Page ) {
 		this.page = page;
-		this.usersTable = page.locator(selectors.usersTable);
+		this.usersTable = page.locator( selectors.usersTable );
 	}
 
 	/**
 	 * Navigate to Users List page
 	 */
 	public visit(): Promise<unknown> {
-		return this.page.goto('/wp-admin/users.php');
+		return this.page.goto( '/wp-admin/users.php' );
 	}
 
 	/**
@@ -32,9 +32,9 @@ export class UsersListPage {
 	 *
 	 * @param {string} username The username to search for
 	 */
-	public getUserRow(username: string): Locator {
+	public getUserRow( username: string ): Locator {
 		// Find the cell containing the username, then get its parent row
-		return this.usersTable.locator(`xpath=//a[contains(text(), '${username}')]/ancestor::tr`);
+		return this.usersTable.locator( `xpath=//a[contains(text(), '${ username }')]/ancestor::tr` );
 	}
 
 	/**
@@ -42,7 +42,7 @@ export class UsersListPage {
 	 *
 	 * @param {string} username The username to check for inactive badge
 	 */
-	public getInactiveUserBadge(username: string): Locator {
-		return this.getUserRow(username).locator(selectors.inactiveUserBadge);
+	public getInactiveUserBadge( username: string ): Locator {
+		return this.getUserRow( username ).locator( selectors.inactiveUserBadge );
 	}
 }
