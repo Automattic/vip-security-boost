@@ -53,7 +53,7 @@ export const DEFAULT_CONFIG: SecurityBoostConfig = {
 			mode: 'BLOCK',
 			considered_inactive_after_days: 14,
 			roles: [],
-			capabilities: [ 'manage_options', 'edit_others_posts', 'publish_posts' ],
+			capabilities: [ 'manage_options', 'edit_others_posts', 'publish_posts', 'edit_posts' ],
 			needs_review: false,
 		},
 		'forced-mfa-users': {
