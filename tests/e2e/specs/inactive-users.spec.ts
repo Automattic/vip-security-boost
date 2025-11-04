@@ -34,6 +34,22 @@ test.describe( 'Inactive Users', () => {
 				ACTIVE_USERNAMES.map( ( username ) => verifyNoInactiveBadge( usersListPage, username ) ),
 			);
 		} );
+
+		test( 'Unblock link appears for blocked users', async ( { page } ) => {
+			const usersListPage = new UsersListPage( page );
+			await usersListPage.visit();
+
+			// Verify unblock link is present for blocked users
+			await expect( usersListPage.getUnblockLink( INACTIVE_ADMIN_USERNAME ) ).toBeVisible();
+			await expect( usersListPage.getUnblockLink( INACTIVE_CONTRIBUTOR_USERNAME ) ).toBeVisible();
+
+			// Verify unblock link has correct text
+			await expect( usersListPage.getUnblockLink( INACTIVE_ADMIN_USERNAME ) ).toContainText( 'Unblock' );
+		} );
+
+		// Note: Unblock functionality test removed to avoid database state modification
+		// The unblock link is tested for visibility in "Unblock link appears for blocked users"
+		// Actual unblock action would affect subsequent tests by changing user state
 	} );
 	test.describe( 'Inactive Users', () => {
 		test.beforeEach( async ( { context } ) => {
@@ -76,6 +92,15 @@ test.describe( 'Inactive Users', () => {
 			await Promise.all(
 				ACTIVE_USERNAMES.map( ( username ) => verifyNoInactiveBadge( usersListPage, username ) ),
 			);
+		} );
+
+		test( 'Unblock link does not appear in REPORT mode', async ( { page } ) => {
+			const usersListPage = new UsersListPage( page );
+			await usersListPage.visit();
+
+			// Verify unblock link is NOT present for inactive users in REPORT mode
+			await expect( usersListPage.getUnblockLink( INACTIVE_ADMIN_USERNAME ) ).toBeHidden();
+			await expect( usersListPage.getUnblockLink( INACTIVE_CONTRIBUTOR_USERNAME ) ).toBeHidden();
 		} );
 	} );
 
