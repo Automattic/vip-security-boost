@@ -71,8 +71,7 @@ add_filter( 'wpcom_vip_is_two_factor_local_testing', '__return_true' );
 add_filter('wpcom_vip_is_two_factor_forced', function ( \$forced ) {
 	// if user is vipgo skip forcing 2FA, to help playwright tests
 	if ( is_user_logged_in() ) {
-		\$current_user = wp_get_current_user();
-		if ( \$current_user->user_login === 'vipgo' ) {
+		if ( wp_get_current_user()->user_login === 'vipgo' ) {
 			return false;
 		}
 	}
