@@ -2,31 +2,27 @@ export interface SecurityBoostConfig {
 	enabled_modules: string[];
 	available_modules: string[];
 	module_configs: {
-		'inactive-users': {
+		'inactive-users'?: {
 			mode: 'REPORT' | 'BLOCK';
 			considered_inactive_after_days: number;
 			roles: string[];
 			capabilities: string[];
-			needs_review: boolean;
 		};
-		'forced-mfa-users': {
+		'forced-mfa-users'?: {
 			roles: string[];
 			capabilities: string[];
-			needs_review: boolean;
 		};
-		'xml-rpc': {
+		'xml-rpc'?: {
 			mode: 'RESTRICT' | 'DISABLE' | 'ALLOW';
-			needs_review: boolean;
 		};
-		'session-control': {
+		'session-control'?: {
 			expiration_days: number;
-			needs_review: boolean;
 		};
-		'highlight-mfa-users': {
+		'highlight-mfa-users'?: {
 			roles: string[];
 			capabilities: string[];
 		};
-		'notify-privileged-activity': {
+		'notify-privileged-activity'?: {
 			email_users: string[];
 		};
 	};
@@ -54,7 +50,6 @@ export const DEFAULT_CONFIG: SecurityBoostConfig = {
 			considered_inactive_after_days: 14,
 			roles: [],
 			capabilities: [ 'manage_options', 'edit_others_posts', 'publish_posts', 'edit_posts' ],
-			needs_review: false,
 		},
 		'forced-mfa-users': {
 			roles: [],
@@ -64,15 +59,12 @@ export const DEFAULT_CONFIG: SecurityBoostConfig = {
 				'publish_posts',
 				'edit_posts',
 			],
-			needs_review: false,
 		},
 		'xml-rpc': {
 			mode: 'DISABLE',
-			needs_review: false,
 		},
 		'session-control': {
 			expiration_days: 7,
-			needs_review: false,
 		},
 		'highlight-mfa-users': {
 			roles: [],

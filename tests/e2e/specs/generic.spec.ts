@@ -1,5 +1,6 @@
 import { type Response, expect, test } from '@playwright/test';
 
+import { getSecurityBoostConfigHeaders } from '../lib/security-boost-config-helper';
 test.describe( 'Generic Checks', () => {
 	test( 'Page contains closing html tag and no wp_die() message', async ( { page, baseURL } ) => {
 		expect( baseURL ).toBeDefined();
@@ -21,7 +22,38 @@ test.describe( 'Generic Checks', () => {
 		expect.soft( data ).toHaveProperty( 'routes' );
 	} );
 
-	test( 'XML RPC smoke test', async ( { request } ) => {
+	test( 'XML RPC works when allowed', async ( { request } ) => {
+		const xmlPayload = `<methodCall>
+			<methodName>wp.getUsersBlogs</methodName>
+				<params>
+				<param><value><string>vipgo</string></value></param>
+				<param><value><string>password</string></value></param>
+				</params>
+			</methodCall>`;
+
+		const response = await request.post( './xmlrpc.php', {
+			headers: {
+				'Content-Type': 'text/xml',
+				...getSecurityBoostConfigHeaders( {
+					module_configs: {
+						'xml-rpc': {
+							mode: 'ALLOW',
+						},
+					},
+				} ),
+			},
+
+			data: xmlPayload,
+		} );
+
+		expect( response.status() ).toBe( 200 );
+		const responseText = await response.text();
+
+		expect( responseText ).toContain( '<methodResponse>' );
+		expect( responseText ).not.toContain( '<fault>' );
+		expect( responseText ).toContain( '<member><name>blogName</name><value><string>E2E Testing site</string></value></member>' );
+	} );
+	test( 'XML RPC Disabled', async ( { request } ) => {
 		const xmlPayload = '<?xml version="1.0"?><methodCall><methodName>demo.sayHello</methodName><params/></methodCall>';
 
 		const response = await request.post( './xmlrpc.php', {
@@ -33,8 +65,38 @@ test.describe( 'Generic Checks', () => {
 
 		expect( response.status() ).toBe( 200 );
 		const responseText = await response.text();
+		expect( responseText ).toContain( 'Access to XML-RPC is disabled on this site.' );
+	} );
+
+	test( 'XML RPC blocked when restricted to app passwords', async ( { request } ) => {
+		const xmlPayload = `<methodCall>
+			<methodName>wp.getUsersBlogs</methodName>
+				<params>
+				<param><value><string>vipgo</string></value></param>
+				<param><value><string>password</string></value></param>
+				</params>
+			</methodCall>`;
+
+		const response = await request.post( './xmlrpc.php', {
+			headers: {
+				'Content-Type': 'text/xml',
+				...getSecurityBoostConfigHeaders( {
+					module_configs: {
+						'xml-rpc': {
+							mode: 'RESTRICT',
+						},
+					},
+				} ),
+			},
+
+			data: xmlPayload,
+		} );
+
+		expect( response.status() ).toBe( 200 );
+		const responseText = await response.text();
+
 		expect( responseText ).toContain( '<methodResponse>' );
-		expect( responseText ).not.toContain( '<fault>' );
-		expect( responseText ).toContain( '<string>Hello!</string>' );
+		expect( responseText ).toContain( '<fault>' );
+		expect( responseText ).toContain( '<string>Incorrect username or password.</string>' );
 	} );
 } );
