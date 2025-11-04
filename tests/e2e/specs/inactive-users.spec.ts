@@ -8,28 +8,75 @@ test.describe( 'Inactive Users', () => {
 	const BLOCKED_BADGE_CLASS = /inactive-user-badge--blocked/;
 	const INACTIVE_BADGE_CLASS = /inactive-user-badge--inactive/;
 	const INACTIVE_CONTRIBUTOR_USERNAME = 'sbinactivecontributor';
-	test( 'Display inactive user badge for inactive blocked user', async ( { page } ) => {
-		const usersListPage = new UsersListPage( page );
-		await usersListPage.visit();
-		await hasBlockedBadge( usersListPage, INACTIVE_ADMIN_USERNAME );
-		await hasBlockedBadge( usersListPage, INACTIVE_CONTRIBUTOR_USERNAME );
+	const EXPECTED_LAST_SEEN = 'November 8, 2023 at 4:00 pm';
+	const ACTIVE_USERNAMES = [ 'vipgo', 'sbadmin', 'sbcontributor', 'sbeditor' ];
+
+	test.describe( 'Blocked Users', () => {
+		test( 'Display inactive user badge for inactive blocked user', async ( { page } ) => {
+			const usersListPage = new UsersListPage( page );
+			await usersListPage.visit();
+
+			// Verify "Last Seen" column exists
+			await expect( usersListPage.getLastSeenColumnHeader() ).toBeVisible();
+
+			// Verify inactive users have badges and correct last seen date
+			await hasBlockedBadge( usersListPage, INACTIVE_ADMIN_USERNAME );
+			await hasBlockedBadge( usersListPage, INACTIVE_CONTRIBUTOR_USERNAME );
+			await expect( usersListPage.getLastSeenValue( INACTIVE_ADMIN_USERNAME ) ).toContainText( EXPECTED_LAST_SEEN );
+			await expect( usersListPage.getLastSeenValue( INACTIVE_CONTRIBUTOR_USERNAME ) ).toContainText( EXPECTED_LAST_SEEN );
+		} );
+
+		test( 'Ensure users do not have the blocked badge', async ( { page } ) => {
+			const usersListPage = new UsersListPage( page );
+			await usersListPage.visit();
+			// Verify active users don't have inactive badges
+			await Promise.all(
+				ACTIVE_USERNAMES.map( ( username ) => verifyNoInactiveBadge( usersListPage, username ) ),
+			);
+		} );
 	} );
-	test( 'Display inactive user badge for inactive user', async ( { page, context } ) => {
-		await context.setExtraHTTPHeaders(
-			getSecurityBoostConfigHeaders( {
-				module_configs: {
-					...DEFAULT_CONFIG.module_configs,
-					'inactive-users': {
-						...DEFAULT_CONFIG.module_configs[ 'inactive-users' ],
-						mode: 'REPORT',
+	test.describe( 'Inactive Users', () => {
+		test.beforeEach( async ( { context } ) => {
+			await context.setExtraHTTPHeaders(
+				getSecurityBoostConfigHeaders( {
+					module_configs: {
+						...DEFAULT_CONFIG.module_configs,
+						'inactive-users': {
+							...DEFAULT_CONFIG.module_configs[ 'inactive-users' ],
+							mode: 'REPORT',
+						},
 					},
-				},
-			} ),
-		);
-		const usersListPage = new UsersListPage( page );
-		await usersListPage.visit();
-		await hasInactiveBadge( usersListPage, INACTIVE_ADMIN_USERNAME );
-		await hasInactiveBadge( usersListPage, INACTIVE_CONTRIBUTOR_USERNAME );
+				} ),
+			);
+		} );
+
+		test( 'Display inactive user badge for inactive user', async ( { page } ) => {
+			const usersListPage = new UsersListPage( page );
+			await usersListPage.visit();
+
+			// Verify "Last Seen" column exists
+			await expect( usersListPage.getLastSeenColumnHeader() ).toBeVisible();
+
+			// Verify inactive users have badges and correct last seen date
+			await hasInactiveBadge( usersListPage, INACTIVE_ADMIN_USERNAME );
+			await hasInactiveBadge( usersListPage, INACTIVE_CONTRIBUTOR_USERNAME );
+			await expect( usersListPage.getLastSeenValue( INACTIVE_ADMIN_USERNAME ) ).toContainText( EXPECTED_LAST_SEEN );
+			await expect( usersListPage.getLastSeenValue( INACTIVE_CONTRIBUTOR_USERNAME ) ).toContainText( EXPECTED_LAST_SEEN );
+
+			// Verify active users don't have inactive badges
+			await Promise.all(
+				ACTIVE_USERNAMES.map( ( username ) => verifyNoInactiveBadge( usersListPage, username ) ),
+			);
+		} );
+
+		test( 'Ensure users do not have the inactive badge', async ( { page } ) => {
+			const usersListPage = new UsersListPage( page );
+			await usersListPage.visit();
+			// Verify active users don't have inactive badges
+			await Promise.all(
+				ACTIVE_USERNAMES.map( ( username ) => verifyNoInactiveBadge( usersListPage, username ) ),
+			);
+		} );
 	} );
 
 	async function hasInactiveBadge( usersListPage: UsersListPage, username: string ) {
@@ -58,5 +105,17 @@ test.describe( 'Inactive Users', () => {
 
 		// Verify the badge text content
 		await expect( blockedUserBadge ).toContainText( 'Blocked: Inactivity' );
+	}
+
+	async function verifyNoInactiveBadge( usersListPage: UsersListPage, username: string ) {
+		const userRow = usersListPage.getUserRow( username );
+		await expect( userRow ).toBeVisible();
+
+		// Verify that neither inactive nor blocked badges are present
+		const inactiveBadge = userRow.locator( '.inactive-user-badge--inactive' );
+		const blockedBadge = userRow.locator( '.inactive-user-badge--blocked' );
+
+		await expect( inactiveBadge ).toBeHidden();
+		await expect( blockedBadge ).toBeHidden();
 	}
 } );

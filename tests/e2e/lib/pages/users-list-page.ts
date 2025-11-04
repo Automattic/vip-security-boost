@@ -34,8 +34,10 @@ export class UsersListPage {
 	 * @param {string} username The username to search for
 	 */
 	public getUserRow( username: string ): Locator {
-		// Find the cell containing the username, then get its parent row
-		return this.usersTable.locator( `xpath=//a[contains(text(), '${ username }')]/ancestor::tr` );
+		// Find the row that contains a link starting with the exact username
+		// Use regex to match username followed by optional badge text
+		const linkPattern = new RegExp( `^${ username.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ) }(\\s|$)` );
+		return this.usersTable.getByRole( 'row' ).filter( { has: this.page.getByRole( 'link', { name: linkPattern } ) } );
 	}
 
 	/**
@@ -49,5 +51,23 @@ export class UsersListPage {
 
 	public getBlockedUserBadge( username: string ): Locator {
 		return this.getUserRow( username ).locator( selectors.blockedUserBadge ).first();
+	}
+
+	/**
+	 * Get the "Last Seen" column header
+	 */
+	public getLastSeenColumnHeader(): Locator {
+		return this.usersTable.locator( 'thead th' ).filter( { hasText: 'Last seen' } );
+	}
+
+	/**
+	 * Get the "Last Seen" value for a specific user
+	 *
+	 * @param {string} username The username to get the "Last Seen" value for
+	 */
+	public getLastSeenValue( username: string ): Locator {
+		// "Last seen" is the 6th td cell (0-indexed: td[5])
+		// Columns: username, name, email, role, posts, last-seen, two-factor, wpcom
+		return this.getUserRow( username ).locator( 'td' ).nth( 5 );
 	}
 }
