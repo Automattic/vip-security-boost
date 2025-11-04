@@ -63,3 +63,19 @@ vip dev-env exec --slug e2e-sb-test-site --quiet -- wp option set wpvip_last_see
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user update sbinactivecontributor --user_registered='2023-01-15 10:00:00'
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user meta set sbinactivecontributor wpvip_last_seen 1699459200
 vip dev-env exec --slug e2e-sb-test-site --quiet -- wp user meta set sbinactivecontributor wpvip_last_seen_ignore_inactivity_check_until 1599459200
+
+# Enable 2FA locally and skip vipgo user
+vip dev-env shell --slug e2e-sb-test-site -- bash -lc "cat <<'EOF' >> /wp/wp-content/plugins/vip-security-boost/vip-security-boost.php
+remove_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' );
+add_filter( 'wpcom_vip_is_two_factor_local_testing', '__return_true' );
+add_filter('wpcom_vip_is_two_factor_forced', function ( \$forced ) {
+	// if user is vipgo skip forcing 2FA, to help playwright tests
+	if ( is_user_logged_in() ) {
+		\$current_user = wp_get_current_user();
+		if ( \$current_user->user_login === 'vipgo' ) {
+			return false;
+		}
+	}
+	return \$forced;
+} );
+EOF"

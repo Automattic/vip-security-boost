@@ -6,7 +6,7 @@ const selectors = {
 	rememberMeCheckbox: '#rememberme',
 	submitButton: '#wp-submit',
 	twoFactorSetupNotice: '.two-factor-prompt',
-	twoFactorInterstitialPage: '#two-factor-interstitial',
+	twoFactorInterstitialPage: '#vip-2fa-error',
 };
 
 export class LoginPage {

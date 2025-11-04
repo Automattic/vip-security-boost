@@ -57,7 +57,6 @@ export const DEFAULT_CONFIG: SecurityBoostConfig = {
 				'manage_options',
 				'edit_others_posts',
 				'publish_posts',
-				'edit_posts',
 			],
 		},
 		'xml-rpc': {
