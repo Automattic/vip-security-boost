@@ -21,7 +21,7 @@ const config: PlaywrightTestConfig = {
 		storageState: 'e2eStorageState.json',
 		baseURL: process.env.E2E_BASE_URL
 			? process.env.E2E_BASE_URL
-			: 'http://e2e-sb-test-site.vipdev.lndo.site',
+			: 'https://e2e-sb-test-site.vipdev.lndo.site',
 		extraHTTPHeaders: getSecurityBoostConfigHeaders(),
 	},
 };
