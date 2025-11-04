@@ -7,6 +7,8 @@ import type { Cookie } from '@playwright/test';
 
 const DAY_IN_SECONDS = 86400;
 test.describe( 'Session Control', () => {
+	// we're using logout here so we want a dedicated storage state
+	test.use( { storageState: { cookies: [], origins: [] } } );
 	const TEST_USERNAME = 'sbadmin';
 	const TEST_PASSWORD = 'password';
 

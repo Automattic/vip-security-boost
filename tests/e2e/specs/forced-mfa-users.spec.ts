@@ -9,7 +9,11 @@ const EDITOR_USERNAME = 'sbeditor';
 const EDITOR_PASSWORD = 'password';
 const CONTRIBUTOR_USERNAME = 'sbcontributor';
 const CONTRIBUTOR_PASSWORD = 'password';
+
 test.describe( 'Forced MFA Users', () => {
+	// Use a dedicated storage state so logging out does not invalidate the shared admin session.
+	test.use( { storageState: { cookies: [], origins: [] } } );
+
 	test.describe( 'Module disabled', () => {
 		test.beforeEach( async ( { context } ) => {
 			// Disable forced-mfa module
