@@ -3,7 +3,8 @@ import type { Locator, Page } from '@playwright/test';
 const selectors = {
 	usersTable: 'table.wp-list-table',
 	userRowByUsername: ( username: string ) => `text=${ username }`,
-	inactiveUserBadge: '.inactive-user-badge.inactive-user-badge--inactive',
+	inactiveUserBadge: '.inactive-user-badge--inactive',
+	blockedUserBadge: '.inactive-user-badge.inactive-user-badge--blocked',
 };
 
 export class UsersListPage {
@@ -43,6 +44,10 @@ export class UsersListPage {
 	 * @param {string} username The username to check for inactive badge
 	 */
 	public getInactiveUserBadge( username: string ): Locator {
-		return this.getUserRow( username ).locator( selectors.inactiveUserBadge );
+		return this.getUserRow( username ).locator( selectors.inactiveUserBadge ).first();
+	}
+
+	public getBlockedUserBadge( username: string ): Locator {
+		return this.getUserRow( username ).locator( selectors.blockedUserBadge ).first();
 	}
 }
