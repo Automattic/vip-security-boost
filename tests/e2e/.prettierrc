@@ -6,4 +6,3 @@ semi: true
 singleQuote: true
 trailingComma: 'es5'
 useTabs: true
-parenSpacing: true
