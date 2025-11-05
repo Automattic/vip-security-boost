@@ -16,7 +16,7 @@ export interface SecurityBoostConfig {
 			mode: 'RESTRICT' | 'DISABLE' | 'ALLOW';
 		};
 		'session-control'?: {
-			expiration_days: number| string;
+			expiration_days: number | string;
 		};
 		'highlight-mfa-users'?: {
 			roles: string[];

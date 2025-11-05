@@ -46,7 +46,7 @@ test.describe( 'Session Control', () => {
 	} );
 
 	test( 'Cookie expiration with default expiration (14 days)', async ( { page, context } ) => {
-		// Enable session-control with 7 days expiration
+		// Default WordPress expiration is 14 days
 		await context.setExtraHTTPHeaders(
 			getSecurityBoostConfigHeaders( {
 				module_configs: {
@@ -79,7 +79,7 @@ test.describe( 'Session Control', () => {
 	} );
 
 	test( 'Cookie expiration with default expiration when module is disabled', async ( { page, context } ) => {
-		// Enable session-control with 7 days expiration
+		// When session-control is disabled, WordPress default expiration is 14 days
 		await context.setExtraHTTPHeaders(
 			getSecurityBoostConfigHeaders( {
 				enabled_modules: [],

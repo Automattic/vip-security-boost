@@ -9,7 +9,7 @@ test.describe( 'Highlight MFA Users', () => {
 	const USERS_WITH_NO_MFA_REQUIREMENTS = [ 'sbcontributor', 'sbinactivecontributor' ];
 	const ALL_USERNAMES = [ ...USERS_WITHOUT_MFA, ...USERS_WITH_NO_MFA_REQUIREMENTS ];
 
-	test.describe( 'With module disable', () => {
+	test.describe( 'With module disabled', () => {
 		test.beforeEach( async ( { context } ) => {
 			// Disable the MFA module
 			await context.setExtraHTTPHeaders( {
