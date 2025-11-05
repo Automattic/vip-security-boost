@@ -246,7 +246,6 @@ class Forced_MFA_Users {
 			'fields'  => 'ID',
 			// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Excluding a potentially small, known set of users (skipped + ID 1)
 			'exclude' => $skipped_user_ids,
-			'number'  => -1, // Get all relevant users
 		];
 
 		// Use native capability filtering if capabilities are configured
@@ -267,25 +266,55 @@ class Forced_MFA_Users {
 			$args['role__in'] = $roles;
 		}
 
-		// Use our utility method that properly handles network-wide capability filtering
-		$user_ids = Users_Query_Utils::query_users_with_capability_filtering(
+		$args['meta_query'] = self::get_users_without_two_factor_meta_query();
+
+		$mfa_disabled_count = Users_Query_Utils::query_users_with_capability_filtering(
 			$args,
 			$blog_id,
-			false // return user IDs, not count
+			true
 		);
-
-		$mfa_disabled_count = 0;
-		foreach ( $user_ids as $user_id ) {
-			if ( ! \Two_Factor_Core::is_user_using_two_factor( $user_id ) ) {
-				++$mfa_disabled_count;
-			}
-		}
 
 		// Cache the result
 		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
 		wp_cache_set( $cache_key, $mfa_disabled_count, self::MFA_COUNT_CACHE_GROUP, self::MFA_COUNT_CACHE_TTL );
 
 		return $mfa_disabled_count;
+	}
+
+	/**
+	 * Build a meta query that matches users without an enabled Two Factor provider.
+	 *
+	 * Users are considered 2FA-disabled when `_two_factor_enabled_providers` is missing,
+	 * empty, or serialized as an empty array (`a:0:{}`).
+	 *
+	 * This might not return the exact results, since the original Two Factor plugin also applies a filter, but it's still a good indication, which is what we care about.
+	 *
+	 * @return array
+	 */
+	private static function get_users_without_two_factor_meta_query() {
+		$meta_key = \Two_Factor_Core::ENABLED_PROVIDERS_USER_META_KEY;
+
+		$empty_values = apply_filters(
+			'vip_security_forced_mfa_empty_enabled_providers_values',
+			[ '', 'a:0:{}', 'N;', 'b:0;' ]
+		);
+
+		$empty_values = array_unique( array_map( 'strval', (array) $empty_values ) );
+
+		$meta_query = [
+			'relation' => 'OR',
+			[
+				'key'     => $meta_key,
+				'compare' => 'NOT EXISTS',
+			],
+			[
+				'key'     => $meta_key,
+				'value'   => $empty_values,
+				'compare' => 'IN',
+			],
+		];
+
+		return $meta_query;
 	}
 
 	/**
