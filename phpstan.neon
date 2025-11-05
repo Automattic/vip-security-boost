@@ -11,7 +11,7 @@ parameters:
     - class-loader.php
     - vip-security-boost.php
   excludePaths:
-    - %rootDir%/../../../tests/e2e/node_modules
+    - %rootDir%/../../../tests/e2e
   scanDirectories:
     - mu-plugins
   scanFiles:
