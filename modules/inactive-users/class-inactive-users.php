@@ -318,45 +318,160 @@ class Inactive_Users {
 		return $vars;
 	}
 
+	/**
+	 * Count inactive users with elevated permissions.
+	 *
+	 * This method uses pure SQL to count users who:
+	 * 1. Have elevated roles or capabilities (configured via settings)
+	 * 2. Are active (not spam, deleted, or have user_status != 0)
+	 * 3. Registered before the inactivity threshold
+	 * 4. Either have not been seen since the threshold, or never had a last_seen recorded
+	 *
+	 * The query structure leverages WordPress's WP_User_Query to generate the capability/role
+	 * filtering SQL, then uses that as a subquery to filter users in the main count query.
+	 *
+	 * Results are cached with a 5-minute TTL to improve performance.
+	 *
+	 * Example SQL (single site with administrator role):
+	 *
+	 *     SELECT COUNT(DISTINCT u.ID)
+	 *     FROM wp_users u
+	 *     LEFT JOIN wp_usermeta m_last_seen
+	 *         ON u.ID = m_last_seen.user_id
+	 *         AND m_last_seen.meta_key = 'wpvip_last_seen'
+	 *     WHERE u.user_status=0 AND u.spam=0 and u.deleted=0
+	 *         AND u.user_registered < '2024-08-06 12:00:00'
+	 *         AND (
+	 *             (m_last_seen.meta_value IS NOT NULL AND CAST(m_last_seen.meta_value AS UNSIGNED) < 1722945600)
+	 *             OR m_last_seen.meta_value IS NULL
+	 *         )
+	 *         AND u.ID IN (
+	 *             SELECT DISTINCT wp_users.ID
+	 *             FROM wp_users
+	 *             INNER JOIN wp_usermeta ON wp_users.ID = wp_usermeta.user_id
+	 *             WHERE 1=1
+	 *                 AND (wp_usermeta.meta_key = 'wp_capabilities'
+	 *                     AND wp_usermeta.meta_value LIKE '%\"administrator\"%')
+	 *         )
+	 *
+	 * Example SQL (network-wide with administrator role):
+	 *
+	 *     SELECT COUNT(DISTINCT u.ID)
+	 *     FROM wp_users u
+	 *     LEFT JOIN wp_usermeta m_last_seen
+	 *         ON u.ID = m_last_seen.user_id
+	 *         AND m_last_seen.meta_key = 'wpvip_last_seen'
+	 *     WHERE u.user_status=0 AND u.spam=0 and u.deleted=0
+	 *         AND u.user_registered < '2024-08-06 12:00:00'
+	 *         AND (
+	 *             (m_last_seen.meta_value IS NOT NULL AND CAST(m_last_seen.meta_value AS UNSIGNED) < 1722945600)
+	 *             OR m_last_seen.meta_value IS NULL
+	 *         )
+	 *         AND u.ID IN (
+	 *             SELECT DISTINCT user_id
+	 *             FROM wp_usermeta
+	 *             WHERE meta_key LIKE 'wp%_capabilities'
+	 *                 AND (
+	 *                     meta_value LIKE '%\"administrator\";b:1%'
+	 *                 )
+	 *         )
+	 *
+	 * @param int|null $blog_id Optional. Blog ID to query. Use 0 for network-wide queries. Default is current blog.
+	 * @return int Count of inactive users.
+	 */
 	public static function get_inactive_users_count( $blog_id = null ) {
+		global $wpdb;
+
 		$blog_id = $blog_id ?? get_current_blog_id();
 
-		// Use global cache for network-wide queries (blog_id = 0)
-		if ( 0 === $blog_id ) {
-			$cache_key    = self::get_inactive_users_count_cache_key( $blog_id );
-			$cached_count = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
 
-			if ( false !== $cached_count ) {
-				return $cached_count;
-			}
+		$cache_key    = self::get_inactive_users_count_cache_key( $blog_id );
+		$cached_count = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+
+		if ( false !== $cached_count ) {
+			return $cached_count;
 		}
 
-		/**
-		 * We're doing two separate queries to avoid the query getting too complex and slow since excluding the last_seen meta would add an extra join
-		 * multiplying the complexity of the query beneath it
-		 */
-		// Use our utility method that properly handles network-wide capability filtering
-		$inactive_users_with_last_seen_count    = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
-			self::get_inactive_users_query_args( 'with_last_seen' ),
-			$blog_id,
-			true // count only
+		$inact_ts   = self::get_inactivity_timestamp();
+		$release_ts = static::get_last_seen_release_date_timestamp();
+
+		// Build the inactivity date for user_registered comparison
+		$inactivity_date = gmdate( 'Y-m-d H:i:s', $inact_ts );
+
+		// Use WordPress's WP_User_Query to build the capability/role filtering SQL
+		$capability_query_args = [
+			'fields'      => 'ID',
+			'count_total' => false, // Prevent SQL_CALC_FOUND_ROWS which doesn't work in subqueries
+		];
+
+		// Add capability or role filtering
+		if ( ! empty( self::$elevated_capabilities ) ) {
+			$capability_query_args['capability__in'] = self::$elevated_capabilities;
+		} else {
+			$capability_query_args['role__in'] = Capability_Utils::normalize_roles_input( self::$elevated_roles );
+		}
+
+		// Get the prepared query data using our utility method
+		$prepared         = Users_Query_Utils::get_prepared_user_query_data( $capability_query_args, $blog_id );
+		$user_query       = $prepared['query'];
+		$is_network       = $prepared['is_network'];
+		$capability_where = $prepared['capability_where'];
+
+		// Build the subquery for users with elevated permissions
+		// Remove SQL_CALC_FOUND_ROWS if present (not compatible with subqueries in MySQL 8+)
+		$query_fields             = str_replace( 'SQL_CALC_FOUND_ROWS ', '', $user_query->query_fields );
+		$users_with_caps_subquery = "SELECT DISTINCT {$query_fields} {$user_query->query_from} {$user_query->query_where}";
+
+		if ( $is_network && ! empty( $capability_where ) ) {
+			$users_with_caps_subquery .= " AND ({$capability_where})";
+		}
+
+		// Build the last_seen conditions
+		$last_seen_conditions = [];
+
+		// Users with last_seen < inactivity threshold
+		$last_seen_conditions[] = $wpdb->prepare( '(m_last_seen.meta_value IS NOT NULL AND CAST(m_last_seen.meta_value AS UNSIGNED) < %d)', $inact_ts );
+
+		// Users without last_seen meta (only if release date is older than cutoff)
+		if ( $release_ts < $inact_ts ) {
+			$last_seen_conditions[] = 'm_last_seen.meta_value IS NULL';
+		}
+
+		$last_seen_where    = '(' . implode( ' OR ', $last_seen_conditions ) . ')';
+		$last_seen_meta_key = self::LAST_SEEN_META_KEY;
+
+		// include only valid users.
+		$status_conditions = 'u.user_status = 0';
+		if ( is_multisite() ) {
+			$status_conditions .= ' AND u.spam = 0 AND u.deleted = 0';
+		}
+
+		// Build the main SQL query
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
+		$sql = $wpdb->prepare(
+			"SELECT COUNT(DISTINCT u.ID)
+			FROM {$wpdb->users} u
+			LEFT JOIN {$wpdb->usermeta} m_last_seen
+				ON u.ID = m_last_seen.user_id
+				AND m_last_seen.meta_key = %s
+			WHERE {$status_conditions}
+				AND u.user_registered < %s
+				AND {$last_seen_where}
+				AND u.ID IN ({$users_with_caps_subquery})",
+			$last_seen_meta_key,
+			$inactivity_date
 		);
-		$inactive_users_without_last_seen_count = 0;
-		if ( self::is_release_date_older_than_cutoff() ) {
-			$inactive_users_without_last_seen_count = \Automattic\VIP\Security\Utils\Users_Query_Utils::query_users_with_capability_filtering(
-				self::get_inactive_users_query_args( 'without_last_seen' ),
-				$blog_id,
-				true // count only
-			);
-		}
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
 
-		$count = $inactive_users_with_last_seen_count + $inactive_users_without_last_seen_count;
+		// Execute the query
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count = (int) $wpdb->get_var( $sql );
 
 		// Cache the result for global queries (blog_id = 0)
-		if ( 0 === $blog_id ) {
-			$cache_key = self::get_inactive_users_count_cache_key( $blog_id );
-			wp_cache_set( $cache_key, $count, self::LAST_SEEN_CACHE_GROUP, self::INACTIVE_USERS_COUNT_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
-		}
+
+		$cache_key = self::get_inactive_users_count_cache_key( $blog_id );
+		wp_cache_set( $cache_key, $count, self::LAST_SEEN_CACHE_GROUP, self::INACTIVE_USERS_COUNT_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+
 
 		return $count;
 	}
