@@ -265,7 +265,7 @@ class Forced_MFA_Users {
 		} else {
 			$args['role__in'] = $roles;
 		}
-
+        // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Required meta query to find users without 2FA enabled
 		$args['meta_query'] = self::get_users_without_two_factor_meta_query();
 
 		$mfa_disabled_count = Users_Query_Utils::query_users_with_capability_filtering(
