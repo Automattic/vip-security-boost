@@ -90,9 +90,8 @@ class Inactive_Users {
 			add_action( 'admin_init', [ __CLASS__, 'last_seen_unblock_action' ] );
 		}
 
-		// TODO - Fix performance issues with network-wide queries
 		// Add SDS hook
-		// add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
+		add_filter( 'vip_site_details_index_security_boost_data', [ __CLASS__, 'add_inactive_users_count_to_sds_payload' ] );
 	}
 
 	public static function maybe_fix_found_users_query() {
