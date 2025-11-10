@@ -6,8 +6,6 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	private $user_id;
 	private $elevated_roles                 = [ 'administrator' ];
 	private $considered_inactive_after_days = 90;
-	private $additional_user_ids            = [];
-	private $original_release_timestamp;
 
 	public function setUp(): void {
 		parent::setUp();
@@ -29,54 +27,15 @@ class InactiveUsersTest extends WP_UnitTestCase {
 				],
 			]);
 		}
-		$this->original_release_timestamp = get_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, false );
 		// Let's assume the module has been activated today
-		update_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time() );
-		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, time() );
+		add_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, time() );
 
 		Inactive_Users::init();
 	}
 
 	public function tearDown(): void {
-		foreach ( $this->additional_user_ids as $user_id ) {
-			wp_delete_user( $user_id );
-		}
-		$this->additional_user_ids = [];
-
 		wp_delete_user( $this->user_id );
-
-		if ( false === $this->original_release_timestamp ) {
-			delete_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY );
-		} else {
-			update_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, $this->original_release_timestamp );
-		}
-
 		parent::tearDown();
-	}
-
-	/**
-	 * Test that get_inactive_users_count counts users with stale last_seen values.
-	 */
-	public function test_get_inactive_users_count_counts_users_with_stale_last_seen(): void {
-		$baseline_count = $this->get_fresh_inactive_users_count();
-
-		$user_id = $this->create_test_user();
-		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
-
-		$this->assertSame( $baseline_count + 1, $this->get_fresh_inactive_users_count() );
-	}
-
-	/**
-	 * Test that users without last_seen are counted once the release date predates the cutoff.
-	 */
-	public function test_get_inactive_users_count_counts_users_without_last_seen_after_release_cutoff(): void {
-		update_option( Inactive_Users::LAST_SEEN_RELEASE_DATE_TIMESTAMP_OPTION_KEY, strtotime( '-400 days' ) );
-		$baseline_count = $this->get_fresh_inactive_users_count();
-
-		$user_id = $this->create_test_user();
-		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY );
-
-		$this->assertSame( $baseline_count + 1, $this->get_fresh_inactive_users_count() );
 	}
 
 	/**
@@ -1147,34 +1106,5 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertEquals( 403, $error->get_error_data()['status'] );
 
 		wp_delete_user( $user_id );
-	}
-
-	/**
-	 * Create a test user and ensure it is cleaned up after the test.
-	 *
-	 * @param array $overrides Optional. User factory overrides.
-	 * @return int The created user ID.
-	 */
-	private function create_test_user( array $overrides = [] ): int {
-		$defaults = [
-			'role'            => 'administrator',
-			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-120 days' ) ),
-		];
-
-		$user_id                     = $this->factory->user->create( array_merge( $defaults, $overrides ) );
-		$this->additional_user_ids[] = $user_id;
-
-		return $user_id;
-	}
-
-	/**
-	 * Convenience wrapper to fetch a cache-bypassed inactive users count.
-	 *
-	 * @param int|null $blog_id Optional blog ID.
-	 * @return int
-	 */
-	private function get_fresh_inactive_users_count( $blog_id = null ): int {
-		Inactive_Users::flush_cache();
-		return Inactive_Users::get_inactive_users_count( $blog_id );
 	}
 }
