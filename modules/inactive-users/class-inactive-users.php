@@ -466,7 +466,11 @@ class Inactive_Users {
 			// selectively sanitize roles just for this view
 			Role_Sanitizer::maybe_register_role_sanitizers();
 			add_action( 'pre_user_query', [ Role_Sanitizer::class, 'unregister_role_sanitizers' ] );
-			return array_merge( $vars, self::get_inactive_users_query_args() );
+			try {
+				return array_merge( $vars, self::get_inactive_users_query_args() );
+			} finally {
+				Role_Sanitizer::unregister_role_sanitizers();
+			}
 		}
 
 		return $vars;
