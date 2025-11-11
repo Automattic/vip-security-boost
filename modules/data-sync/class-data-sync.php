@@ -63,8 +63,19 @@ class Data_Sync {
 	 * @return array Modified SDS payload including the `two_factor_status` information.
 	 */
 	public static function add_two_factor_enforcement_status_to_sds_payload( $data ) {
-		$has_additional_capabilities_filter = has_filter( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME ) !== false;
-		$data['two_factor_status']          = [
+		$has_additional_capabilities_filter   = has_filter( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME ) !== false;
+		$mfa_additional_required_capabilities = '';
+		if ( $has_additional_capabilities_filter ) {
+			try {
+				$mfa_additional_required_capabilities = implode( ',', apply_filters( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, [] ) );
+			} catch ( \Exception $e ) {
+				Logger::error(
+					self::LOG_FEATURE_NAME,
+					'Error retrieving MFA additional required capabilities: ' . $e->getMessage()
+				);
+			}
+		}
+		$data['two_factor_status'] = [
 			// return wpcom_vip_is_two_factor_forced status
 			'is_enforced_globally'                   => \has_filter( 'wpcom_vip_is_two_factor_forced', '__return_true' ) !== false,
 			'is_not_enforced_globally'               => \has_filter( 'wpcom_vip_is_two_factor_forced', '__return_false' ) !== false,
@@ -74,7 +85,7 @@ class Data_Sync {
 			'has_enable_two_factor_filter'           => \has_filter( 'wpcom_vip_enable_two_factor' ) !== false,
 
 			'has_mfa_additional_capabilities_filter' => $has_additional_capabilities_filter,
-			'mfa_additional_required_capabilities'   => $has_additional_capabilities_filter ? implode( ',', apply_filters( Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, [] ) ) : '',
+			'mfa_additional_required_capabilities'   => $mfa_additional_required_capabilities,
 		];
 		return $data;
 	}
