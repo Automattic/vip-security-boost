@@ -7,7 +7,6 @@ use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Utils\Capability_Utils;
 use Automattic\VIP\Security\Utils\Users_Query_Utils;
 use Automattic\VIP\Security\Utils\Role_Sanitizer;
-use Automattic\VIP\Support_User\Role;
 
 class Inactive_Users {
 	protected static $considered_inactive_after_days;
