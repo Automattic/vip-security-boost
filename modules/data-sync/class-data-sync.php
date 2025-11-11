@@ -50,12 +50,12 @@ class Data_Sync {
 	 * following structure:
 	 *
 	 *     'two_factor_status' => [
-	 *         'is_enforced_globally'                   => bool,   // `wpcom_vip_is_two_factor_forced` hooked to `__return_true`
-	 *         'is_not_enforced_globally'               => bool,   // `wpcom_vip_is_two_factor_forced` hooked to `__return_false`
-	 *         'has_two_factor_forced_filter'           => bool,   // Any filter present on `wpcom_vip_is_two_factor_forced`
-	 *         'is_entirely_disabled'                   => bool,   // 2FA disabled via `wpcom_vip_enable_two_factor` returning false
-	 *         'has_enable_two_factor_filter'           => bool,   // Any filter present on `wpcom_vip_enable_two_factor`
-	 *         'has_mfa_additional_capabilities_filter' => bool,   // Any filter present on MFA additional capabilities
+	 *         'is_enforced_globally'                    => bool,   // `wpcom_vip_is_two_factor_forced` hooked to `__return_true`
+	 *         'is_not_enforced_globally'                => bool,   // `wpcom_vip_is_two_factor_forced` hooked to `__return_false`
+	 *         'has_two_factor_forced_filter'             => bool,   // Any filter present on `wpcom_vip_is_two_factor_forced`
+	 *         'is_entirely_disabled'                    => bool,   // 2FA disabled via `wpcom_vip_enable_two_factor` returning false
+	 *         'has_enable_two_factor_filter'             => bool,   // Any filter present on `wpcom_vip_enable_two_factor`
+	 *         'has_mfa_additional_capabilities_filter'   => bool,   // Any filter present on MFA additional capabilities
 	 *         'mfa_additional_required_capabilities'    => string, // Comma-separated list of additional capabilities when filter is present
 	 *     ],
 	 *
