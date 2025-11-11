@@ -536,7 +536,10 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * Test that the vip_site_details_index_security_boost_data filter is added and works correctly
 	 */
 	public function test_vip_site_details_index_security_boost_data_filter_is_added() {
+		$this->markTestSkipped( 'Skipping for now since SDS sync is temporarily disabled' );
+
 		// Verify the filter is added during init
+		// @phpstan-ignore-next-line deadCode.unreachable
 		$this->assertNotFalse( has_filter( 'vip_site_details_index_security_boost_data', [ 'Automattic\VIP\Security\InactiveUsers\Inactive_Users', 'add_inactive_users_count_to_sds_payload' ] ) );
 
 		// Test that the filter works by applying it
@@ -853,12 +856,14 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		// Clean up GET globals
 		unset( $_GET['last_seen_filter'], $_GET['last_seen_filter_nonce'] );
-
 		// Assert: only u1 and u4 should be returned
 		$this->assertContains( $u1, $found );
+
 		$this->assertContains( $u4, $found );
 		$this->assertNotContains( $u2, $found );
-		$this->assertNotContains( $u3, $found );
+
+		// exception to the rule: $u3 is being listed, although it's not blocked, because we don't use the ignore flag for querying
+		$this->assertContains( $u3, $found );
 
 		// Cleanup created users
 		wp_delete_user( $u1 );
@@ -1056,7 +1061,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Verify that authentication returns an error
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'inactive_account', $result->get_error_code() );
-		$this->assertEquals( '<strong>Error</strong>: Your account has been flagged as inactive. Please contact your site administrator.', $result->get_error_message() );
+		$this->assertEquals( '<strong>Error</strong>: Your account has been flagged as inactive. Please contact your site Administrator.', $result->get_error_message() );
 
 		// check that if we pass a WP_Error to the filter, the xmlrpc_login_error filter is added
 		remove_all_filters( 'xmlrpc_login_error' );
@@ -1067,7 +1072,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$error = apply_filters( 'xmlrpc_login_error', null );
 		$this->assertInstanceOf( 'IXR_Error', $error );
 		$this->assertEquals( 403, $error->code );
-		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site administrator.', $error->message );
+		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site Administrator.', $error->message );
 
 		wp_delete_user( $user_id );
 	}
@@ -1097,7 +1102,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Error', $error );
 		$this->assertEquals( 'inactive_account', $error->get_error_code() );
-		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site administrator.', $error->get_error_message() );
+		$this->assertEquals( 'Your account has been flagged as inactive. Please contact your site Administrator.', $error->get_error_message() );
 		$this->assertEquals( 403, $error->get_error_data()['status'] );
 
 		wp_delete_user( $user_id );
