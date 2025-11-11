@@ -61,7 +61,7 @@ class Xml_Rpc {
 			/**
 			 * Filters the HTTP status code returned when XML-RPC is disabled.
 			 */
-			status_header( apply_filters( 'vip_security_boost_xml_rpc_disabled_status_code', 403 ) );
+			status_header( (int) apply_filters( 'vip_security_boost_xml_rpc_disabled_status_code', 403 ) );
 
 			exit( 'Access to XML-RPC is disabled on this site.' );
 			// phpcs:ignore Squiz.PHP.NonExecutableCode.Unreachable
