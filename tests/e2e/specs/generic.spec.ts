@@ -63,7 +63,7 @@ test.describe( 'Generic Checks', () => {
 			data: xmlPayload,
 		} );
 
-		expect( response.status() ).toBe( 200 );
+		expect( response.status() ).toBe( 403 );
 		const responseText = await response.text();
 		expect( responseText ).toContain( 'Access to XML-RPC is disabled on this site.' );
 	} );
