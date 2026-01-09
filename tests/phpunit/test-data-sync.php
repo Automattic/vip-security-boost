@@ -27,12 +27,14 @@ class Test_Data_Sync extends WP_UnitTestCase {
 		// Clear any pre-existing filters entirely to get a true default state.
 		remove_all_filters( 'wpcom_vip_is_two_factor_forced' );
 		remove_all_filters( 'wpcom_vip_enable_two_factor' );
+		remove_all_filters( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME );
 	}
 
 	public function tearDown(): void {
 		// Clean up any filters added in individual tests.
 		remove_all_filters( 'wpcom_vip_is_two_factor_forced' );
 		remove_all_filters( 'wpcom_vip_enable_two_factor' );
+		remove_all_filters( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME );
 
 		parent::tearDown();
 	}
@@ -46,11 +48,13 @@ class Test_Data_Sync extends WP_UnitTestCase {
 	public function test_two_factor_enforcement_status_defaults() {
 		$expected = [
 			'two_factor_status' => [
-				'is_enforced_globally'         => false,
-				'is_not_enforced_globally'     => false,
-				'has_two_factor_forced_filter' => false,
-				'is_entirely_disabled'         => false,
-				'has_enable_two_factor_filter' => false,
+				'is_enforced_globally'                   => false,
+				'is_not_enforced_globally'               => false,
+				'has_two_factor_forced_filter'           => false,
+				'is_entirely_disabled'                   => false,
+				'has_enable_two_factor_filter'           => false,
+				'has_mfa_additional_capabilities_filter' => false,
+				'mfa_additional_required_capabilities'   => '',
 			],
 		];
 
@@ -106,6 +110,46 @@ class Test_Data_Sync extends WP_UnitTestCase {
 
 		$this->assertArrayHasKey( Constants::SDS_DATA_KEY, $site_details );
 		$this->assertSame( $expected, $site_details[ Constants::SDS_DATA_KEY ] );
+	}
+
+	/**
+	 * Test MFA additional capabilities filter detection and content extraction.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_mfa_additional_capabilities_filter() {
+		// Test with no filter present
+		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
+		$this->assertFalse( $status['two_factor_status']['has_mfa_additional_capabilities_filter'] );
+		$this->assertSame( '', $status['two_factor_status']['mfa_additional_required_capabilities'] );
+
+		// Test with filter present returning capabilities
+		add_filter( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME, function () {
+			return [ 'edit_posts', 'manage_options', 'upload_files' ];
+		} );
+
+		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
+		$this->assertTrue( $status['two_factor_status']['has_mfa_additional_capabilities_filter'] );
+		$this->assertSame( 'edit_posts,manage_options,upload_files', $status['two_factor_status']['mfa_additional_required_capabilities'] );
+
+		// Clean up
+		remove_all_filters( \Automattic\VIP\Security\MFAUsers\Forced_MFA_Users::ADDITIONAL_CAPABILITIES_FILTER_NAME );
+	}
+
+	/**
+	 * Test status when two-factor is entirely disabled.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_two_factor_entirely_disabled() {
+		add_filter( 'wpcom_vip_enable_two_factor', '__return_false' );
+
+		$status = Data_Sync::add_two_factor_enforcement_status_to_sds_payload( [] );
+
+		$this->assertTrue( $status['two_factor_status']['is_entirely_disabled'] );
+		$this->assertTrue( $status['two_factor_status']['has_enable_two_factor_filter'] );
 	}
 
 	// check that it adds a vip_site_details_index_data filter and it adds the vip_security_boost key
