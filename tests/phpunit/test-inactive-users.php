@@ -1098,7 +1098,16 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * their activity is recorded again.
 	 */
 	public function test_record_activity_skips_inactive_user_in_block_mode() {
-		// The setUp() already defines mode as BLOCK via VIP_SECURITY_BOOST_CONFIGS.
+		// Explicitly reset mode to BLOCK, since prior tests may have changed the static property.
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$mode                           = 'BLOCK';
+				self::$elevated_roles                 = [ 'administrator' ];
+				self::$considered_inactive_after_days = 90;
+			}
+		};
+
+		$inactive_users_class::reset_for_test();
 
 		// Create an inactive admin user.
 		$user_id = $this->factory->user->create( [
