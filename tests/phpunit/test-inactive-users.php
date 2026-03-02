@@ -1041,7 +1041,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that record_activity() updates last seen meta for an inactive user in REPORT mode.
+	 * Test that record_activity() clears stale last seen meta and records fresh
+	 * activity for an inactive user in REPORT mode.
 	 *
 	 * This is a regression test for the bug where REPORT mode created a permanent
 	 * inactive flag: the early-return in record_activity() only checked
@@ -1049,7 +1050,7 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	 * so once a user was flagged inactive in REPORT mode, their activity was
 	 * never recorded again — making the flag permanent.
 	 */
-	public function test_record_activity_updates_last_seen_in_report_mode_for_inactive_user() {
+	public function test_record_activity_clears_meta_and_records_activity_in_report_mode() {
 		// Create anonymous subclass to set mode to REPORT.
 		$inactive_users_class = new class() extends Inactive_Users {
 			public static function reset_for_test() {
@@ -1078,12 +1079,13 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		wp_set_current_user( $user_id );
 		wp_cache_delete( $user_id, Inactive_Users::LAST_SEEN_CACHE_GROUP );
 
-		// Call record_activity() — in REPORT mode this should NOT early-return.
+		// Call record_activity() — in REPORT mode this should clear stale meta and record fresh activity.
 		Inactive_Users::record_activity();
 
-		// The last seen timestamp should have been updated.
+		// The user should no longer be considered inactive.
 		$new_timestamp = get_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, true );
-		$this->assertGreaterThan( $old_timestamp, (int) $new_timestamp, 'record_activity() should update last_seen in REPORT mode even for inactive users' );
+		$this->assertGreaterThan( $old_timestamp, (int) $new_timestamp, 'record_activity() should record fresh last_seen in REPORT mode for inactive users' );
+		$this->assertFalse( Inactive_Users::is_considered_inactive( $user_id ), 'User should no longer be considered inactive after record_activity() in REPORT mode' );
 
 		// Clean up.
 		wp_delete_user( $user_id );
