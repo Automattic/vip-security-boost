@@ -1041,6 +1041,92 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that record_activity() updates last seen meta for an inactive user in REPORT mode.
+	 *
+	 * This is a regression test for the bug where REPORT mode created a permanent
+	 * inactive flag: the early-return in record_activity() only checked
+	 * is_considered_inactive() without also checking is_block_action_enabled(),
+	 * so once a user was flagged inactive in REPORT mode, their activity was
+	 * never recorded again — making the flag permanent.
+	 */
+	public function test_record_activity_updates_last_seen_in_report_mode_for_inactive_user() {
+		// Create anonymous subclass to set mode to REPORT.
+		$inactive_users_class = new class() extends Inactive_Users {
+			public static function reset_for_test() {
+				self::$mode                           = 'REPORT';
+				self::$elevated_roles                 = [ 'administrator' ];
+				self::$considered_inactive_after_days = 90;
+			}
+		};
+
+		$inactive_users_class::reset_for_test();
+
+		// Create an inactive admin user.
+		$user_id = $this->factory->user->create( [
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		] );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		$old_timestamp = strtotime( '-91 days' );
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, $old_timestamp );
+
+		// Confirm the user is considered inactive.
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $user_id ) );
+
+		// Simulate the user being logged in and clear the cache so record_activity() proceeds.
+		wp_set_current_user( $user_id );
+		wp_cache_delete( $user_id, Inactive_Users::LAST_SEEN_CACHE_GROUP );
+
+		// Call record_activity() — in REPORT mode this should NOT early-return.
+		Inactive_Users::record_activity();
+
+		// The last seen timestamp should have been updated.
+		$new_timestamp = get_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, true );
+		$this->assertGreaterThan( $old_timestamp, (int) $new_timestamp, 'record_activity() should update last_seen in REPORT mode even for inactive users' );
+
+		// Clean up.
+		wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test that record_activity() still skips updating last seen for inactive users in BLOCK mode.
+	 *
+	 * In BLOCK mode, inactive users must be manually unblocked by an admin before
+	 * their activity is recorded again.
+	 */
+	public function test_record_activity_skips_inactive_user_in_block_mode() {
+		// The setUp() already defines mode as BLOCK via VIP_SECURITY_BOOST_CONFIGS.
+
+		// Create an inactive admin user.
+		$user_id = $this->factory->user->create( [
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		] );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+
+		$old_timestamp = strtotime( '-91 days' );
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, $old_timestamp );
+
+		// Confirm the user is considered inactive.
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $user_id ) );
+
+		// Simulate the user being logged in and clear the cache.
+		wp_set_current_user( $user_id );
+		wp_cache_delete( $user_id, Inactive_Users::LAST_SEEN_CACHE_GROUP );
+
+		// Call record_activity() — in BLOCK mode this should early-return.
+		Inactive_Users::record_activity();
+
+		// The last seen timestamp should NOT have been updated.
+		$new_timestamp = get_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, true );
+		$this->assertEquals( $old_timestamp, (int) $new_timestamp, 'record_activity() should NOT update last_seen in BLOCK mode for inactive users' );
+
+		// Clean up.
+		wp_delete_user( $user_id );
+	}
+
+	/**
 	 * Test XML-RPC authentication for inactive users returns proper error message
 	 */
 	public function test_xmlrpc_authentication_inactive_user_error_message() {
