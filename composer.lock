@@ -4,7 +4,7 @@
 		"Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
 		"This file is @generated automatically"
 	],
-	"content-hash": "523bb8df61284b1d71833a238d7fc8d8",
+	"content-hash": "fea2b10178c650a47c33c1fe37e5feaa",
 	"packages": [
 		{
 			"name": "spatie/mjml-php",
@@ -3545,11 +3545,11 @@
 	"prefer-stable": false,
 	"prefer-lowest": false,
 	"platform": {
-		"php": ">=8.1"
+		"php": ">=8.3"
 	},
 	"platform-dev": {},
 	"platform-overrides": {
-		"php": "8.1"
+		"php": "8.3"
 	},
 	"plugin-api-version": "2.6.0"
 }
