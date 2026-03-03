@@ -144,14 +144,9 @@ class Inactive_Users {
 			return;
 		}
 
-		if ( self::is_considered_inactive( $user_id ) ) {
-			if ( self::is_block_action_enabled() ) {
-				// User needs to be unblocked first.
-				return;
-			}
-
-			// In REPORT mode, clear the stale last seen meta so the user starts fresh.
-			delete_user_meta( $user_id, self::LAST_SEEN_META_KEY );
+		if ( self::is_block_action_enabled() && self::is_considered_inactive( $user_id ) ) {
+			// User needs to be unblocked first.
+			return;
 		}
 
 	// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
