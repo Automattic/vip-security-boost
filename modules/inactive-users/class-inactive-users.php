@@ -144,8 +144,8 @@ class Inactive_Users {
 			return;
 		}
 
-		if ( self::is_considered_inactive( $user_id ) ) {
-			// User needs to be unblocked first
+		if ( self::is_block_action_enabled() && self::is_considered_inactive( $user_id ) ) {
+			// User needs to be unblocked first.
 			return;
 		}
 
