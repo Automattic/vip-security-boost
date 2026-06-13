@@ -170,7 +170,8 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that modify_users_list_table_items adds badges to inactive users
+	 * Test that modify_users_list_table_items emits badge markup for inactive
+	 * users without mutating the shared WP_User objects (PLTFRM-2468).
 	 */
 	public function test_modify_users_list_table_items_adds_badges() {
 		// Create a mock WP_Users_List_Table
@@ -197,14 +198,19 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Make the first user inactive
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
 
-		// Call the method
+		// Capture the inline script output.
+		ob_start();
 		Inactive_Users::modify_users_list_table_items();
+		$output = ob_get_clean();
 
-		// Check that the inactive user has a badge added
-		$this->assertStringContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
-		$this->assertStringContainsString( 'testuser', $wp_list_table->items[0]->user_login );
+		// The badge markup/payload references the inactive user, not the active one.
+		$this->assertStringContainsString( 'inactive-user-badge', $output );
+		$this->assertStringContainsString( (string) $this->user_id, $output );
+		$this->assertStringNotContainsString( (string) $active_user->ID, $output );
 
-		// Check that the active user doesn't have a badge
+		// The shared WP_User objects must be left untouched so consumers such as
+		// Co-Authors Plus still read a clean user_login.
+		$this->assertEquals( 'testuser', $wp_list_table->items[0]->user_login );
 		$this->assertEquals( 'activeuser', $wp_list_table->items[1]->user_login );
 
 		// Clean up
@@ -231,18 +237,123 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Make the user inactive
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
 
-		// Test that a badge is added (the specific text depends on the current config)
+		// Capture the inline script output.
+		ob_start();
 		Inactive_Users::modify_users_list_table_items();
-		$this->assertStringContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
-		$this->assertStringContainsString( 'testuser', $wp_list_table->items[0]->user_login );
+		$output = ob_get_clean();
+
+		// The badge markup is emitted (text depends on the current config) and
+		// the user_login is never mutated.
+		$this->assertStringContainsString( 'inactive-user-badge', $output );
+		$this->assertEquals( 'testuser', $wp_list_table->items[0]->user_login );
 
 		// Should contain either "Blocked: Inactivity" or "Inactive User"
-		$login_text = $wp_list_table->items[0]->user_login;
 		$this->assertTrue(
-			strpos( $login_text, 'Blocked: Inactivity' ) !== false ||
-			strpos( $login_text, 'Inactive User' ) !== false,
+			strpos( $output, 'Blocked: Inactivity' ) !== false ||
+			strpos( $output, 'Inactive User' ) !== false,
 			'Badge should contain either "Blocked: Inactivity" or "Inactive User"'
 		);
+	}
+
+	/**
+	 * Regression test for PLTFRM-2468: the badge must never be appended to the
+	 * shared WP_User->user_login, because that value is read by user_row_actions
+	 * consumers such as Co-Authors Plus (linked-account lookups).
+	 */
+	public function test_modify_users_list_table_items_does_not_mutate_user_login() {
+		global $wp_list_table;
+		$wp_list_table = $this->getMockBuilder( 'WP_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+
+		$inactive_user             = new stdClass();
+		$inactive_user->ID         = $this->user_id;
+		$inactive_user->user_login = 'linked-user@example.com';
+
+		$wp_list_table->items = [ $inactive_user ];
+
+		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		ob_start();
+		Inactive_Users::modify_users_list_table_items();
+		ob_end_clean();
+
+		// The login must be byte-for-byte preserved: no badge markup, no padding.
+		$this->assertSame( 'linked-user@example.com', $wp_list_table->items[0]->user_login );
+		$this->assertStringNotContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
+	}
+
+	/**
+	 * The inline payload must be hardened so a translated badge string can never
+	 * break out of the <script> element.
+	 */
+	public function test_modify_users_list_table_items_payload_is_script_safe() {
+		global $wp_list_table;
+		$wp_list_table = $this->getMockBuilder( 'WP_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+
+		$inactive_user             = new stdClass();
+		$inactive_user->ID         = $this->user_id;
+		$inactive_user->user_login = 'testuser';
+		$wp_list_table->items      = [ $inactive_user ];
+
+		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		// Inject a hostile translation for the badge text.
+		$malicious = 'Inactive </script><script>window.__xss=1;</script>';
+		$filter    = static function ( $translation, $text ) use ( $malicious ) {
+			if ( 'Blocked: Inactivity' === $text || 'Inactive User' === $text ) {
+				return $malicious;
+			}
+			return $translation;
+		};
+		add_filter( 'gettext', $filter, 10, 2 );
+
+		ob_start();
+		Inactive_Users::modify_users_list_table_items();
+		$output = ob_get_clean();
+
+		remove_filter( 'gettext', $filter, 10 );
+
+		// The raw closing-script sequence must not survive into the output: with
+		// JSON_HEX_TAG the `<`/`>` are escaped, so the hostile string can no longer
+		// break out of the inline <script>. The escaped text remaining inside the
+		// JS string literal is inert.
+		$this->assertStringNotContainsString( '</script><script>', $output );
+		$this->assertStringNotContainsString( '<script>window', $output );
+		$this->assertStringContainsString( '\u003C', $output );
+	}
+
+	/**
+	 * The badge script must be able to locate rows in the network (multisite)
+	 * Users table, whose rows carry no `id` attribute. We assert the emitted
+	 * script includes the fallback selectors used for that table.
+	 */
+	public function test_modify_users_list_table_items_supports_network_rows() {
+		global $wp_list_table;
+		$wp_list_table = $this->getMockBuilder( 'WP_MS_Users_List_Table' )
+			->disableOriginalConstructor()
+			->getMock();
+
+		$inactive_user             = new stdClass();
+		$inactive_user->ID         = $this->user_id;
+		$inactive_user->user_login = 'testuser';
+		$wp_list_table->items      = [ $inactive_user ];
+
+		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+
+		ob_start();
+		Inactive_Users::modify_users_list_table_items();
+		$output = ob_get_clean();
+
+		// The script emits the network fallbacks (checkbox id and edit-link href)
+		// in addition to the single-site row id.
+		$this->assertStringContainsString( "'user-'", $output );
+		$this->assertStringContainsString( "'blog_'", $output );
+		$this->assertStringContainsString( 'user_id=', $output );
+		// And the WP_User object is still untouched.
+		$this->assertEquals( 'testuser', $wp_list_table->items[0]->user_login );
 	}
 
 	/**
@@ -401,12 +512,15 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		// Make the user inactive
 		update_user_meta( $this->user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
 
-		// Call the method
+		// Capture the inline script output.
+		ob_start();
 		Inactive_Users::modify_users_list_table_items();
+		$output = ob_get_clean();
 
-		// Check that the inactive user has a badge added
-		$this->assertStringContainsString( 'inactive-user-badge', $wp_list_table->items[0]->user_login );
-		$this->assertStringContainsString( 'testuser', $wp_list_table->items[0]->user_login );
+		// Check that the inactive user is badged via output, not via mutation.
+		$this->assertStringContainsString( 'inactive-user-badge', $output );
+		$this->assertStringContainsString( (string) $this->user_id, $output );
+		$this->assertEquals( 'testuser', $wp_list_table->items[0]->user_login );
 	}
 
 	/**
