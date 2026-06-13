@@ -329,9 +329,24 @@ class Inactive_Users {
 					}
 				}
 
-				var link = document.querySelector( 'a[href*="user_id=' + id + '"]' );
-				if ( link && link.closest ) {
-					return link.closest( 'tr' );
+				// Match the edit link by the exact `user_id` query value. A bare
+				// substring match (`user_id=1`) would also match `user_id=10`, so
+				// confirm the captured value equals the target ID.
+				var wanted = String( id );
+				var links  = document.querySelectorAll( 'a[href*="user_id=' + id + '"]' );
+				for ( var i = 0; i < links.length; i++ ) {
+					if ( ! links[ i ].closest ) {
+						continue;
+					}
+
+					var href = links[ i ].getAttribute( 'href' ) || '';
+					var re   = /[?&]user_id=(\d+)/g;
+					var match;
+					while ( ( match = re.exec( href ) ) !== null ) {
+						if ( match[ 1 ] === wanted ) {
+							return links[ i ].closest( 'tr' );
+						}
+					}
 				}
 
 				return null;

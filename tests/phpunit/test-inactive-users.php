@@ -352,6 +352,9 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( "'user-'", $output );
 		$this->assertStringContainsString( "'blog_'", $output );
 		$this->assertStringContainsString( 'user_id=', $output );
+		// The edit-link fallback must match the user_id value exactly so that,
+		// e.g., user_id=1 does not also match user_id=10 (PR #110 review).
+		$this->assertStringContainsString( 'user_id=(\d+)', $output );
 		// And the WP_User object is still untouched.
 		$this->assertEquals( 'testuser', $wp_list_table->items[0]->user_login );
 	}
