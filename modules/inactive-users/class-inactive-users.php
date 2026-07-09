@@ -618,7 +618,7 @@ class Inactive_Users {
 
 			$unblock_link = "<div class='row-actions'><span>User blocked due to inactivity. <a class='reset_last_seen_action' href='" . esc_url( $url ) . "'>" . __( 'Unblock', 'wpvip' ) . '</a></span></div>';
 		}
-		return sprintf( '<span class="wp-ui-text-notification">%s</span>' . $unblock_link, esc_html( $date ) );
+		return sprintf( '<span class="wp-ui-text-notification">%s</span>', esc_html( $date ) ) . $unblock_link;
 	}
 
 	/**

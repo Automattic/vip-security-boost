@@ -28,7 +28,6 @@ require_once __DIR__ . '/../mu-plugins/000-pre-vip-config/requires.php';
 
 function _manually_load_plugin() {
 	require_once __DIR__ . '/../mu-plugins/000-pre-vip-config/requires.php';
-	require_once __DIR__ . '/../mu-plugins/lib/helpers/php-compat.php';
 	require_once __DIR__ . '/../mu-plugins/000-vip-init.php';
 	require_once __DIR__ . '/../mu-plugins/001-core.php';
 	require_once __DIR__ . '/../mu-plugins/a8c-files.php';
