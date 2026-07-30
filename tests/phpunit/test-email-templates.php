@@ -36,6 +36,10 @@ class EmailTemplatesTest extends WP_UnitTestCase {
 			$html = file_get_contents( $template ); // phpcs:ignore WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown
 			$name = basename( $template );
 
+			// Without this, an unreadable file would coerce to '' and the test
+			// would pass vacuously rather than reporting the read failure.
+			$this->assertIsString( $html, sprintf( 'Could not read %s.', $name ) );
+
 			foreach ( $this->get_inline_styles( $html ) as $style ) {
 				$has_font_size   = preg_match( '/font-size:\s*([\d.]+)px/i', $style, $font_size_match );
 				$has_line_height = preg_match( '/line-height:\s*([\d.]+)px/i', $style, $line_height_match );
