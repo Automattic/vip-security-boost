@@ -21,7 +21,7 @@ class XmlRpcTest extends TestCase {
 		global $client;
 		$url = '/xmlrpc.php';
 
-		$xml_payload = <<<XML
+		$xml_payload = <<<'XML'
 		<?xml version="1.0"?>
 			<methodCall>
 				<methodName>system.listMethods</methodName>
@@ -50,7 +50,7 @@ class XmlRpcTest extends TestCase {
 		global $client;
 		$url = '/xmlrpc.php';
 
-		$xml_payload = <<<XML
+		$xml_payload = <<<'XML'
 		<?xml version="1.0"?>
 		<methodCall>
 			<methodName>system.listMethods</methodName>
@@ -108,7 +108,7 @@ class XmlRpcTest extends TestCase {
 		]);
 
 		$this->assertXmlStringEqualsXmlString(
-			<<<XML
+			<<<'XML'
 				<methodResponse>
 					<fault>
 							<value>
@@ -162,7 +162,7 @@ class XmlRpcTest extends TestCase {
 		]);
 
 		$this->assertXmlStringEqualsXmlString(
-			<<<XML
+			<<<'XML'
 				<methodResponse>
 						<params>
 								<param>
@@ -221,7 +221,7 @@ class XmlRpcTest extends TestCase {
 		]);
 
 		$this->assertXmlStringEqualsXmlString(
-			<<<XML
+			<<<'XML'
 				<methodResponse>
 						<params>
 								<param>
