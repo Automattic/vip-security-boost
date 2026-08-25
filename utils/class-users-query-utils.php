@@ -32,6 +32,60 @@ class Users_Query_Utils {
 	}
 
 	/**
+	 * Prepare a WP_User_Query instance and capability clause for re-use in custom SQL builders.
+	 *
+	 * @param array    $query_args WP_User_Query arguments.
+	 * @param int|null $blog_id    Blog ID. Use 0 for network-wide queries.
+	 * @return array {
+	 *     @type \WP_User_Query $query            Prepared WP_User_Query instance.
+	 *     @type string         $capability_where Additional capability WHERE clause for network-wide queries.
+	 *     @type bool           $is_network       True when the query targets the entire network (blog_id = 0).
+	 * }
+	 */
+	public static function get_prepared_user_query_data( $query_args, $blog_id = null ) {
+		Role_Sanitizer::maybe_register_role_sanitizers();
+
+		try {
+			$blog_id = null === $blog_id ? get_current_blog_id() : (int) $blog_id;
+
+			if ( ! is_multisite() || 0 !== $blog_id ) {
+				$query_args['blog_id'] = $blog_id;
+				$query_args['fields']  = 'ID';
+
+				$user_query = new \WP_User_Query();
+				$user_query->prepare_query( $query_args );
+
+				return [
+					'query'            => $user_query,
+					'capability_where' => '',
+					'is_network'       => false,
+				];
+			}
+
+			$capabilities = $query_args['capability__in'] ?? [];
+			$roles        = $query_args['role__in'] ?? [];
+
+			$base_query_args = $query_args;
+			unset( $base_query_args['capability__in'], $base_query_args['role__in'] );
+			$base_query_args['fields']  = 'ID';
+			$base_query_args['blog_id'] = 0;
+
+			$user_query = new \WP_User_Query();
+			$user_query->prepare_query( $base_query_args );
+
+			$capability_where = self::build_network_capability_where_clause( $capabilities, $roles );
+
+			return [
+				'query'            => $user_query,
+				'capability_where' => $capability_where,
+				'is_network'       => true,
+			];
+		} finally {
+			Role_Sanitizer::unregister_role_sanitizers();
+		}
+	}
+
+	/**
 	 * Perform a user query with proper capability/role filtering for network-wide queries.
 	 *
 	 * This method solves the WordPress core issue where WP_User_Query ignores
@@ -48,84 +102,58 @@ class Users_Query_Utils {
 	 */
 	public static function query_users_with_capability_filtering( $query_args, $blog_id = null, $count_only = true ) {
 		global $wpdb;
-		Role_Sanitizer::maybe_register_role_sanitizers();
 
-		try {
-			// Single blog query
-			if ( ! is_multisite() || 0 !== $blog_id ) {
-				$query_args['blog_id'] = $blog_id;
-				$query_args['fields']  = 'ID';
-
-				if ( $count_only ) {
-					$query_args['count_total'] = true;
-					$query_args['number']      = 1; // We only need the count
-				}
-
-				$user_query = new \WP_User_Query();
-				$user_query->prepare_query( $query_args );
-
-				if ( $count_only ) {
-					// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
-					$user_query->query_fields = 'COUNT(DISTINCT ' . $wpdb->users . '.ID)';
-				}
-
-				$request =
-				"SELECT {$user_query->query_fields}
-				{$user_query->query_from}
-				{$user_query->query_where}
-				{$user_query->query_orderby}
-				{$user_query->query_limit}";
-
-				if ( $count_only ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-					return (int) $wpdb->get_var( $request );
-				} else {
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-					return array_map( 'intval', $wpdb->get_col( $request ) );
-				}
-			}
-
-			// Network-wide query
-			$capabilities = $query_args['capability__in'] ?? [];
-			$roles        = $query_args['role__in'] ?? [];
-
-			// Remove capability/role filters from query args and let WP_User_Query build the base query
-			$base_query_args = $query_args;
-			unset( $base_query_args['capability__in'], $base_query_args['role__in'] );
-			$base_query_args['fields']  = 'ID';
-			$base_query_args['blog_id'] = 0;
-
-			// Create WP_User_Query to get the base SQL clauses
-			$temp_query = new \WP_User_Query();
-			$temp_query->prepare_query( $base_query_args );
-
-			// Build our network-wide capability filtering clause
-			$capability_where = self::build_network_capability_where_clause( $capabilities, $roles );
-
-			if ( empty( $capability_where ) ) {
-				// No capability/role filtering needed, use the temp query results
-				return $count_only ? $temp_query->get_total() : array_map( 'intval', $temp_query->get_results() );
-			}
-
-			// Build the final query using WP_User_Query's SQL with our additional WHERE clause
-			if ( $count_only ) {
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is built by WP_User_Query and internal methods
-				// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users -- Required for network-wide user capability filtering
-				$sql = "SELECT COUNT(DISTINCT {$wpdb->users}.ID) {$temp_query->query_from} {$temp_query->query_where} AND ({$capability_where})";
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-				$result = $wpdb->get_var( $sql );
-				return (int) $result;
-			} else {
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is built by WP_User_Query and internal methods
-				// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users -- Required for network-wide user capability filtering
-				$sql = "SELECT DISTINCT {$wpdb->users}.ID {$temp_query->query_from} {$temp_query->query_where} AND ({$capability_where})";
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-				$results = $wpdb->get_col( $sql );
-				return array_map( 'intval', $results );
-			}
-		} finally {
-			Role_Sanitizer::unregister_role_sanitizers();
+		if ( $count_only ) {
+			$query_args['count_total'] = true;
 		}
+
+		$prepared         = self::get_prepared_user_query_data( $query_args, $blog_id );
+		$user_query       = $prepared['query'];
+		$is_network       = $prepared['is_network'];
+		$capability_where = $prepared['capability_where'];
+
+		if ( ! $is_network ) {
+			if ( $count_only ) {
+				// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users
+				$user_query->query_fields = 'COUNT(DISTINCT ' . $wpdb->users . '.ID)';
+			}
+
+			$request =
+			"SELECT {$user_query->query_fields}
+			{$user_query->query_from}
+			{$user_query->query_where}
+			{$user_query->query_orderby}
+			{$user_query->query_limit}";
+
+			if ( $count_only ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				return (int) $wpdb->get_var( $request );
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			return array_map( 'intval', $wpdb->get_col( $request ) );
+		}
+
+		if ( empty( $capability_where ) ) {
+			return $count_only ? $user_query->get_total() : array_map( 'intval', $user_query->get_results() );
+		}
+
+		// Build the final query using WP_User_Query's SQL with our additional WHERE clause
+		if ( $count_only ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is built by WP_User_Query and internal methods
+			// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users -- Required for network-wide user capability filtering
+			$sql = "SELECT COUNT(DISTINCT {$wpdb->users}.ID) {$user_query->query_from} {$user_query->query_where} AND ({$capability_where})";
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$result = $wpdb->get_var( $sql );
+			return (int) $result;
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is built by WP_User_Query and internal methods
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.user_meta__wpdb__users -- Required for network-wide user capability filtering
+		$sql = "SELECT DISTINCT {$wpdb->users}.ID {$user_query->query_from} {$user_query->query_where} AND ({$capability_where})";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$results = $wpdb->get_col( $sql );
+		return array_map( 'intval', $results );
 	}
 
 	/**
