@@ -1321,4 +1321,94 @@ class InactiveUsersTest extends WP_UnitTestCase {
 
 		wp_delete_user( $user_id );
 	}
+
+	/**
+	 * Test that an inactive user authenticating with an application password gets a 403,
+	 * rather than re-entering the check until the request runs out of memory.
+	 *
+	 * When capabilities are configured instead of roles, the inactivity check calls
+	 * user_can(), which fires map_meta_cap. A callback there that reads the current user
+	 * starts resolution over again, because $current_user is not set yet, and that comes
+	 * back through this same availability filter.
+	 *
+	 * Runs in a separate process because an earlier test defines XMLRPC_REQUEST, which makes
+	 * _wp_get_current_user() return before it reaches determine_current_user.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_app_password_auth_does_not_recurse_when_map_meta_cap_resolves_current_user() {
+		// Clear any error left behind by an earlier test.
+		$reflection = new ReflectionClass( Inactive_Users::class );
+		$property   = $reflection->getProperty( 'application_password_authentication_error' );
+		$property->setAccessible( true );
+		$property->setValue( null, null );
+
+		// Create an inactive user.
+		$user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$user = new WP_User( $user_id );
+
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+
+		// Configure capabilities so the check goes through user_can(). Counting the filter
+		// shows how many times the inactivity check ran.
+		$capability_checks = 0;
+		add_filter( 'vip_security_boost_inactive_users_elevated_capabilities', function () use ( &$capability_checks ) {
+			++$capability_checks;
+
+			return [ 'manage_options' ];
+		} );
+
+		// A plugin that reads the current user from a map_meta_cap callback.
+		add_filter( 'map_meta_cap', function ( $caps ) {
+			wp_get_current_user();
+
+			return $caps;
+		} );
+
+		// Stand in for wp_validate_application_password(), which checks availability every
+		// time WordPress determines the current user.
+		$determine_calls = 0;
+		add_filter( 'determine_current_user', function ( $current ) use ( $user, &$determine_calls ) {
+			++$determine_calls;
+
+			// Give up rather than let a regression exhaust memory and kill the test run.
+			if ( $determine_calls > 10 ) {
+				return $current;
+			}
+
+			return wp_is_application_passwords_available_for_user( $user ) ? $user->ID : $current;
+		} );
+
+		// Resolve the current user from scratch, as a REST request does.
+		$GLOBALS['current_user'] = null;
+		$resolved                = wp_get_current_user();
+
+		$this->assertSame( 2, $determine_calls, 'Current user resolution should only be re-entered once' );
+		$this->assertSame( 1, $capability_checks, 'The nested check should return before testing inactivity again' );
+		$this->assertSame( 0, $resolved->ID, 'An inactive user should not be authenticated' );
+
+		// Core turns the blocked availability check into a generic 401 on
+		// rest_authentication_errors. Ours runs last and replaces it with the inactive
+		// account error, so the caller gets a 403 saying why.
+		$core_error = new WP_Error(
+			'application_passwords_disabled_for_user',
+			'Application passwords are not available for your account.',
+			[ 'status' => 401 ]
+		);
+
+		$error = Inactive_Users::maybe_return_error_on_rest_auth( $core_error );
+		$this->assertInstanceOf( 'WP_Error', $error );
+		$this->assertSame( 'inactive_account', $error->get_error_code() );
+		$this->assertSame( 403, $error->get_error_data()['status'] );
+
+		// Clean up.
+		$property->setValue( null, null );
+		wp_delete_user( $user_id );
+	}
 }
