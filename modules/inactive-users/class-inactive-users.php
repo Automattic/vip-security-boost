@@ -33,6 +33,14 @@ class Inactive_Users {
 	 */
 	private static $application_password_authentication_error;
 
+	/**
+	 * Guards against re-entering the application password inactivity check while the
+	 * current user is still being resolved. Uses user ID as key to handle concurrent checks for different users.
+	 *
+	 * @var array<int, bool>
+	 */
+	private static $checking_application_password_auth = [];
+
 	public static function init() {
 		$inactive_user_configs = Configs::get_module_configs( 'inactive-users' );
 
@@ -217,10 +225,36 @@ class Inactive_Users {
 			return false;
 		}
 
-		if ( self::is_considered_inactive( $user->ID ) ) {
-			self::$application_password_authentication_error = new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site Administrator.', 'wpvip' ), array( 'status' => 403 ) );
-
+		/*
+		 * Bail out if this check is already running further up the stack.
+		 *
+		 * With elevated *capabilities* configured (Inactive Users set to "Customize") the
+		 * check below calls user_can(), which fires `map_meta_cap`. A callback there that
+		 * calls wp_get_current_user() re-enters user resolution -- $current_user is still
+		 * empty at this point -- so `determine_current_user` runs again,
+		 * wp_validate_application_password() runs again, and we land back in this method.
+		 * Unguarded, that recursion exhausts memory and returns a 500 instead of the
+		 * expected 403. The role-based check never calls user_can(), so it is unaffected.
+		 *
+		 * Returning false fails the nested attempt closed. We deliberately do NOT set
+		 * self::$application_password_authentication_error here: this means "cannot answer
+		 * while the user is being resolved", not "inactive". The outer call completes the
+		 * real check and records that error only when the user is genuinely inactive.
+		 */
+		if ( isset( self::$checking_application_password_auth[ $user->ID ] ) && self::$checking_application_password_auth[ $user->ID ] ) {
 			return false;
+		}
+
+		self::$checking_application_password_auth[ $user->ID ] = true;
+
+		try {
+			if ( self::is_considered_inactive( $user->ID ) ) {
+				self::$application_password_authentication_error = new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site Administrator.', 'wpvip' ), array( 'status' => 403 ) );
+
+				return false;
+			}
+		} finally {
+			unset( self::$checking_application_password_auth[ $user->ID ] );
 		}
 
 		return $available;
