@@ -230,8 +230,8 @@ class Inactive_Users {
 		 *
 		 * With elevated *capabilities* configured (Inactive Users set to "Customize") the
 		 * check below calls user_can(), which fires `map_meta_cap`. A callback there that
-		 * calls wp_get_current_user() re-enters user resolution -- $current_user is still
-		 * empty at this point -- so `determine_current_user` runs again,
+		 * calls wp_get_current_user() re-enters user resolution. $current_user is still
+		 * empty at this poin, so `determine_current_user` runs again,
 		 * wp_validate_application_password() runs again, and we land back in this method.
 		 * Unguarded, that recursion exhausts memory and returns a 500 instead of the
 		 * expected 403. The role-based check never calls user_can(), so it is unaffected.
@@ -254,6 +254,7 @@ class Inactive_Users {
 				return false;
 			}
 		} finally {
+			// clear recursion guard
 			unset( self::$checking_application_password_auth[ $user->ID ] );
 		}
 

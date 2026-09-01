@@ -1393,8 +1393,16 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		$this->assertSame( 1, $capability_checks, 'The nested check should return before testing inactivity again' );
 		$this->assertSame( 0, $resolved->ID, 'An inactive user should not be authenticated' );
 
-		// The error is still recorded, so rest_authentication_errors returns a 403.
-		$error = Inactive_Users::maybe_return_error_on_rest_auth( null );
+		// Core turns the blocked availability check into a generic 401 on
+		// rest_authentication_errors. Ours runs last and replaces it with the inactive
+		// account error, so the caller gets a 403 saying why.
+		$core_error = new WP_Error(
+			'application_passwords_disabled_for_user',
+			'Application passwords are not available for your account.',
+			[ 'status' => 401 ]
+		);
+
+		$error = Inactive_Users::maybe_return_error_on_rest_auth( $core_error );
 		$this->assertInstanceOf( 'WP_Error', $error );
 		$this->assertSame( 'inactive_account', $error->get_error_code() );
 		$this->assertSame( 403, $error->get_error_data()['status'] );
