@@ -6,6 +6,7 @@ use Automattic\VIP\Security\Utils\Logger;
 use Automattic\VIP\Security\Utils\Configs;
 use Automattic\VIP\Security\Utils\Capability_Utils;
 use Automattic\VIP\Security\Utils\Users_Query_Utils;
+use Automattic\VIP\Security\Utils\Role_Sanitizer;
 
 class Inactive_Users {
 	protected static $considered_inactive_after_days;
@@ -587,8 +588,14 @@ class Inactive_Users {
 		) {
 			// Track blocked users view
 			do_action( 'vip_security_blocked_users_view' );
-
-			return array_merge( $vars, self::get_inactive_users_query_args() );
+			// selectively sanitize roles just for this view
+			Role_Sanitizer::maybe_register_role_sanitizers();
+			add_action( 'pre_user_query', [ Role_Sanitizer::class, 'unregister_role_sanitizers' ] );
+			try {
+				return array_merge( $vars, self::get_inactive_users_query_args() );
+			} finally {
+				Role_Sanitizer::unregister_role_sanitizers();
+			}
 		}
 
 		return $vars;
@@ -695,46 +702,50 @@ class Inactive_Users {
 
 		$cache_key         = self::get_blocked_users_cache_key();
 		$has_blocked_users = wp_cache_get( $cache_key, self::LAST_SEEN_CACHE_GROUP );
+		try {
+			Role_Sanitizer::maybe_register_role_sanitizers();
+			if ( false === $has_blocked_users ) {
 
-		if ( false === $has_blocked_users ) {
-			// Reuse the same logic we use elsewhere to determine if a user is considered blocked
-			// so that the link visibility and the actual list stay in sync.
-			$query_args = array_merge(
-				[
-					'blog_id'     => $blog_id,
-					'fields'      => 'ID',
-					'count_total' => false,
-					'number'      => 1, // we only need to know if at least one match exists
-				],
-				self::get_inactive_users_query_args()
-			);
+				// Reuse the same logic we use elsewhere to determine if a user is considered blocked
+				// so that the link visibility and the actual list stay in sync.
+				$query_args = array_merge(
+					[
+						'blog_id'     => $blog_id,
+						'fields'      => 'ID',
+						'count_total' => false,
+						'number'      => 1, // we only need to know if at least one match exists
+					],
+					self::get_inactive_users_query_args()
+				);
 
-			$users_query = new \WP_User_Query( $query_args );
+				$users_query = new \WP_User_Query( $query_args );
 
-			$has_blocked_users = ! empty( $users_query->get_results() ) ? 1 : 0;
+				$has_blocked_users = ! empty( $users_query->get_results() ) ? 1 : 0;
 
-			// we're using the same granularity for the cache as for the last seen meta
-			wp_cache_set( $cache_key, $has_blocked_users, self::LAST_SEEN_CACHE_GROUP, self::BLOCKED_USERS_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
-		}
+				// we're using the same granularity for the cache as for the last seen meta
+				wp_cache_set( $cache_key, $has_blocked_users, self::LAST_SEEN_CACHE_GROUP, self::BLOCKED_USERS_CACHE_TTL ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined
+			}
 
-		$views['blocked_users'] = __( 'Blocked Users', 'wpvip' );
+			$views['blocked_users'] = __( 'Blocked Users', 'wpvip' );
 
-		if ( ! $has_blocked_users ) {
-			return $views;
-		}
+			if ( ! $has_blocked_users ) {
+				return $views;
+			}
 
-		$url = add_query_arg( array(
-			'last_seen_filter'       => 'blocked',
-			'last_seen_filter_nonce' => wp_create_nonce( 'last_seen_filter' ),
-		) );
+			$url = add_query_arg( array(
+				'last_seen_filter'       => 'blocked',
+				'last_seen_filter_nonce' => wp_create_nonce( 'last_seen_filter' ),
+			) );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$class = isset( $_GET['last_seen_filter'] ) ? 'current' : '';
+			$class = isset( $_GET['last_seen_filter'] ) ? 'current' : '';
 
-		$view = '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $views['blocked_users'] ) . '</a>';
+			$view = '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $views['blocked_users'] ) . '</a>';
 
-		$views['blocked_users'] = $view;
-
+			$views['blocked_users'] = $view;
+		} finally {
+			Role_Sanitizer::unregister_role_sanitizers();
+		}
 		return $views;
 	}
 
