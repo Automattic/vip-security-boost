@@ -34,8 +34,8 @@ class Inactive_Users {
 	private static $application_password_authentication_error;
 
 	/**
-	 * Guards against re-entering the application password inactivity check while the
-	 * current user is still being resolved. Uses user ID as key to handle concurrent checks for different users.
+	 * User IDs whose application password inactivity check is in progress. Keyed by user ID
+	 * because a nested check can be for a different user.
 	 *
 	 * @var array<int, bool>
 	 */
@@ -225,19 +225,16 @@ class Inactive_Users {
 			return false;
 		}
 
-		// Bail out if this check is already running further up the stack.
-		//
-		// With elevated *capabilities* configured (Inactive Users set to "Customize") the
-		// check below calls user_can(), which fires `map_meta_cap`. A callback there that
-		// calls wp_get_current_user() re-enters user resolution. $current_user is still
-		// empty at this poin, so `determine_current_user` runs again,
-		// wp_validate_application_password() runs again, and we land back in this method.
-		// Unguarded, that recursion exhausts memory and returns a 500 instead of the
-		// expected 403. 
-		if ( isset( self::$checking_application_password_auth[ $user->ID ] ) && self::$checking_application_password_auth[ $user->ID ] ) {
-			return false;
+		// Nested call: a check for this user is already running further up the stack. Leave
+		// $available untouched and let the outer call decide; it records the 403 if the user
+		// is inactive.
+		if ( self::is_checking_application_password_auth( $user ) ) {
+			return $available;
 		}
 
+		// While set, user_has_elevated_permissions() skips user_can(). This filter runs inside
+		// determine_current_user, so a map_meta_cap callback that calls wp_get_current_user()
+		// would otherwise restart resolution and recurse here until the request runs out of memory.
 		self::$checking_application_password_auth[ $user->ID ] = true;
 
 		try {
@@ -247,11 +244,23 @@ class Inactive_Users {
 				return false;
 			}
 		} finally {
-			// clear recursion guard
 			unset( self::$checking_application_password_auth[ $user->ID ] );
 		}
 
 		return $available;
+	}
+
+	/**
+	 * Whether the application password inactivity check is already running for a user.
+	 *
+	 * @param \WP_User|false|null $user The user to check.
+	 */
+	private static function is_checking_application_password_auth( $user ): bool {
+		if ( ! ( $user instanceof \WP_User ) ) {
+			return false;
+		}
+
+		return ! empty( self::$checking_application_password_auth[ $user->ID ] );
 	}
 
 	/**
@@ -1010,7 +1019,11 @@ class Inactive_Users {
 		 */
 		$elevated_roles = apply_filters( 'vip_security_boost_inactive_users_elevated_roles', self::$elevated_roles );
 
-		return Capability_Utils::user_has_elevated_permissions( $user, $elevated_capabilities, $elevated_roles );
+		// user_can() is unsafe while the current user is still being resolved; see
+		// maybe_block_inactive_user_on_app_password_auth().
+		$resolve_capabilities = ! self::is_checking_application_password_auth( $user );
+
+		return Capability_Utils::user_has_elevated_permissions( $user, $elevated_capabilities, $elevated_roles, $resolve_capabilities );
 	}
 }
 
