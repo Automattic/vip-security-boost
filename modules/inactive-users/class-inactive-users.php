@@ -202,7 +202,8 @@ class Inactive_Users {
 	/**
 	 * Return error on REST authentication, active only when BLOCK mode is enabled
 	 *
-	 * @param \WP_Error $status The authentication status.
+	 * @param \WP_Error|true|null $status The authentication status from the rest_authentication_errors filter.
+	 * @return \WP_Error|true|null
 	 */
 	public static function maybe_return_error_on_rest_auth( $status ) {
 		if ( is_wp_error( self::$application_password_authentication_error ) ) {
