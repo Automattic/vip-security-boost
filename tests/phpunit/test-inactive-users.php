@@ -1530,4 +1530,75 @@ class InactiveUsersTest extends WP_UnitTestCase {
 		unset( $_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'] );
 		wp_delete_user( $user_id );
 	}
+
+	/**
+	 * An inactive user whose elevated capability comes only from a filter is still rejected
+	 * on a REST request, even when they hold none of the configured roles.
+	 *
+	 * This test runs on a subscriber, so the role fallback cannot catch
+	 * them during user resolution. The user authenticates, then the REST authentication
+	 * check sees the capability and rejects the request with a 403.
+	 *
+	 * Runs in a separate process because an earlier test defines XMLRPC_REQUEST, which makes
+	 * _wp_get_current_user() return before it reaches determine_current_user.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_app_password_auth_blocks_inactive_user_whose_elevated_capability_is_only_filter_granted() {
+		$user_id = $this->factory->user->create([
+			'role'            => 'subscriber',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		update_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		$user = new WP_User( $user_id );
+
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		add_filter( 'application_password_is_api_request', '__return_true' );
+
+		add_filter( 'vip_security_boost_inactive_users_elevated_capabilities', function () {
+			return [ 'custom_elevated_cap' ];
+		} );
+
+		// Grants the capability only when a current user is resolved.
+		add_filter( 'user_has_cap', function ( $allcaps ) {
+			if ( get_current_user_id() ) {
+				$allcaps['custom_elevated_cap'] = true;
+			}
+
+			return $allcaps;
+		} );
+
+		// Sanity check: once logged in, the user is elevated and inactive.
+		wp_set_current_user( $user_id );
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Granted by the user_has_cap filter above.
+		$this->assertTrue( user_can( $user, 'custom_elevated_cap' ), 'The grant should apply to a logged-in user' );
+		$this->assertTrue( Inactive_Users::is_considered_inactive( $user_id ), 'The user should be considered inactive once logged in' );
+
+		$created = WP_Application_Passwords::create_new_application_password( $user_id, array( 'name' => 'filter-only-grant' ) );
+		$this->assertNotWPError( $created );
+		// phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.BasicAuthentication -- Simulating a Basic auth request.
+		$_SERVER['PHP_AUTH_USER'] = $user->user_login;
+		// phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.BasicAuthentication -- Simulating a Basic auth request.
+		$_SERVER['PHP_AUTH_PW'] = $created[0];
+
+		global $current_user;
+		$current_user = null;
+
+		$resolved = wp_get_current_user();
+
+		$this->assertSame( $user_id, $resolved->ID, 'The grant is invisible during resolution, so the user authenticates' );
+		$this->assertSame( $created[1]['uuid'], rest_get_authenticated_app_password() );
+		$this->assertSame( strtotime( '-91 days' ), (int) get_user_meta( $user_id, Inactive_Users::LAST_SEEN_META_KEY, true ), 'Authenticating must not record activity for a blocked user' );
+
+		$error = apply_filters( 'rest_authentication_errors', null );
+		$this->assertInstanceOf( 'WP_Error', $error );
+		$this->assertSame( 'inactive_account', $error->get_error_code() );
+		$this->assertSame( 403, $error->get_error_data()['status'] );
+
+		// phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.BasicAuthentication -- Simulating a Basic auth request.
+		unset( $_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'] );
+		wp_delete_user( $user_id );
+	}
 }

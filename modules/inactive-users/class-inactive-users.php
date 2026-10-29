@@ -209,6 +209,12 @@ class Inactive_Users {
 			return self::$application_password_authentication_error;
 		}
 
+		// The app password check ran while the current user was still being resolved, so it
+		// couldn't see a capability that only a filter grants. The user is resolved by now.
+		if ( ! is_wp_error( $status ) && rest_get_authenticated_app_password() && self::is_considered_inactive( get_current_user_id() ) ) {
+			return new \WP_Error( 'inactive_account', __( 'Your account has been flagged as inactive. Please contact your site Administrator.', 'wpvip' ), array( 'status' => 403 ) );
+		}
+
 		return $status;
 	}
 
