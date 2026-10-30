@@ -816,8 +816,9 @@ class Inactive_Users {
 			$error = __( 'You do not have permission to unblock this user.', 'wpvip' );
 		}
 
-		// Additional multisite security check: ensure user belongs to current site
-		if ( ! $error && is_multisite() && ! is_user_member_of_blog( $user_id, get_current_blog_id() ) ) {
+		// Additional multisite security check: ensure user belongs to current site.
+		// Network Admin lists users from every site, so membership of the current blog doesn't apply there.
+		if ( ! $error && is_multisite() && ! is_network_admin() && ! is_user_member_of_blog( $user_id, get_current_blog_id() ) ) {
 			$error = __( 'You can only unblock users who are members of this site.', 'wpvip' );
 		}
 

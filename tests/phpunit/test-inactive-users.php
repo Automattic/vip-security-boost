@@ -1121,6 +1121,49 @@ class InactiveUsersTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test multisite: a super admin can unblock a non-member of the current site from Network Admin
+	 */
+	public function test_multisite_unblock_from_network_admin_when_user_not_member_of_site() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'This test requires multisite to be enabled' );
+		}
+
+		$network_user_id = $this->factory->user->create([
+			'role'            => 'administrator',
+			'user_registered' => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+		]);
+		update_user_meta( $network_user_id, Inactive_Users::LAST_SEEN_META_KEY, strtotime( '-91 days' ) );
+		delete_user_meta( $network_user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY );
+		remove_user_from_blog( $network_user_id, get_current_blog_id() );
+
+		$super_admin_id = $this->factory->user->create();
+		grant_super_admin( $super_admin_id );
+		wp_set_current_user( $super_admin_id );
+
+		$this->assertFalse( is_user_member_of_blog( $network_user_id, get_current_blog_id() ) );
+
+		$_GET['action']                = 'reset_last_seen';
+		$_GET['user_id']               = $network_user_id;
+		$_GET['reset_last_seen_nonce'] = wp_create_nonce( 'reset_last_seen_action' );
+
+		add_filter( 'wp_redirect', '__return_false' );
+		set_current_screen( 'dashboard-network' );
+
+		Inactive_Users::last_seen_unblock_action();
+
+		$ignored_until = (int) get_user_meta( $network_user_id, Inactive_Users::LAST_SEEN_IGNORE_INACTIVITY_CHECK_UNTIL_META_KEY, true );
+
+		// Clean up
+		remove_filter( 'wp_redirect', '__return_false' );
+		unset( $GLOBALS['current_screen'], $_GET['action'], $_GET['user_id'], $_GET['reset_last_seen_nonce'] );
+		revoke_super_admin( $super_admin_id );
+		wp_delete_user( $network_user_id );
+		wp_delete_user( $super_admin_id );
+
+		$this->assertGreaterThan( time(), $ignored_until, 'A super admin should be able to unblock a non-member from Network Admin' );
+	}
+
+	/**
 	 * Test that single-site unblock action works
 	 */
 	public function test_single_site_unblock_action() {
